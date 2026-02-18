@@ -178,7 +178,7 @@ function SectionHero({ settings, categories }: { settings: Record<string, string
 
   return (
     <section style={{ backgroundColor: "hsl(220 30% 15%)" }} data-testid="section-hero">
-      <div className="max-w-6xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between gap-4 py-4">
           <div className="relative" ref={catRef}>
             <Button
@@ -273,7 +273,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
   const mainDate = formatDate(mainPost.publishedAt);
 
   return (
-    <section className="max-w-6xl mx-auto px-4 py-10" data-testid="section-recent-posts">
+    <section className="max-w-7xl mx-auto px-4 py-10" data-testid="section-recent-posts">
       <SectionTitle>Posts Recentes</SectionTitle>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
@@ -353,7 +353,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
 function SectionHorizontalBanner({ banners }: { banners: Banner[] }) {
   if (banners.length === 0) return null;
   return (
-    <section className="max-w-6xl mx-auto px-4 py-4" data-testid="section-horizontal-banner">
+    <section className="max-w-7xl mx-auto px-4 py-4" data-testid="section-horizontal-banner">
       {banners.map((banner) => (
         <div key={banner.id} className="mb-4 last:mb-0">
           <BannerHorizontal banner={banner} />
@@ -366,7 +366,7 @@ function SectionHorizontalBanner({ banners }: { banners: Banner[] }) {
 function SectionFeaturedCategory({ category, posts }: { category: Category | null; posts: PostWithRelations[] }) {
   if (!category || posts.length === 0) return null;
   return (
-    <section className="max-w-6xl mx-auto px-4 py-10" data-testid="section-featured-category">
+    <section className="max-w-7xl mx-auto px-4 py-10" data-testid="section-featured-category">
       <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
         <SectionTitle className="mb-0">{category.name}</SectionTitle>
         <Link href={`/categoria/${category.slug}`}>
@@ -389,7 +389,7 @@ function SectionNewsletter({ settings }: { settings: Record<string, string> }) {
   const text = settings["newsletter_text"] || "Receba nossos conteudos diretamente no seu e-mail";
   return (
     <section className="bg-muted/50" data-testid="section-newsletter">
-      <div className="max-w-6xl mx-auto px-4 py-10">
+      <div className="max-w-7xl mx-auto px-4 py-10">
         <div className="max-w-xl mx-auto text-center">
           <Mail className="h-10 w-10 text-primary mx-auto mb-4" />
           <h2 className="font-serif text-2xl font-bold mb-2">Newsletter</h2>
@@ -414,7 +414,7 @@ function SectionNewsletter({ settings }: { settings: Record<string, string> }) {
 
 function SectionMostReadAndCategories({ mostRead, categories: cats }: { mostRead: PostWithRelations[]; categories: Category[] }) {
   return (
-    <section className="max-w-6xl mx-auto px-4 py-10" data-testid="section-most-read">
+    <section className="max-w-7xl mx-auto px-4 py-10" data-testid="section-most-read">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           <SectionTitle>Mais Lidos</SectionTitle>
@@ -445,7 +445,7 @@ function SectionMostReadAndCategories({ mostRead, categories: cats }: { mostRead
 function SectionDiverseCategories({ sections }: { sections: { category: Category; posts: PostWithRelations[] }[] }) {
   if (sections.length === 0) return null;
   return (
-    <section className="max-w-6xl mx-auto px-4 py-10" data-testid="section-diverse-categories">
+    <section className="max-w-7xl mx-auto px-4 py-10" data-testid="section-diverse-categories">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {sections.map((sec) => (
           <div key={sec.category.id}>
@@ -472,7 +472,7 @@ function SectionDiverseCategories({ sections }: { sections: { category: Category
 function SectionRandomPosts({ posts }: { posts: PostWithRelations[] }) {
   if (posts.length === 0) return null;
   return (
-    <section className="max-w-6xl mx-auto px-4 py-10" data-testid="section-random-posts">
+    <section className="max-w-7xl mx-auto px-4 py-10" data-testid="section-random-posts">
       <SectionTitle>Voce tambem pode gostar</SectionTitle>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {posts.slice(0, 6).map((post) => (
@@ -487,7 +487,7 @@ function SectionRowCategories({ row1, row2 }: { row1: { category: Category; post
   const rows = [row1, row2].filter(Boolean) as { category: Category; posts: PostWithRelations[] }[];
   if (rows.length === 0) return null;
   return (
-    <section className="max-w-6xl mx-auto px-4 py-10" data-testid="section-row-categories">
+    <section className="max-w-7xl mx-auto px-4 py-10" data-testid="section-row-categories">
       {rows.map((row) => (
         <div key={row.category.id} className="mb-10 last:mb-0">
           <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
@@ -513,7 +513,7 @@ function SectionFreeMaterials({ materials }: { materials: FreeMaterial[] }) {
   if (materials.length === 0) return null;
   return (
     <section className="bg-primary/5" data-testid="section-free-materials">
-      <div className="max-w-6xl mx-auto px-4 py-10">
+      <div className="max-w-7xl mx-auto px-4 py-10">
         <div className="text-center mb-8">
           <Download className="h-10 w-10 text-primary mx-auto mb-4" />
           <h2 className="font-serif text-2xl font-bold mb-2">Materiais Gratuitos</h2>
@@ -549,7 +549,7 @@ function HomeSkeleton() {
   return (
     <div>
       <div className="bg-primary h-64" />
-      <div className="max-w-6xl mx-auto px-4 py-10">
+      <div className="max-w-7xl mx-auto px-4 py-10">
         <Skeleton className="h-8 w-48 mb-6" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
