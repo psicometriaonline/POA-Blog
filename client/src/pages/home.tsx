@@ -235,7 +235,7 @@ function SectionHero({ settings, categories }: { settings: Record<string, string
           <h1 className="font-serif text-2xl md:text-3xl font-bold mb-3 text-white" data-testid="text-hero-title">
             {headline.includes("Blog") ? (
               <>
-                O seu <span className="text-cyan-400">Blog</span> de Psicometria
+                O seu <span className="text-accent-bright">Blog</span> de Psicometria
               </>
             ) : (
               headline
@@ -245,7 +245,7 @@ function SectionHero({ settings, categories }: { settings: Record<string, string
 
           <div className="max-w-4xl mx-auto">
             <p className="text-white/80 text-sm mb-4 text-left">
-              Junte-se a mais de <span className="text-cyan-400 font-semibold">22.300</span> membros e receba conteudos exclusivos e com prioridade
+              Junte-se a mais de <span className="text-accent-bright font-semibold">22.300</span> membros e receba conteudos exclusivos e com prioridade
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Input
@@ -260,7 +260,7 @@ function SectionHero({ settings, categories }: { settings: Record<string, string
                 className="bg-white text-foreground placeholder:text-muted-foreground flex-1"
                 data-testid="input-hero-email"
               />
-              <Button className="flex-shrink-0 bg-cyan-500 hover:bg-cyan-600 text-white border-cyan-600" data-testid="button-hero-subscribe">
+              <Button className="flex-shrink-0 bg-accent-bright text-accent-bright-foreground border-accent-bright" data-testid="button-hero-subscribe">
                 Quero receber materiais gratuitos
               </Button>
             </div>
@@ -292,7 +292,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                   {mainPost.categories.length > 0 && (
                     <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1">
                       {mainPost.categories.map((cat) => (
-                        <Badge key={cat.id} className="bg-cyan-400 text-white border-cyan-500 text-xs">{cat.name}</Badge>
+                        <Badge key={cat.id} className="bg-accent-bright text-accent-bright-foreground border-accent-bright text-xs">{cat.name}</Badge>
                       ))}
                     </div>
                   )}
@@ -325,7 +325,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                     <div className="flex items-center gap-3 flex-wrap mb-2">
                       {d && <span className="text-xs text-muted-foreground">{d}</span>}
                       {post.categories.length > 0 && post.categories.slice(0, 1).map((cat) => (
-                        <Badge key={cat.id} className="bg-cyan-400 text-white border-cyan-500 text-xs">{cat.name}</Badge>
+                        <Badge key={cat.id} className="bg-accent-bright text-accent-bright-foreground border-accent-bright text-xs">{cat.name}</Badge>
                       ))}
                     </div>
                     <h3 className="font-serif text-sm font-bold leading-snug line-clamp-2">{post.title}</h3>
@@ -349,7 +349,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                   <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{banner1.title}</p>
                   {banner1.linkUrl && (
                     <a href={banner1.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-banner-cta-${banner1.id}`}>
-                      <Button size="sm" className="bg-cyan-500 text-white border-cyan-600" data-testid={`button-banner-cta-${banner1.id}`}>
+                      <Button size="sm" className="bg-accent-bright text-accent-bright-foreground border-accent-bright" data-testid={`button-banner-cta-${banner1.id}`}>
                         Saiba mais
                         <ArrowRight className="h-3 w-3 ml-1" />
                       </Button>
@@ -419,20 +419,20 @@ function SectionFeaturedCategory({ category, posts }: { category: Category | nul
 function SectionNewsletter({ settings }: { settings: Record<string, string> }) {
   const text = settings["newsletter_text"] || "Receba nossos conteudos diretamente no seu e-mail";
   return (
-    <section className="bg-muted/50" data-testid="section-newsletter">
-      <div className="max-w-7xl mx-auto px-4 py-10">
+    <section className="bg-dark-bg" data-testid="section-newsletter">
+      <div className="max-w-7xl mx-auto px-4 py-14">
         <div className="max-w-xl mx-auto text-center">
-          <Mail className="h-10 w-10 text-primary mx-auto mb-4" />
-          <h2 className="font-serif text-2xl font-bold mb-2">Newsletter</h2>
-          <p className="text-muted-foreground mb-6">{text}</p>
+          <Mail className="h-10 w-10 text-accent-bright mx-auto mb-4" />
+          <h2 className="font-serif text-2xl font-bold mb-2 text-dark-bg-foreground">Newsletter</h2>
+          <p className="text-dark-bg-foreground/70 mb-6">{text}</p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Input
               type="email"
               placeholder="Seu melhor e-mail"
-              className="flex-1"
+              className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50"
               data-testid="input-newsletter-email"
             />
-            <Button data-testid="button-newsletter-subscribe">
+            <Button className="bg-accent-bright text-accent-bright-foreground border-accent-bright" data-testid="button-newsletter-subscribe">
               <Mail className="h-4 w-4 mr-1" />
               Inscrever-se
             </Button>

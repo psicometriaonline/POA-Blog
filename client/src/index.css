@@ -57,6 +57,11 @@
   --chart-4: 340 75% 55%;
   --chart-5: 27 87% 67%;
 
+  --dark-bg: 223 100% 7%;
+  --dark-bg-foreground: 0 0% 100%;
+  --accent-bright: 192 100% 60%;
+  --accent-bright-foreground: 223 100% 7%;
+
   --font-sans: 'Open Sans', 'Inter', sans-serif;
   --font-serif: 'Merriweather', Georgia, serif;
   --font-mono: 'Fira Code', Menlo, monospace;
@@ -136,6 +141,11 @@
 
   --input: 220 15% 28%;
   --ring: 211 75% 52%;
+  --dark-bg: 223 100% 7%;
+  --dark-bg-foreground: 0 0% 100%;
+  --accent-bright: 192 100% 60%;
+  --accent-bright-foreground: 223 100% 7%;
+
   --chart-1: 211 75% 52%;
   --chart-2: 173 58% 45%;
   --chart-3: 43 74% 55%;
