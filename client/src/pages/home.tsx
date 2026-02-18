@@ -37,6 +37,11 @@ function formatDateShort(date: string | Date | null) {
   return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
 }
 
+function formatDateMonth(date: string | Date | null) {
+  if (!date) return null;
+  return format(new Date(date), "MMM dd, yyyy", { locale: ptBR });
+}
+
 function SectionTitle({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <div className={`mb-6 ${className}`}>
@@ -269,80 +274,106 @@ function SectionHero({ settings, categories }: { settings: Record<string, string
 function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelations[]; sidebarBanners: Banner[] }) {
   if (posts.length === 0) return null;
   const mainPost = posts[0];
-  const sidePosts = posts.slice(1, 4);
-  const mainDate = formatDate(mainPost.publishedAt);
+  const bottomPosts = posts.slice(1, 4);
+  const mainDate = formatDateMonth(mainPost.publishedAt);
+
+  const banner1 = sidebarBanners[0] || null;
+  const banner2 = sidebarBanners[1] || null;
 
   return (
     <section className="max-w-7xl mx-auto px-4 py-10" data-testid="section-recent-posts">
       <SectionTitle>Posts Recentes</SectionTitle>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Link href={`/post/${mainPost.slug}`} data-testid={`card-post-${mainPost.id}`}>
-              <Card className="overflow-visible hover-elevate active-elevate-2 cursor-pointer h-full flex flex-col">
-                {mainPost.featuredImage && (
-                  <div className="aspect-video overflow-hidden rounded-t-md">
-                    <img src={mainPost.featuredImage} alt={mainPost.title} className="w-full h-full object-cover" loading="lazy" />
-                  </div>
-                )}
-                <div className="p-4 flex flex-col flex-1 gap-2">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-stretch">
+        <div className="flex flex-col h-full">
+          <Link href={`/post/${mainPost.slug}`} data-testid={`card-post-${mainPost.id}`}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-0 cursor-pointer hover-elevate active-elevate-2 rounded-md overflow-visible">
+              {mainPost.featuredImage && (
+                <div className="aspect-[16/10] md:aspect-auto overflow-hidden relative rounded-l-md">
                   {mainPost.categories.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
+                    <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1">
                       {mainPost.categories.map((cat) => (
-                        <Badge key={cat.id} variant="secondary" className="text-xs">{cat.name}</Badge>
+                        <Badge key={cat.id} className="bg-cyan-400 text-white border-cyan-500 text-xs">{cat.name}</Badge>
                       ))}
                     </div>
                   )}
-                  <h3 className="font-serif text-lg font-bold leading-snug line-clamp-3">{mainPost.title}</h3>
-                  {mainPost.excerpt && <p className="text-sm text-muted-foreground line-clamp-3 flex-1">{mainPost.excerpt}</p>}
-                  <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground mt-auto pt-2">
-                    {mainDate && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{mainDate}</span>}
-                    {mainPost.authorName && <span className="flex items-center gap-1"><User className="h-3 w-3" />{mainPost.authorName}</span>}
-                  </div>
+                  <img src={mainPost.featuredImage} alt={mainPost.title} className="w-full h-full object-cover" loading="lazy" />
                 </div>
-              </Card>
-            </Link>
-
-            <div className="flex flex-col gap-4">
-              {sidePosts.map((post) => {
-                const d = formatDateShort(post.publishedAt);
-                return (
-                  <Link key={post.id} href={`/post/${post.slug}`} data-testid={`card-post-${post.id}`}>
-                    <Card className="overflow-visible hover-elevate active-elevate-2 cursor-pointer flex flex-row h-full">
-                      {post.featuredImage && (
-                        <div className="w-28 flex-shrink-0 overflow-hidden rounded-l-md">
-                          <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover" loading="lazy" />
-                        </div>
-                      )}
-                      <div className="p-3 flex flex-col flex-1 gap-1 min-w-0">
-                        {post.categories.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {post.categories.slice(0, 1).map((cat) => (
-                              <Badge key={cat.id} variant="secondary" className="text-xs">{cat.name}</Badge>
-                            ))}
-                          </div>
-                        )}
-                        <h4 className="font-serif text-sm font-semibold leading-snug line-clamp-2">{post.title}</h4>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-auto">
-                          {d && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{d}</span>}
-                        </div>
-                      </div>
-                    </Card>
-                  </Link>
-                );
-              })}
+              )}
+              <div className="flex flex-col justify-center p-6 gap-3">
+                {mainDate && <span className="text-sm text-muted-foreground">{mainDate}</span>}
+                <h2 className="font-serif text-xl md:text-2xl font-bold leading-snug" data-testid="text-main-post-title">
+                  {mainPost.title}
+                </h2>
+                {mainPost.excerpt && (
+                  <p className="text-sm text-muted-foreground line-clamp-3">{mainPost.excerpt}</p>
+                )}
+              </div>
             </div>
+          </Link>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6 flex-1">
+            {bottomPosts.map((post) => {
+              const d = formatDateMonth(post.publishedAt);
+              return (
+                <Link key={post.id} href={`/post/${post.slug}`} data-testid={`card-post-${post.id}`}>
+                  <div className="cursor-pointer hover-elevate active-elevate-2 rounded-md p-1">
+                    {post.featuredImage && (
+                      <div className="aspect-[16/10] overflow-hidden rounded-md mb-3">
+                        <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover" loading="lazy" />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3 flex-wrap mb-2">
+                      {d && <span className="text-xs text-muted-foreground">{d}</span>}
+                      {post.categories.length > 0 && post.categories.slice(0, 1).map((cat) => (
+                        <Badge key={cat.id} className="bg-cyan-400 text-white border-cyan-500 text-xs">{cat.name}</Badge>
+                      ))}
+                    </div>
+                    <h3 className="font-serif text-sm font-bold leading-snug line-clamp-2">{post.title}</h3>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
 
-        <div className="space-y-4" data-testid="sidebar-banners">
-          {sidebarBanners.map((banner) => (
-            <BannerSidebar key={banner.id} banner={banner} />
-          ))}
-          {sidebarBanners.length === 0 && (
-            <Card className="p-6 text-center">
+        <div className="flex flex-col gap-6 h-full" data-testid="sidebar-banners">
+          {banner1 && (
+            <div className="flex-1">
+              <a href={banner1.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner1.id}`}>
+                <div className="aspect-[1400/788] overflow-hidden rounded-md">
+                  <img src={banner1.imageUrl} alt={banner1.title} className="w-full h-full object-cover" loading="lazy" />
+                </div>
+              </a>
+              {banner1.title && (
+                <div className="mt-3">
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{banner1.title}</p>
+                  {banner1.linkUrl && (
+                    <a href={banner1.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-banner-cta-${banner1.id}`}>
+                      <Button size="sm" className="bg-cyan-500 text-white border-cyan-600" data-testid={`button-banner-cta-${banner1.id}`}>
+                        Saiba mais
+                        <ArrowRight className="h-3 w-3 ml-1" />
+                      </Button>
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {banner2 && (
+            <div className="flex-1">
+              <a href={banner2.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner2.id}`}>
+                <div className="aspect-[1400/788] overflow-hidden rounded-md">
+                  <img src={banner2.imageUrl} alt={banner2.title} className="w-full h-full object-cover" loading="lazy" />
+                </div>
+              </a>
+            </div>
+          )}
+
+          {!banner1 && !banner2 && (
+            <div className="aspect-[1400/788] rounded-md bg-muted flex items-center justify-center">
               <p className="text-sm text-muted-foreground">Espaco para banner</p>
-            </Card>
+            </div>
           )}
         </div>
       </div>
