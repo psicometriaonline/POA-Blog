@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema } from "@shared/schema";
+import { insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema } from "@shared/schema";
 import { crawlMultipleUrls } from "./crawler";
 import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
 
@@ -144,6 +144,49 @@ export async function registerRoutes(
       res.json({ posts, total, limit, offset, tag });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/banners", async (req, res) => {
+    try {
+      const slot = req.query.slot as string | undefined;
+      const all = await storage.getBanners(slot);
+      res.json(all.filter(b => b.isActive));
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/posts/:id/most-read-category", async (req, res) => {
+    try {
+      const postId = parseInt(req.params.id);
+      const categoryId = parseInt(req.query.categoryId as string);
+      if (!categoryId) return res.json([]);
+      const mostRead = await storage.getMostReadByCategory(categoryId, postId, 3);
+      res.json(mostRead);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/posts/:id/comments", async (req, res) => {
+    try {
+      const postId = parseInt(req.params.id);
+      const cmts = await storage.getCommentsByPost(postId);
+      res.json(cmts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/posts/:id/comments", async (req, res) => {
+    try {
+      const postId = parseInt(req.params.id);
+      const parsed = insertCommentSchema.parse({ ...req.body, postId });
+      const comment = await storage.createComment(parsed);
+      res.json(comment);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
     }
   });
 

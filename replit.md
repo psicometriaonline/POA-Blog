@@ -12,12 +12,13 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - **Crawling**: Cheerio-based WordPress post extraction
 
 ## Key Files
-- `shared/schema.ts` - Database schema (posts, categories, tags, banners, free_materials, site_settings)
+- `shared/schema.ts` - Database schema (posts, categories, tags, banners, free_materials, site_settings, comments)
 - `server/storage.ts` - Database CRUD operations + home page data aggregation
 - `server/routes.ts` - API endpoints (public + admin)
 - `server/crawler.ts` - WordPress post crawler using Cheerio
 - `client/src/pages/home.tsx` - Magazine-style home page with 11 configurable sections
-- `client/src/pages/post.tsx` - Individual post page
+- `client/src/pages/post.tsx` - Individual post page (two-column layout, breadcrumb, social sharing, comments)
+- `client/src/components/hero-bar.tsx` - Reusable hero section (categories dropdown, search, email signup)
 - `client/src/pages/category.tsx` - Category listing page
 - `client/src/pages/tag.tsx` - Tag listing page
 - `client/src/pages/search.tsx` - Search results page
@@ -36,6 +37,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `post_tags` - Many-to-many junction table
 - `banners` - Configurable banner ads (sidebar/horizontal slots)
 - `free_materials` - Downloadable materials section
+- `comments` - Post comments (authorName, authorEmail, content, isApproved)
 - `site_settings` - Key-value store for home page configuration
 - Auth tables from Replit Auth integration
 
@@ -69,6 +71,10 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 
 ### API
 - `GET /api/home` - Aggregated home page data (all sections in one request)
+- `GET /api/banners?slot=` - Public banners (active only)
+- `GET /api/posts/:id/most-read-category?categoryId=` - Top 3 most-read in category
+- `GET /api/posts/:id/comments` - Comments for a post
+- `POST /api/posts/:id/comments` - Create comment (authorName, authorEmail, content)
 - `GET/POST/PUT/DELETE /api/admin/banners` - Banner CRUD
 - `GET/POST/PUT/DELETE /api/admin/materials` - Free materials CRUD
 - `GET/PUT /api/admin/settings` - Site settings (key-value)

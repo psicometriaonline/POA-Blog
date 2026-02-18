@@ -1,15 +1,26 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, User, ArrowLeft, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { PostWithRelations } from "@shared/schema";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import type { PostWithRelations, Comment, Banner } from "@shared/schema";
+import { insertCommentSchema } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import DOMPurify from "dompurify";
 import { useEffect, useRef } from "react";
 import { HeroBar } from "@/components/hero-bar";
+import { Calendar, User, Tag, ChevronRight, Eye, Send, MessageSquare } from "lucide-react";
+import { SiFacebook, SiLinkedin, SiWhatsapp, SiX } from "react-icons/si";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import hljs from "highlight.js/lib/core";
@@ -19,7 +30,7 @@ import javascript from "highlight.js/lib/languages/javascript";
 import typescript from "highlight.js/lib/languages/typescript";
 import sql from "highlight.js/lib/languages/sql";
 import bash from "highlight.js/lib/languages/bash";
-import css from "highlight.js/lib/languages/css";
+import cssLang from "highlight.js/lib/languages/css";
 import xml from "highlight.js/lib/languages/xml";
 import json from "highlight.js/lib/languages/json";
 import yaml from "highlight.js/lib/languages/yaml";
@@ -32,7 +43,7 @@ hljs.registerLanguage("javascript", javascript);
 hljs.registerLanguage("typescript", typescript);
 hljs.registerLanguage("sql", sql);
 hljs.registerLanguage("bash", bash);
-hljs.registerLanguage("css", css);
+hljs.registerLanguage("css", cssLang);
 hljs.registerLanguage("html", xml);
 hljs.registerLanguage("xml", xml);
 hljs.registerLanguage("json", json);
@@ -64,6 +75,277 @@ function renderMathAndCode(contentRef: React.RefObject<HTMLDivElement | null>) {
   });
 }
 
+function Breadcrumb({ post }: { post: PostWithRelations }) {
+  const category = post.categories[0];
+  return (
+    <nav className="flex items-center gap-1 text-sm text-muted-foreground flex-wrap mb-4" data-testid="nav-breadcrumb">
+      <Link href="/" data-testid="link-breadcrumb-home">Home</Link>
+      <ChevronRight className="h-3 w-3" />
+      <span>Blog</span>
+      {category && (
+        <>
+          <ChevronRight className="h-3 w-3" />
+          <Link href={`/categoria/${category.slug}`} data-testid="link-breadcrumb-category">{category.name}</Link>
+        </>
+      )}
+      <ChevronRight className="h-3 w-3" />
+      <span className="text-foreground font-medium truncate max-w-xs">{post.title}</span>
+    </nav>
+  );
+}
+
+function SocialShare({ post }: { post: PostWithRelations }) {
+  const url = typeof window !== "undefined" ? window.location.href : "";
+  const title = encodeURIComponent(post.title);
+  const encodedUrl = encodeURIComponent(url);
+
+  const links = [
+    { icon: SiFacebook, href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`, label: "Facebook", testId: "link-share-facebook" },
+    { icon: SiLinkedin, href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`, label: "LinkedIn", testId: "link-share-linkedin" },
+    { icon: SiWhatsapp, href: `https://wa.me/?text=${title}%20${encodedUrl}`, label: "WhatsApp", testId: "link-share-whatsapp" },
+    { icon: SiX, href: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${title}`, label: "X", testId: "link-share-x" },
+  ];
+
+  return (
+    <div className="flex items-center gap-3 flex-wrap" data-testid="div-social-share">
+      <span className="text-sm text-muted-foreground">Compartilhe nas Redes Sociais</span>
+      <div className="flex items-center gap-2">
+        {links.map((l) => (
+          <a
+            key={l.label}
+            href={l.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center h-9 w-9 rounded-full border text-muted-foreground hover-elevate"
+            data-testid={l.testId}
+          >
+            <l.icon className="h-4 w-4" />
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MostReadSidebar({ postId, categoryId }: { postId: number; categoryId: number }) {
+  const { data: mostRead, isLoading } = useQuery<PostWithRelations[]>({
+    queryKey: [`/api/posts/${postId}/most-read-category?categoryId=${categoryId}`],
+    enabled: !!categoryId,
+  });
+
+  if (isLoading) {
+    return (
+      <Card className="p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-1 h-6 bg-accent-bright rounded-full" />
+          <Skeleton className="h-6 w-32" />
+        </div>
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-24 w-full rounded-md" />
+          ))}
+        </div>
+      </Card>
+    );
+  }
+
+  if (!mostRead || mostRead.length === 0) return null;
+
+  return (
+    <Card className="p-5" data-testid="card-most-read">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-1 h-6 bg-accent-bright rounded-full" />
+        <h3 className="font-bold text-lg">Mais Lidos</h3>
+      </div>
+      <div className="space-y-4">
+        {mostRead.map((p) => (
+          <Link key={p.id} href={`/post/${p.slug}`} data-testid={`card-most-read-${p.id}`}>
+            <Card className="overflow-visible hover-elevate cursor-pointer">
+              <div className="flex gap-3 p-3">
+                {p.featuredImage && (
+                  <img
+                    src={p.featuredImage}
+                    alt={p.title}
+                    className="w-20 h-20 object-cover rounded-md flex-shrink-0"
+                    loading="lazy"
+                  />
+                )}
+                <div className="flex flex-col justify-center min-w-0">
+                  {p.categories[0] && (
+                    <Badge variant="secondary" className="self-start mb-1 text-xs bg-accent-bright/15 text-accent-bright border-0">
+                      {p.categories[0].name}
+                    </Badge>
+                  )}
+                  <h4 className="text-sm font-semibold leading-snug line-clamp-3">{p.title}</h4>
+                </div>
+              </div>
+            </Card>
+          </Link>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+const commentFormSchema = insertCommentSchema.extend({
+  authorName: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+  authorEmail: z.string().email("E-mail invalido"),
+  content: z.string().min(3, "Comentario muito curto"),
+});
+
+type CommentFormValues = z.infer<typeof commentFormSchema>;
+
+function CommentsSection({ postId }: { postId: number }) {
+  const { toast } = useToast();
+
+  const savedName = (() => { try { return localStorage.getItem("comment_name") || ""; } catch { return ""; } })();
+  const savedEmail = (() => { try { return localStorage.getItem("comment_email") || ""; } catch { return ""; } })();
+
+  const form = useForm<CommentFormValues>({
+    resolver: zodResolver(commentFormSchema),
+    defaultValues: {
+      authorName: savedName,
+      authorEmail: savedEmail,
+      content: "",
+      postId,
+      isApproved: true,
+    },
+  });
+
+  const { data: cmts, isLoading } = useQuery<Comment[]>({
+    queryKey: [`/api/posts/${postId}/comments`],
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (values: CommentFormValues) => {
+      const res = await apiRequest("POST", `/api/posts/${postId}/comments`, values);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/posts/${postId}/comments`] });
+      try {
+        localStorage.setItem("comment_name", form.getValues("authorName"));
+        localStorage.setItem("comment_email", form.getValues("authorEmail"));
+      } catch {}
+      form.setValue("content", "");
+      toast({ title: "Comentario enviado com sucesso!" });
+    },
+    onError: () => {
+      toast({ title: "Erro ao enviar comentario", variant: "destructive" });
+    },
+  });
+
+  const onSubmit = (values: CommentFormValues) => {
+    mutation.mutate(values);
+  };
+
+  const comments = cmts || [];
+
+  return (
+    <Card className="p-6 mt-8" data-testid="card-comments">
+      <div className="flex items-center gap-2 mb-6">
+        <MessageSquare className="h-5 w-5 text-accent-bright" />
+        <h3 className="font-bold text-lg">Comentarios ({comments.length})</h3>
+      </div>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="mb-8 space-y-3" data-testid="form-comment">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FormField
+              control={form.control}
+              name="authorName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Input placeholder="Seu nome" {...field} data-testid="input-comment-name" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="authorEmail"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Input type="email" placeholder="Seu e-mail" {...field} data-testid="input-comment-email" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <FormField
+            control={form.control}
+            name="content"
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <Textarea placeholder="Escreva seu comentario..." className="min-h-[100px]" {...field} data-testid="input-comment-content" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" disabled={mutation.isPending} data-testid="button-submit-comment">
+            <Send className="h-4 w-4 mr-2" />
+            {mutation.isPending ? "Enviando..." : "Enviar comentario"}
+          </Button>
+        </form>
+      </Form>
+
+      {isLoading ? (
+        <div className="space-y-4">
+          {[1, 2].map((i) => <Skeleton key={i} className="h-20 w-full rounded-md" />)}
+        </div>
+      ) : comments.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-4">Seja o primeiro a comentar!</p>
+      ) : (
+        <div className="space-y-4">
+          {comments.map((c) => (
+            <div key={c.id} className="border rounded-md p-4" data-testid={`comment-${c.id}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-8 w-8 rounded-full bg-accent-bright/15 flex items-center justify-center text-accent-bright font-bold text-sm">
+                  {c.authorName.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-semibold text-sm" data-testid={`text-comment-author-${c.id}`}>{c.authorName}</p>
+                  {c.createdAt && (
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(c.createdAt), "dd 'de' MMMM, yyyy", { locale: ptBR })}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <p className="text-sm leading-relaxed" data-testid={`text-comment-content-${c.id}`}>{c.content}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function SidebarBanners() {
+  const { data: banners } = useQuery<Banner[]>({
+    queryKey: ["/api/banners?slot=sidebar"],
+  });
+  const sidebarBanners = (banners || []).sort((a, b) => a.sortOrder - b.sortOrder);
+  if (sidebarBanners.length === 0) return null;
+  return (
+    <>
+      {sidebarBanners.map((banner) => (
+        <a key={banner.id} href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner.id}`}>
+          <Card className="overflow-visible hover-elevate cursor-pointer">
+            <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto rounded-md" loading="lazy" />
+          </Card>
+        </a>
+      ))}
+    </>
+  );
+}
+
 export default function PostPage() {
   const { slug } = useParams<{ slug: string }>();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -82,14 +364,22 @@ export default function PostPage() {
     return (
       <>
         <HeroBar showHeadline={true} />
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <Skeleton className="h-8 w-3/4 mb-4" />
-          <Skeleton className="h-4 w-1/3 mb-8" />
-          <Skeleton className="h-64 w-full mb-4" />
-          <div className="space-y-3">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-2/3" />
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
+            <div>
+              <Skeleton className="h-8 w-3/4 mb-4" />
+              <Skeleton className="h-4 w-1/3 mb-8" />
+              <Skeleton className="h-64 w-full mb-4" />
+              <div className="space-y-3">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            </div>
+            <div className="space-y-6">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-40 w-full rounded-md" />
+            </div>
           </div>
         </div>
       </>
@@ -100,11 +390,10 @@ export default function PostPage() {
     return (
       <>
         <HeroBar showHeadline={true} />
-        <div className="max-w-4xl mx-auto px-4 py-16 text-center">
+        <div className="max-w-7xl mx-auto px-4 py-16 text-center">
           <h1 className="text-2xl font-bold mb-4">Post nao encontrado</h1>
           <Link href="/">
             <Button variant="outline" data-testid="button-back-home">
-              <ArrowLeft className="h-4 w-4 mr-2" />
               Voltar ao inicio
             </Button>
           </Link>
@@ -116,82 +405,103 @@ export default function PostPage() {
   const publishedDate = post.publishedAt
     ? format(new Date(post.publishedAt), "dd 'de' MMMM, yyyy", { locale: ptBR })
     : null;
+  const primaryCategory = post.categories[0];
+  const currentUrl = typeof window !== "undefined" ? window.location.href : "";
 
   return (
     <>
       <HeroBar showHeadline={true} />
-      <article className="max-w-4xl mx-auto px-4 py-8">
-      <Link href="/">
-        <Button variant="ghost" size="sm" className="mb-4" data-testid="button-back">
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Voltar
-        </Button>
-      </Link>
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
+          <article>
+            <Breadcrumb post={post} />
+            <SocialShare post={post} />
 
-      {post.categories.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-3">
-          {post.categories.map((cat) => (
-            <Link key={cat.id} href={`/categoria/${cat.slug}`}>
-              <Badge variant="secondary" data-testid={`badge-category-${cat.id}`}>
-                {cat.name}
-              </Badge>
-            </Link>
-          ))}
+            {post.categories.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-5 mb-4">
+                {post.categories.map((cat) => (
+                  <Link key={cat.id} href={`/categoria/${cat.slug}`}>
+                    <Badge variant="secondary" className="bg-accent-bright/15 text-accent-bright border-0" data-testid={`badge-category-${cat.id}`}>
+                      <Tag className="h-3 w-3 mr-1" />
+                      {cat.name}
+                    </Badge>
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            <Card className="p-6 mb-6" data-testid="card-post-header">
+              <div className="flex items-center gap-3 mb-4 flex-wrap text-sm text-muted-foreground">
+                {post.authorName && (
+                  <span className="flex items-center gap-1">
+                    <User className="h-4 w-4" />
+                    {post.authorName}
+                  </span>
+                )}
+                {publishedDate && (
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    {publishedDate}
+                  </span>
+                )}
+                <span className="flex items-center gap-1">
+                  <Eye className="h-4 w-4" />
+                  {post.viewCount} visualizacoes
+                </span>
+              </div>
+
+              <h1 className="font-serif text-2xl md:text-3xl font-bold mb-4 leading-tight" data-testid="text-post-title">
+                {post.title}
+              </h1>
+
+              {post.featuredImage && (
+                <div className="rounded-md overflow-hidden">
+                  <img
+                    src={post.featuredImage}
+                    alt={post.title}
+                    className="w-full h-auto"
+                    data-testid="img-featured"
+                  />
+                </div>
+              )}
+            </Card>
+
+            <Card className="p-6 mb-6" data-testid="card-post-content">
+              <div
+                ref={contentRef}
+                className="prose prose-lg dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content, { ADD_TAGS: ["iframe", "span", "div"], ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "scrolling", "data-type", "data-latex", "class"] }) }}
+                data-testid="div-post-content"
+              />
+            </Card>
+
+            {post.tags.length > 0 && (
+              <Card className="p-5 mb-6" data-testid="card-post-tags">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Tag className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground mr-1">Tags:</span>
+                  {post.tags.map((tag) => (
+                    <Link key={tag.id} href={`/tag/${tag.slug}`}>
+                      <Badge variant="outline" data-testid={`badge-tag-${tag.id}`}>
+                        {tag.name}
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            <CommentsSection postId={post.id} />
+          </article>
+
+          <aside className="space-y-6">
+            {primaryCategory && (
+              <MostReadSidebar postId={post.id} categoryId={primaryCategory.id} />
+            )}
+            <SidebarBanners />
+          </aside>
         </div>
-      )}
-
-      <h1 className="font-serif text-3xl md:text-4xl font-bold mb-4 leading-tight" data-testid="text-post-title">
-        {post.title}
-      </h1>
-
-      <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground mb-6">
-        {publishedDate && (
-          <span className="flex items-center gap-1">
-            <Calendar className="h-4 w-4" />
-            {publishedDate}
-          </span>
-        )}
-        {post.authorName && (
-          <span className="flex items-center gap-1">
-            <User className="h-4 w-4" />
-            {post.authorName}
-          </span>
-        )}
       </div>
-
-      {post.featuredImage && (
-        <div className="mb-8 rounded-md overflow-hidden">
-          <img
-            src={post.featuredImage}
-            alt={post.title}
-            className="w-full h-auto"
-            data-testid="img-featured"
-          />
-        </div>
-      )}
-
-      <div
-        ref={contentRef}
-        className="prose prose-lg dark:prose-invert max-w-none"
-        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content, { ADD_TAGS: ["iframe", "span", "div"], ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "scrolling", "data-type", "data-latex", "class"] }) }}
-        data-testid="div-post-content"
-      />
-
-      {post.tags.length > 0 && (
-        <div className="mt-8 pt-6 border-t">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Tag className="h-4 w-4 text-muted-foreground" />
-            {post.tags.map((tag) => (
-              <Link key={tag.id} href={`/tag/${tag.slug}`}>
-                <Badge variant="outline" data-testid={`badge-tag-${tag.id}`}>
-                  {tag.name}
-                </Badge>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-      </article>
     </>
   );
 }

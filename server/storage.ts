@@ -5,8 +5,9 @@ import {
   type PostWithRelations,
   type Banner, type InsertBanner,
   type FreeMaterial, type InsertFreeMaterial,
+  type Comment, type InsertComment,
   categories, tags, posts, postCategories, postTags,
-  banners, freeMaterials, siteSettings,
+  banners, freeMaterials, siteSettings, comments,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, or, desc, sql, inArray, and, asc } from "drizzle-orm";
@@ -52,6 +53,12 @@ export interface IStorage {
   createFreeMaterial(data: InsertFreeMaterial): Promise<FreeMaterial>;
   updateFreeMaterial(id: number, data: Partial<InsertFreeMaterial>): Promise<FreeMaterial | undefined>;
   deleteFreeMaterial(id: number): Promise<boolean>;
+
+  getMostReadByCategory(categoryId: number, excludePostId: number, limit?: number): Promise<PostWithRelations[]>;
+
+  getCommentsByPost(postId: number): Promise<Comment[]>;
+  createComment(data: InsertComment): Promise<Comment>;
+  deleteComment(id: number): Promise<boolean>;
 
   getSetting(key: string): Promise<string | undefined>;
   setSetting(key: string, value: string): Promise<void>;
@@ -485,6 +492,35 @@ export class DatabaseStorage implements IStorage {
       randomPosts,
       materials,
     };
+  }
+
+  async getMostReadByCategory(categoryId: number, excludePostId: number, limit = 3): Promise<PostWithRelations[]> {
+    const postIdsInCategory = await db.select({ postId: postCategories.postId })
+      .from(postCategories)
+      .where(eq(postCategories.categoryId, categoryId));
+    const ids = postIdsInCategory.map(r => r.postId).filter(id => id !== excludePostId);
+    if (ids.length === 0) return [];
+    const rawPosts = await db.select().from(posts)
+      .where(and(inArray(posts.id, ids), eq(posts.status, "published")))
+      .orderBy(desc(posts.viewCount), desc(posts.publishedAt))
+      .limit(limit);
+    return enrichPostsWithRelations(rawPosts);
+  }
+
+  async getCommentsByPost(postId: number): Promise<Comment[]> {
+    return db.select().from(comments)
+      .where(and(eq(comments.postId, postId), eq(comments.isApproved, true)))
+      .orderBy(desc(comments.createdAt));
+  }
+
+  async createComment(data: InsertComment): Promise<Comment> {
+    const [comment] = await db.insert(comments).values(data).returning();
+    return comment;
+  }
+
+  async deleteComment(id: number): Promise<boolean> {
+    const result = await db.delete(comments).where(eq(comments.id, id)).returning();
+    return result.length > 0;
   }
 }
 

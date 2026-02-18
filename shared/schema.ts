@@ -88,6 +88,16 @@ export const freeMaterials = pgTable("free_materials", {
   sortOrder: integer("sort_order").notNull().default(0),
 });
 
+export const comments = pgTable("comments", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+  authorName: text("author_name").notNull(),
+  authorEmail: text("author_email").notNull(),
+  content: text("content").notNull(),
+  isApproved: boolean("is_approved").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const siteSettings = pgTable("site_settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
@@ -98,6 +108,7 @@ export const insertTagSchema = createInsertSchema(tags).omit({ id: true });
 export const insertPostSchema = createInsertSchema(posts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertBannerSchema = createInsertSchema(banners).omit({ id: true });
 export const insertFreeMaterialSchema = createInsertSchema(freeMaterials).omit({ id: true });
+export const insertCommentSchema = createInsertSchema(comments).omit({ id: true, createdAt: true });
 
 export type Category = typeof categories.$inferSelect;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
@@ -109,6 +120,8 @@ export type Banner = typeof banners.$inferSelect;
 export type InsertBanner = z.infer<typeof insertBannerSchema>;
 export type FreeMaterial = typeof freeMaterials.$inferSelect;
 export type InsertFreeMaterial = z.infer<typeof insertFreeMaterialSchema>;
+export type Comment = typeof comments.$inferSelect;
+export type InsertComment = z.infer<typeof insertCommentSchema>;
 export type SiteSetting = typeof siteSettings.$inferSelect;
 
 export type PostWithRelations = Post & {
