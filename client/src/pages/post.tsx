@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import DOMPurify from "dompurify";
 import { useEffect, useRef } from "react";
+import { HeroBar } from "@/components/hero-bar";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import hljs from "highlight.js/lib/core";
@@ -79,30 +80,36 @@ export default function PostPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <Skeleton className="h-8 w-3/4 mb-4" />
-        <Skeleton className="h-4 w-1/3 mb-8" />
-        <Skeleton className="h-64 w-full mb-4" />
-        <div className="space-y-3">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-2/3" />
+      <>
+        <HeroBar />
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <Skeleton className="h-8 w-3/4 mb-4" />
+          <Skeleton className="h-4 w-1/3 mb-8" />
+          <Skeleton className="h-64 w-full mb-4" />
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   if (!post) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold mb-4">Post nao encontrado</h1>
-        <Link href="/">
-          <Button variant="outline" data-testid="button-back-home">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar ao inicio
-          </Button>
-        </Link>
-      </div>
+      <>
+        <HeroBar />
+        <div className="max-w-4xl mx-auto px-4 py-16 text-center">
+          <h1 className="text-2xl font-bold mb-4">Post nao encontrado</h1>
+          <Link href="/">
+            <Button variant="outline" data-testid="button-back-home">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Voltar ao inicio
+            </Button>
+          </Link>
+        </div>
+      </>
     );
   }
 
@@ -111,7 +118,9 @@ export default function PostPage() {
     : null;
 
   return (
-    <article className="max-w-4xl mx-auto px-4 py-8">
+    <>
+      <HeroBar />
+      <article className="max-w-4xl mx-auto px-4 py-8">
       <Link href="/">
         <Button variant="ghost" size="sm" className="mb-4" data-testid="button-back">
           <ArrowLeft className="h-4 w-4 mr-1" />
@@ -182,6 +191,7 @@ export default function PostPage() {
           </div>
         </div>
       )}
-    </article>
+      </article>
+    </>
   );
 }
