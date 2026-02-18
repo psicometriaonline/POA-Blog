@@ -1,80 +1,71 @@
 import { Link, useLocation } from "wouter";
-import { Search, Moon, Sun, Menu, X } from "lucide-react";
+import { Search, Menu, X, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useTheme } from "@/components/theme-provider";
 import { useAuth } from "@/hooks/use-auth";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { Category } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
+import logoImg from "@assets/vertical_color_1771451634914.png";
+
+export interface MenuItem {
+  label: string;
+  url: string;
+  children?: MenuItem[];
+}
 
 export function BlogHeader() {
-  const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
-  const [location, setLocation] = useLocation();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const categoriesRef = useRef<HTMLDivElement>(null);
 
   const { data: categories } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      setLocation(`/busca?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery("");
-      setMobileMenuOpen(false);
+  const { data: menuItems } = useQuery<MenuItem[]>({
+    queryKey: ["/api/menu"],
+  });
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (categoriesRef.current && !categoriesRef.current.contains(e.target as Node)) {
+        setCategoriesOpen(false);
+      }
     }
-  };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const navItems = menuItems || [];
 
   return (
-    <header className="sticky top-0 z-50 bg-background border-b">
+    <header className="sticky top-0 z-50 border-b" style={{ backgroundColor: "hsl(220 30% 15%)" }}>
       <div className="max-w-6xl mx-auto px-4">
-        <div className="flex items-center justify-between gap-4 h-16">
-          <Link href="/" data-testid="link-home">
-            <span className="font-serif text-xl font-bold text-foreground">
-              Blog Psicometria Online
-            </span>
-          </Link>
-
-          <nav className="hidden md:flex items-center gap-1 flex-wrap">
-            <Link href="/">
-              <Button variant="ghost" size="sm" data-testid="nav-home">
-                Inicio
-              </Button>
+        <div className="flex items-center justify-between gap-4 h-14">
+          <div className="flex items-center gap-6">
+            <Link href="/" data-testid="link-home">
+              <img
+                src={logoImg}
+                alt="Psicometria Online"
+                className="h-8 w-auto"
+                data-testid="img-logo"
+              />
             </Link>
-            {categories?.slice(0, 5).map((cat) => (
-              <Link key={cat.id} href={`/categoria/${cat.slug}`}>
-                <Button variant="ghost" size="sm" data-testid={`nav-category-${cat.id}`}>
-                  {cat.name}
-                </Button>
-              </Link>
-            ))}
-          </nav>
+
+            <nav className="hidden lg:flex items-center gap-1">
+              {navItems.map((item, idx) => (
+                <NavItem key={idx} item={item} onNavigate={() => {}} />
+              ))}
+            </nav>
+          </div>
 
           <div className="flex items-center gap-2">
-            <form onSubmit={handleSearch} className="hidden sm:flex items-center">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Buscar..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 w-48"
-                  data-testid="input-search"
-                />
-              </div>
-            </form>
-
-            <Button size="icon" variant="ghost" onClick={toggleTheme} data-testid="button-theme-toggle">
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </Button>
-
             {user && (
               <Link href="/admin">
-                <Button variant="outline" size="sm" data-testid="link-admin">
+                <Button variant="outline" size="sm" className="text-white border-white/20 hover:bg-white/10" data-testid="link-admin">
                   Admin
                 </Button>
               </Link>
@@ -83,7 +74,7 @@ export function BlogHeader() {
             <Button
               size="icon"
               variant="ghost"
-              className="md:hidden"
+              className="lg:hidden text-white"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               data-testid="button-mobile-menu"
             >
@@ -93,37 +84,166 @@ export function BlogHeader() {
         </div>
 
         {mobileMenuOpen && (
-          <div className="md:hidden pb-4 border-t pt-3">
-            <form onSubmit={handleSearch} className="sm:hidden mb-3">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Buscar..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                  data-testid="input-search-mobile"
-                />
-              </div>
-            </form>
+          <div className="lg:hidden pb-4 border-t border-white/10 pt-3">
             <nav className="flex flex-col gap-1">
-              <Link href="/" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="ghost" size="sm" className="w-full justify-start">
-                  Inicio
-                </Button>
-              </Link>
-              {categories?.map((cat) => (
-                <Link key={cat.id} href={`/categoria/${cat.slug}`} onClick={() => setMobileMenuOpen(false)}>
-                  <Button variant="ghost" size="sm" className="w-full justify-start">
-                    {cat.name}
-                  </Button>
-                </Link>
+              {navItems.map((item, idx) => (
+                <MobileNavItem key={idx} item={item} onNavigate={() => setMobileMenuOpen(false)} />
               ))}
+
+              <div className="border-t border-white/10 mt-2 pt-2">
+                <p className="text-xs text-white/50 px-3 mb-2">Categorias</p>
+                {categories?.map((cat) => (
+                  <Link key={cat.id} href={`/categoria/${cat.slug}`} onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="ghost" size="sm" className="w-full justify-start text-white/80">
+                      {cat.name}
+                    </Button>
+                  </Link>
+                ))}
+              </div>
             </nav>
           </div>
         )}
       </div>
     </header>
+  );
+}
+
+function NavItem({ item, onNavigate }: { item: MenuItem; onNavigate: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  if (item.children && item.children.length > 0) {
+    return (
+      <div className="relative" ref={ref}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-white/80 hover:text-white hover:bg-white/10 text-sm"
+          onClick={() => setOpen(!open)}
+          data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+        >
+          {item.label}
+          <ChevronDown className="h-3 w-3 ml-1" />
+        </Button>
+        {open && (
+          <div className="absolute top-full left-0 mt-1 min-w-48 rounded-md shadow-lg border" style={{ backgroundColor: "hsl(220 30% 18%)", borderColor: "hsl(220 20% 25%)" }}>
+            {item.children.map((child, idx) => (
+              <a
+                key={idx}
+                href={child.url}
+                target={child.url.startsWith("http") ? "_blank" : undefined}
+                rel={child.url.startsWith("http") ? "noopener noreferrer" : undefined}
+                className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/10 first:rounded-t-md last:rounded-b-md"
+                onClick={() => { setOpen(false); onNavigate(); }}
+                data-testid={`nav-sub-${child.label.toLowerCase().replace(/\s+/g, "-")}`}
+              >
+                {child.label}
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const isExternal = item.url.startsWith("http");
+  if (isExternal) {
+    return (
+      <a href={item.url} target="_blank" rel="noopener noreferrer">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-white/80 hover:text-white hover:bg-white/10 text-sm"
+          data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+        >
+          {item.label}
+        </Button>
+      </a>
+    );
+  }
+
+  return (
+    <Link href={item.url} onClick={onNavigate}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-white/80 hover:text-white hover:bg-white/10 text-sm"
+        data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+      >
+        {item.label}
+      </Button>
+    </Link>
+  );
+}
+
+function MobileNavItem({ item, onNavigate }: { item: MenuItem; onNavigate: () => void }) {
+  const [open, setOpen] = useState(false);
+
+  if (item.children && item.children.length > 0) {
+    return (
+      <div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-between text-white/80"
+          onClick={() => setOpen(!open)}
+        >
+          {item.label}
+          <ChevronRight className={`h-3 w-3 transition-transform ${open ? "rotate-90" : ""}`} />
+        </Button>
+        {open && (
+          <div className="ml-4">
+            {item.children.map((child, idx) => {
+              const isExternal = child.url.startsWith("http");
+              if (isExternal) {
+                return (
+                  <a key={idx} href={child.url} target="_blank" rel="noopener noreferrer" onClick={onNavigate}>
+                    <Button variant="ghost" size="sm" className="w-full justify-start text-white/60 text-sm">
+                      {child.label}
+                    </Button>
+                  </a>
+                );
+              }
+              return (
+                <Link key={idx} href={child.url} onClick={onNavigate}>
+                  <Button variant="ghost" size="sm" className="w-full justify-start text-white/60 text-sm">
+                    {child.label}
+                  </Button>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const isExternal = item.url.startsWith("http");
+  if (isExternal) {
+    return (
+      <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={onNavigate}>
+        <Button variant="ghost" size="sm" className="w-full justify-start text-white/80">
+          {item.label}
+        </Button>
+      </a>
+    );
+  }
+
+  return (
+    <Link href={item.url} onClick={onNavigate}>
+      <Button variant="ghost" size="sm" className="w-full justify-start text-white/80">
+        {item.label}
+      </Button>
+    </Link>
   );
 }

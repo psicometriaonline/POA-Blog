@@ -23,6 +23,19 @@ export async function registerRoutes(
 
   // ===== PUBLIC ROUTES =====
 
+  app.get("/api/menu", async (_req, res) => {
+    try {
+      const menuJson = await storage.getSetting("menu_items");
+      if (menuJson) {
+        res.json(JSON.parse(menuJson));
+      } else {
+        res.json([]);
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/home", async (_req, res) => {
     try {
       const data = await storage.getHomePageData();

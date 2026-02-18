@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Image, BookOpen, Download, Plus, Trash2, Save, ArrowLeft } from "lucide-react";
+import { Settings, Image, BookOpen, Download, Plus, Trash2, Save, ArrowLeft, Menu, GripVertical, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -85,6 +85,10 @@ export default function HomeSettings() {
             <Download className="h-4 w-4 mr-1" />
             Materiais
           </TabsTrigger>
+          <TabsTrigger value="menu" data-testid="tab-menu">
+            <Menu className="h-4 w-4 mr-1" />
+            Menu
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
@@ -101,6 +105,10 @@ export default function HomeSettings() {
 
         <TabsContent value="materials">
           <MaterialsTab materials={materialsList || []} isLoading={materialsLoading} />
+        </TabsContent>
+
+        <TabsContent value="menu">
+          <MenuTab settings={settings || {}} />
         </TabsContent>
       </Tabs>
     </div>
@@ -493,6 +501,219 @@ function MaterialsTab({ materials, isLoading }: { materials: FreeMaterial[]; isL
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+interface MenuItemEditable {
+  label: string;
+  url: string;
+  children?: MenuItemEditable[];
+}
+
+function MenuTab({ settings }: { settings: Record<string, string> }) {
+  const { toast } = useToast();
+  const [items, setItems] = useState<MenuItemEditable[]>(() => {
+    try {
+      return JSON.parse(settings["menu_items"] || "[]");
+    } catch {
+      return [];
+    }
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("PUT", "/api/admin/settings", { menu_items: JSON.stringify(items) });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/menu"] });
+      toast({ title: "Menu salvo", description: "Menu atualizado com sucesso." });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Falha ao salvar o menu.", variant: "destructive" });
+    },
+  });
+
+  const addItem = () => {
+    setItems([...items, { label: "", url: "/" }]);
+  };
+
+  const updateItem = (index: number, field: keyof MenuItemEditable, value: string) => {
+    const newItems = [...items];
+    (newItems[index] as any)[field] = value;
+    setItems(newItems);
+  };
+
+  const removeItem = (index: number) => {
+    setItems(items.filter((_, i) => i !== index));
+  };
+
+  const addSubItem = (parentIndex: number) => {
+    const newItems = [...items];
+    if (!newItems[parentIndex].children) {
+      newItems[parentIndex].children = [];
+    }
+    newItems[parentIndex].children!.push({ label: "", url: "/" });
+    setItems(newItems);
+  };
+
+  const updateSubItem = (parentIndex: number, childIndex: number, field: keyof MenuItemEditable, value: string) => {
+    const newItems = [...items];
+    (newItems[parentIndex].children![childIndex] as any)[field] = value;
+    setItems(newItems);
+  };
+
+  const removeSubItem = (parentIndex: number, childIndex: number) => {
+    const newItems = [...items];
+    newItems[parentIndex].children = newItems[parentIndex].children!.filter((_, i) => i !== childIndex);
+    if (newItems[parentIndex].children!.length === 0) {
+      delete newItems[parentIndex].children;
+    }
+    setItems(newItems);
+  };
+
+  const moveItem = (index: number, direction: "up" | "down") => {
+    const newItems = [...items];
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newItems.length) return;
+    [newItems[index], newItems[targetIndex]] = [newItems[targetIndex], newItems[index]];
+    setItems(newItems);
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-6">
+        <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
+          <h3 className="font-semibold text-lg">Itens do Menu</h3>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={addItem} data-testid="button-add-menu-item">
+              <Plus className="h-4 w-4 mr-1" />
+              Adicionar item
+            </Button>
+            <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} data-testid="button-save-menu">
+              <Save className="h-4 w-4 mr-1" />
+              {saveMutation.isPending ? "Salvando..." : "Salvar Menu"}
+            </Button>
+          </div>
+        </div>
+
+        <p className="text-sm text-muted-foreground mb-4">
+          Configure os itens do menu de navegacao do site. URLs externas (com http) abrem em nova aba.
+          Adicione sub-itens para criar menus dropdown.
+        </p>
+
+        {items.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">Nenhum item no menu. Clique em "Adicionar item" para comecar.</p>
+        ) : (
+          <div className="space-y-4">
+            {items.map((item, index) => (
+              <Card key={index} className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex flex-col gap-1 pt-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => moveItem(index, "up")}
+                      disabled={index === 0}
+                    >
+                      <ChevronDown className="h-3 w-3 rotate-180" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => moveItem(index, "down")}
+                      disabled={index === items.length - 1}
+                    >
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  </div>
+
+                  <div className="flex-1 space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Titulo</Label>
+                        <Input
+                          value={item.label}
+                          onChange={(e) => updateItem(index, "label", e.target.value)}
+                          placeholder="Ex: Home"
+                          data-testid={`input-menu-label-${index}`}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">URL</Label>
+                        <Input
+                          value={item.url}
+                          onChange={(e) => updateItem(index, "url", e.target.value)}
+                          placeholder="Ex: / ou https://..."
+                          data-testid={`input-menu-url-${index}`}
+                        />
+                      </div>
+                    </div>
+
+                    {item.children && item.children.length > 0 && (
+                      <div className="ml-6 border-l-2 border-muted pl-4 space-y-2">
+                        <p className="text-xs text-muted-foreground font-medium">Sub-itens:</p>
+                        {item.children.map((child, childIndex) => (
+                          <div key={childIndex} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                            <div>
+                              <Label className="text-xs">Titulo</Label>
+                              <Input
+                                value={child.label}
+                                onChange={(e) => updateSubItem(index, childIndex, "label", e.target.value)}
+                                placeholder="Sub-item"
+                                data-testid={`input-submenu-label-${index}-${childIndex}`}
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">URL</Label>
+                              <Input
+                                value={child.url}
+                                onChange={(e) => updateSubItem(index, childIndex, "url", e.target.value)}
+                                placeholder="https://..."
+                                data-testid={`input-submenu-url-${index}-${childIndex}`}
+                              />
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeSubItem(index, childIndex)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => addSubItem(index)}
+                      data-testid={`button-add-submenu-${index}`}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Adicionar sub-item
+                    </Button>
+                  </div>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeItem(index)}
+                    data-testid={`button-delete-menu-${index}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </Card>
             ))}
           </div>
         )}
