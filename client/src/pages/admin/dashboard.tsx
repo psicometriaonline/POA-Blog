@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2 } from "lucide-react";
+import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import type { PostWithRelations, Category, Tag as TagType } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -84,6 +84,12 @@ export default function AdminDashboard() {
             <Button variant="outline" data-testid="button-crawl">
               <Download className="h-4 w-4 mr-1" />
               Importar Posts
+            </Button>
+          </Link>
+          <Link href="/admin/home">
+            <Button variant="outline" data-testid="button-home-settings">
+              <Settings className="h-4 w-4 mr-1" />
+              Config. Home
             </Button>
           </Link>
         </div>

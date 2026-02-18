@@ -3,10 +3,13 @@ import {
   type Tag, type InsertTag,
   type Post, type InsertPost,
   type PostWithRelations,
+  type Banner, type InsertBanner,
+  type FreeMaterial, type InsertFreeMaterial,
   categories, tags, posts, postCategories, postTags,
+  banners, freeMaterials, siteSettings,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, or, desc, sql, inArray } from "drizzle-orm";
+import { eq, ilike, or, desc, sql, inArray, and, asc } from "drizzle-orm";
 
 export interface IStorage {
   getCategories(): Promise<Category[]>;
@@ -36,6 +39,25 @@ export interface IStorage {
   createPost(data: InsertPost, categoryIds?: number[], tagIds?: number[]): Promise<PostWithRelations>;
   updatePost(id: number, data: Partial<InsertPost>, categoryIds?: number[], tagIds?: number[]): Promise<PostWithRelations | undefined>;
   deletePost(id: number): Promise<boolean>;
+  incrementViewCount(id: number): Promise<void>;
+
+  getBanners(slot?: string): Promise<Banner[]>;
+  getBanner(id: number): Promise<Banner | undefined>;
+  createBanner(data: InsertBanner): Promise<Banner>;
+  updateBanner(id: number, data: Partial<InsertBanner>): Promise<Banner | undefined>;
+  deleteBanner(id: number): Promise<boolean>;
+
+  getFreeMaterials(): Promise<FreeMaterial[]>;
+  getFreeMaterial(id: number): Promise<FreeMaterial | undefined>;
+  createFreeMaterial(data: InsertFreeMaterial): Promise<FreeMaterial>;
+  updateFreeMaterial(id: number, data: Partial<InsertFreeMaterial>): Promise<FreeMaterial | undefined>;
+  deleteFreeMaterial(id: number): Promise<boolean>;
+
+  getSetting(key: string): Promise<string | undefined>;
+  setSetting(key: string, value: string): Promise<void>;
+  getAllSettings(): Promise<Record<string, string>>;
+
+  getHomePageData(): Promise<any>;
 }
 
 async function enrichPostsWithRelations(rawPosts: Post[]): Promise<PostWithRelations[]> {
@@ -321,6 +343,148 @@ export class DatabaseStorage implements IStorage {
   async deletePost(id: number): Promise<boolean> {
     const result = await db.delete(posts).where(eq(posts.id, id)).returning();
     return result.length > 0;
+  }
+
+  async incrementViewCount(id: number): Promise<void> {
+    await db.update(posts).set({ viewCount: sql`${posts.viewCount} + 1` }).where(eq(posts.id, id));
+  }
+
+  async getBanners(slot?: string): Promise<Banner[]> {
+    if (slot) {
+      return db.select().from(banners).where(and(eq(banners.slot, slot), eq(banners.isActive, true))).orderBy(asc(banners.sortOrder));
+    }
+    return db.select().from(banners).orderBy(asc(banners.sortOrder));
+  }
+
+  async getBanner(id: number): Promise<Banner | undefined> {
+    const [b] = await db.select().from(banners).where(eq(banners.id, id));
+    return b;
+  }
+
+  async createBanner(data: InsertBanner): Promise<Banner> {
+    const [b] = await db.insert(banners).values(data).returning();
+    return b;
+  }
+
+  async updateBanner(id: number, data: Partial<InsertBanner>): Promise<Banner | undefined> {
+    const [b] = await db.update(banners).set(data).where(eq(banners.id, id)).returning();
+    return b;
+  }
+
+  async deleteBanner(id: number): Promise<boolean> {
+    const result = await db.delete(banners).where(eq(banners.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getFreeMaterials(): Promise<FreeMaterial[]> {
+    return db.select().from(freeMaterials).where(eq(freeMaterials.isActive, true)).orderBy(asc(freeMaterials.sortOrder));
+  }
+
+  async getFreeMaterial(id: number): Promise<FreeMaterial | undefined> {
+    const [m] = await db.select().from(freeMaterials).where(eq(freeMaterials.id, id));
+    return m;
+  }
+
+  async createFreeMaterial(data: InsertFreeMaterial): Promise<FreeMaterial> {
+    const [m] = await db.insert(freeMaterials).values(data).returning();
+    return m;
+  }
+
+  async updateFreeMaterial(id: number, data: Partial<InsertFreeMaterial>): Promise<FreeMaterial | undefined> {
+    const [m] = await db.update(freeMaterials).set(data).where(eq(freeMaterials.id, id)).returning();
+    return m;
+  }
+
+  async deleteFreeMaterial(id: number): Promise<boolean> {
+    const result = await db.delete(freeMaterials).where(eq(freeMaterials.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getSetting(key: string): Promise<string | undefined> {
+    const [s] = await db.select().from(siteSettings).where(eq(siteSettings.key, key));
+    return s?.value;
+  }
+
+  async setSetting(key: string, value: string): Promise<void> {
+    await db.insert(siteSettings).values({ key, value }).onConflictDoUpdate({ target: siteSettings.key, set: { value } });
+  }
+
+  async getAllSettings(): Promise<Record<string, string>> {
+    const rows = await db.select().from(siteSettings);
+    return Object.fromEntries(rows.map(r => [r.key, r.value]));
+  }
+
+  async getHomePageData(): Promise<any> {
+    const settings = await this.getAllSettings();
+    const allCategories = await this.getCategories();
+
+    const recentPosts = await this.getPosts({ status: "published", limit: 4 });
+
+    const sidebarBanners = await this.getBanners("sidebar");
+    const horizontalBanners = await this.getBanners("horizontal");
+
+    const featuredCategorySlug = settings["featured_category_slug"] || "";
+    let featuredCategoryPosts: PostWithRelations[] = [];
+    let featuredCategory: Category | undefined;
+    if (featuredCategorySlug) {
+      featuredCategory = await this.getCategoryBySlug(featuredCategorySlug);
+      if (featuredCategory) {
+        featuredCategoryPosts = await this.getPostsByCategory(featuredCategorySlug, { limit: 4 });
+      }
+    }
+
+    const mostReadRaw = await db.select().from(posts)
+      .where(eq(posts.status, "published"))
+      .orderBy(desc(posts.viewCount), desc(posts.publishedAt))
+      .limit(9);
+    const mostRead = await enrichPostsWithRelations(mostReadRaw);
+
+    const diverseCatSlugs = (settings["diverse_category_slugs"] || "").split(",").filter(Boolean);
+    const diverseSections: { category: Category; posts: PostWithRelations[] }[] = [];
+    for (const slug of diverseCatSlugs.slice(0, 3)) {
+      const cat = await this.getCategoryBySlug(slug.trim());
+      if (cat) {
+        const catPosts = await this.getPostsByCategory(slug.trim(), { limit: 4 });
+        diverseSections.push({ category: cat, posts: catPosts });
+      }
+    }
+
+    const row1Slug = settings["row_section_1_slug"] || "";
+    const row2Slug = settings["row_section_2_slug"] || "";
+    let rowSection1: { category: Category; posts: PostWithRelations[] } | null = null;
+    let rowSection2: { category: Category; posts: PostWithRelations[] } | null = null;
+    if (row1Slug) {
+      const cat = await this.getCategoryBySlug(row1Slug);
+      if (cat) rowSection1 = { category: cat, posts: await this.getPostsByCategory(row1Slug, { limit: 3 }) };
+    }
+    if (row2Slug) {
+      const cat = await this.getCategoryBySlug(row2Slug);
+      if (cat) rowSection2 = { category: cat, posts: await this.getPostsByCategory(row2Slug, { limit: 3 }) };
+    }
+
+    const materials = await this.getFreeMaterials();
+
+    const randomRaw = await db.select().from(posts)
+      .where(eq(posts.status, "published"))
+      .orderBy(sql`RANDOM()`)
+      .limit(6);
+    const randomPosts = await enrichPostsWithRelations(randomRaw);
+
+    return {
+      settings,
+      categories: allCategories,
+      recentPosts,
+      sidebarBanners,
+      horizontalBanners,
+      featuredCategory: featuredCategory || null,
+      featuredCategoryPosts,
+      mostRead,
+      diverseSections,
+      rowSection1,
+      rowSection2,
+      randomPosts,
+      materials,
+    };
   }
 }
 

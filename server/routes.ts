@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCategorySchema, insertTagSchema, insertPostSchema } from "@shared/schema";
+import { insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema } from "@shared/schema";
 import { crawlMultipleUrls } from "./crawler";
 import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
 
@@ -22,6 +22,15 @@ export async function registerRoutes(
   registerAuthRoutes(app);
 
   // ===== PUBLIC ROUTES =====
+
+  app.get("/api/home", async (_req, res) => {
+    try {
+      const data = await storage.getHomePageData();
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   app.get("/api/posts", async (req, res) => {
     try {
@@ -54,6 +63,7 @@ export async function registerRoutes(
     try {
       const post = await storage.getPostBySlug(req.params.slug);
       if (!post) return res.status(404).json({ message: "Post not found" });
+      storage.incrementViewCount(post.id).catch(() => {});
       res.json(post);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -228,6 +238,111 @@ export async function registerRoutes(
       res.json({ message: "Tag deleted" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ===== BANNER ROUTES (Protected) =====
+
+  app.get("/api/admin/banners", isAuthenticated, async (_req, res) => {
+    try {
+      const all = await storage.getBanners();
+      res.json(all);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/banners", isAuthenticated, async (req, res) => {
+    try {
+      const parsed = insertBannerSchema.parse(req.body);
+      const b = await storage.createBanner(parsed);
+      res.status(201).json(b);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/banners/:id", isAuthenticated, async (req, res) => {
+    try {
+      const b = await storage.updateBanner(parseInt(req.params.id), req.body);
+      if (!b) return res.status(404).json({ message: "Banner not found" });
+      res.json(b);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/banners/:id", isAuthenticated, async (req, res) => {
+    try {
+      const success = await storage.deleteBanner(parseInt(req.params.id));
+      if (!success) return res.status(404).json({ message: "Banner not found" });
+      res.json({ message: "Banner deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ===== FREE MATERIALS ROUTES (Protected) =====
+
+  app.get("/api/admin/materials", isAuthenticated, async (_req, res) => {
+    try {
+      const all = await storage.getFreeMaterials();
+      res.json(all);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/materials", isAuthenticated, async (req, res) => {
+    try {
+      const parsed = insertFreeMaterialSchema.parse(req.body);
+      const m = await storage.createFreeMaterial(parsed);
+      res.status(201).json(m);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/materials/:id", isAuthenticated, async (req, res) => {
+    try {
+      const m = await storage.updateFreeMaterial(parseInt(req.params.id), req.body);
+      if (!m) return res.status(404).json({ message: "Material not found" });
+      res.json(m);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/materials/:id", isAuthenticated, async (req, res) => {
+    try {
+      const success = await storage.deleteFreeMaterial(parseInt(req.params.id));
+      if (!success) return res.status(404).json({ message: "Material not found" });
+      res.json({ message: "Material deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ===== SITE SETTINGS ROUTES (Protected) =====
+
+  app.get("/api/admin/settings", isAuthenticated, async (_req, res) => {
+    try {
+      const settings = await storage.getAllSettings();
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/settings", isAuthenticated, async (req, res) => {
+    try {
+      const entries = Object.entries(req.body) as [string, string][];
+      for (const [key, value] of entries) {
+        await storage.setSetting(key, value);
+      }
+      res.json({ message: "Settings updated" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
     }
   });
 

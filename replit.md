@@ -1,7 +1,7 @@
 # Psicometria Online Blog - CMS & Content Migration System
 
 ## Overview
-A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quantitative research blog. Features a complete content management system with automated WordPress content migration via crawling. Built with Express + React + PostgreSQL.
+A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quantitative research blog. Features a complete content management system with automated WordPress content migration via crawling. Built with Express + React + PostgreSQL. Home page has a magazine-style layout with 11 configurable sections.
 
 ## Project Architecture
 - **Backend**: Express.js with Drizzle ORM (PostgreSQL)
@@ -12,11 +12,11 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - **Crawling**: Cheerio-based WordPress post extraction
 
 ## Key Files
-- `shared/schema.ts` - Database schema (posts, categories, tags, many-to-many)
-- `server/storage.ts` - Database CRUD operations
+- `shared/schema.ts` - Database schema (posts, categories, tags, banners, free_materials, site_settings)
+- `server/storage.ts` - Database CRUD operations + home page data aggregation
 - `server/routes.ts` - API endpoints (public + admin)
 - `server/crawler.ts` - WordPress post crawler using Cheerio
-- `client/src/pages/home.tsx` - Blog home page with post grid
+- `client/src/pages/home.tsx` - Magazine-style home page with 11 configurable sections
 - `client/src/pages/post.tsx` - Individual post page
 - `client/src/pages/category.tsx` - Category listing page
 - `client/src/pages/tag.tsx` - Tag listing page
@@ -26,19 +26,35 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `client/src/pages/admin/manage-categories.tsx` - Category management
 - `client/src/pages/admin/manage-tags.tsx` - Tag management
 - `client/src/pages/admin/crawl.tsx` - WordPress import tool
+- `client/src/pages/admin/home-settings.tsx` - Home page section configuration
 
 ## Database Schema
-- `posts` - Blog posts with title, slug, content, status, featured image
+- `posts` - Blog posts with title, slug, content, status, featured image, viewCount
 - `categories` - Post categories with slug
 - `tags` - Post tags with slug
 - `post_categories` - Many-to-many junction table
 - `post_tags` - Many-to-many junction table
+- `banners` - Configurable banner ads (sidebar/horizontal slots)
+- `free_materials` - Downloadable materials section
+- `site_settings` - Key-value store for home page configuration
 - Auth tables from Replit Auth integration
+
+## Home Page Sections (configurable from admin)
+1. Hero banner with headline, subtitle, email signup
+2. Recent posts grid (4 posts) + sidebar banners
+3. Horizontal banner
+4. Featured category section (admin-selected)
+5. Newsletter signup
+6. Most read posts (by viewCount) + category navigation
+7. Diverse categories (up to 3 admin-selected)
+8. "You may also like" random posts
+9. Row category sections (2 admin-selected)
+10. Free materials download section
 
 ## Routes
 ### Public
-- `/` - Home page with paginated posts
-- `/post/:slug` - Individual post
+- `/` - Home page with magazine layout
+- `/post/:slug` - Individual post (increments viewCount)
 - `/categoria/:slug` - Posts by category
 - `/tag/:slug` - Posts by tag
 - `/busca` - Search page
@@ -49,6 +65,13 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `/admin/categorias` - Category management
 - `/admin/tags` - Tag management
 - `/admin/crawl` - WordPress content importer
+- `/admin/home` - Home page section configuration
+
+### API
+- `GET /api/home` - Aggregated home page data (all sections in one request)
+- `GET/POST/PUT/DELETE /api/admin/banners` - Banner CRUD
+- `GET/POST/PUT/DELETE /api/admin/materials` - Free materials CRUD
+- `GET/PUT /api/admin/settings` - Site settings (key-value)
 
 ## User Preferences
 - Portuguese language throughout the UI

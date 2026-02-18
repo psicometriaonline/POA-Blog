@@ -1,62 +1,427 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { PostCard } from "@/components/post-card";
-import { PaginationControls } from "@/components/pagination-controls";
+import { Link } from "wouter";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { PostWithRelations } from "@shared/schema";
+import { Calendar, User, ArrowRight, BookOpen, Mail, ChevronRight, Eye, Download } from "lucide-react";
+import type { PostWithRelations, Category, Banner, FreeMaterial } from "@shared/schema";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
-export default function Home() {
-  const [offset, setOffset] = useState(0);
-  const limit = 12;
+interface HomeData {
+  settings: Record<string, string>;
+  categories: Category[];
+  recentPosts: PostWithRelations[];
+  sidebarBanners: Banner[];
+  horizontalBanners: Banner[];
+  featuredCategory: Category | null;
+  featuredCategoryPosts: PostWithRelations[];
+  mostRead: PostWithRelations[];
+  diverseSections: { category: Category; posts: PostWithRelations[] }[];
+  rowSection1: { category: Category; posts: PostWithRelations[] } | null;
+  rowSection2: { category: Category; posts: PostWithRelations[] } | null;
+  randomPosts: PostWithRelations[];
+  materials: FreeMaterial[];
+}
 
-  const { data, isLoading } = useQuery<{ posts: PostWithRelations[]; total: number }>({
-    queryKey: [`/api/posts?limit=${limit}&offset=${offset}`],
-  });
+function formatDate(date: string | Date | null) {
+  if (!date) return null;
+  return format(new Date(date), "dd 'de' MMMM, yyyy", { locale: ptBR });
+}
+
+function formatDateShort(date: string | Date | null) {
+  if (!date) return null;
+  return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
+}
+
+function SectionTitle({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`mb-6 ${className}`}>
+      <h2 className="font-serif text-2xl font-bold">{children}</h2>
+      <div className="h-1 w-16 bg-primary mt-2 rounded-full" />
+    </div>
+  );
+}
+
+function PostCardLarge({ post }: { post: PostWithRelations }) {
+  const date = formatDate(post.publishedAt);
+  return (
+    <Link href={`/post/${post.slug}`} data-testid={`card-post-${post.id}`}>
+      <Card className="overflow-visible hover-elevate active-elevate-2 cursor-pointer h-full flex flex-col">
+        {post.featuredImage && (
+          <div className="aspect-video overflow-hidden rounded-t-md">
+            <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover" loading="lazy" />
+          </div>
+        )}
+        <div className="p-4 flex flex-col flex-1 gap-2">
+          {post.categories.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {post.categories.map((cat) => (
+                <Badge key={cat.id} variant="secondary" className="text-xs">{cat.name}</Badge>
+              ))}
+            </div>
+          )}
+          <h3 className="font-serif text-lg font-semibold leading-snug line-clamp-2">{post.title}</h3>
+          {post.excerpt && <p className="text-sm text-muted-foreground line-clamp-2 flex-1">{post.excerpt}</p>}
+          <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground mt-auto pt-2">
+            {date && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{date}</span>}
+            {post.authorName && <span className="flex items-center gap-1"><User className="h-3 w-3" />{post.authorName}</span>}
+          </div>
+        </div>
+      </Card>
+    </Link>
+  );
+}
+
+function PostCardCompact({ post, index }: { post: PostWithRelations; index?: number }) {
+  const date = formatDateShort(post.publishedAt);
+  return (
+    <Link href={`/post/${post.slug}`} data-testid={`card-compact-${post.id}`}>
+      <div className="flex gap-3 p-3 rounded-md hover-elevate active-elevate-2 cursor-pointer">
+        {index !== undefined && (
+          <span className="text-3xl font-bold text-primary/20 flex-shrink-0 w-8 text-center">{index}</span>
+        )}
+        {post.featuredImage && (
+          <div className="w-20 h-16 flex-shrink-0 rounded-md overflow-hidden">
+            <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover" loading="lazy" />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <h4 className="font-serif text-sm font-semibold leading-snug line-clamp-2">{post.title}</h4>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+            {date && <span>{date}</span>}
+            {post.viewCount > 0 && <span className="flex items-center gap-0.5"><Eye className="h-3 w-3" />{post.viewCount}</span>}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function PostCardHorizontal({ post }: { post: PostWithRelations }) {
+  const date = formatDate(post.publishedAt);
+  return (
+    <Link href={`/post/${post.slug}`} data-testid={`card-horiz-${post.id}`}>
+      <Card className="overflow-visible hover-elevate active-elevate-2 cursor-pointer flex flex-col sm:flex-row h-full">
+        {post.featuredImage && (
+          <div className="sm:w-48 aspect-video sm:aspect-auto flex-shrink-0 overflow-hidden rounded-t-md sm:rounded-l-md sm:rounded-tr-none">
+            <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover" loading="lazy" />
+          </div>
+        )}
+        <div className="p-4 flex flex-col flex-1 gap-2">
+          {post.categories.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {post.categories.map((cat) => (
+                <Badge key={cat.id} variant="secondary" className="text-xs">{cat.name}</Badge>
+              ))}
+            </div>
+          )}
+          <h3 className="font-serif text-base font-semibold leading-snug line-clamp-2">{post.title}</h3>
+          {post.excerpt && <p className="text-sm text-muted-foreground line-clamp-2">{post.excerpt}</p>}
+          <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground mt-auto pt-1">
+            {date && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{date}</span>}
+          </div>
+        </div>
+      </Card>
+    </Link>
+  );
+}
+
+function Section2_Hero({ settings }: { settings: Record<string, string> }) {
+  const headline = settings["hero_headline"] || "Blog Psicometria Online";
+  const subheadline = settings["hero_subheadline"] || "Recursos de aprendizagem em psicometria e analises quantitativas";
+  const ctaUrl = settings["hero_cta_url"] || "";
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="font-serif text-3xl font-bold mb-2" data-testid="text-home-title">
-          Blog Psicometria Online
-        </h1>
-        <p className="text-muted-foreground" data-testid="text-home-subtitle">
-          Recursos de aprendizagem em psicometria e analises quantitativas
-        </p>
+    <section className="bg-primary text-primary-foreground" data-testid="section-hero">
+      <div className="max-w-6xl mx-auto px-4 py-12 md:py-16">
+        <div className="max-w-2xl mx-auto text-center">
+          <h1 className="font-serif text-3xl md:text-4xl font-bold mb-4" data-testid="text-hero-title">{headline}</h1>
+          <p className="text-primary-foreground/80 text-lg mb-8" data-testid="text-hero-subtitle">{subheadline}</p>
+          <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+            <Input
+              type="email"
+              placeholder="Seu melhor e-mail"
+              className="bg-white/10 border-white/20 text-primary-foreground placeholder:text-primary-foreground/50 flex-1"
+              data-testid="input-hero-email"
+            />
+            <Button variant="secondary" className="flex-shrink-0" data-testid="button-hero-subscribe">
+              <Mail className="h-4 w-4 mr-1" />
+              Cadastrar
+            </Button>
+          </div>
+        </div>
       </div>
+    </section>
+  );
+}
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
+function Section3_RecentWithBanners({ posts, bannerList }: { posts: PostWithRelations[]; bannerList: Banner[] }) {
+  if (posts.length === 0) return null;
+  return (
+    <section className="max-w-6xl mx-auto px-4 py-10" data-testid="section-recent-posts">
+      <SectionTitle>Posts Recentes</SectionTitle>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {posts.map((post) => (
+            <PostCardLarge key={post.id} post={post} />
+          ))}
+        </div>
+        <div className="space-y-4">
+          {bannerList.map((banner) => (
+            <a key={banner.id} href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner.id}`}>
+              <Card className="overflow-visible hover-elevate cursor-pointer">
+                <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto rounded-md" loading="lazy" />
+              </Card>
+            </a>
+          ))}
+          {bannerList.length === 0 && (
+            <Card className="p-6 text-center">
+              <p className="text-sm text-muted-foreground">Espaco para banner</p>
+            </Card>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Section4_HorizontalBanner({ bannerList }: { bannerList: Banner[] }) {
+  if (bannerList.length === 0) return null;
+  const banner = bannerList[0];
+  return (
+    <section className="max-w-6xl mx-auto px-4 py-4" data-testid="section-horizontal-banner">
+      <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer">
+        <Card className="overflow-visible hover-elevate cursor-pointer">
+          <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto rounded-md" loading="lazy" />
+        </Card>
+      </a>
+    </section>
+  );
+}
+
+function Section5_FeaturedCategory({ category, posts }: { category: Category | null; posts: PostWithRelations[] }) {
+  if (!category || posts.length === 0) return null;
+  return (
+    <section className="max-w-6xl mx-auto px-4 py-10" data-testid="section-featured-category">
+      <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
+        <SectionTitle className="mb-0">{category.name}</SectionTitle>
+        <Link href={`/categoria/${category.slug}`}>
+          <Button variant="outline" size="sm" data-testid="button-see-more-featured">
+            Ver mais
+            <ArrowRight className="h-4 w-4 ml-1" />
+          </Button>
+        </Link>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {posts.map((post) => (
+          <PostCardLarge key={post.id} post={post} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Section6_Newsletter({ settings }: { settings: Record<string, string> }) {
+  const text = settings["newsletter_text"] || "Receba nossos conteudos diretamente no seu e-mail";
+  return (
+    <section className="bg-muted/50" data-testid="section-newsletter">
+      <div className="max-w-6xl mx-auto px-4 py-10">
+        <div className="max-w-xl mx-auto text-center">
+          <Mail className="h-10 w-10 text-primary mx-auto mb-4" />
+          <h2 className="font-serif text-2xl font-bold mb-2">Newsletter</h2>
+          <p className="text-muted-foreground mb-6">{text}</p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Input
+              type="email"
+              placeholder="Seu melhor e-mail"
+              className="flex-1"
+              data-testid="input-newsletter-email"
+            />
+            <Button data-testid="button-newsletter-subscribe">
+              <Mail className="h-4 w-4 mr-1" />
+              Inscrever-se
+            </Button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Section7_MostReadAndCategories({ mostRead, categories: cats }: { mostRead: PostWithRelations[]; categories: Category[] }) {
+  return (
+    <section className="max-w-6xl mx-auto px-4 py-10" data-testid="section-most-read">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          <SectionTitle>Mais Lidos</SectionTitle>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+            {mostRead.map((post, i) => (
+              <PostCardCompact key={post.id} post={post} index={i + 1} />
+            ))}
+          </div>
+        </div>
+        <div>
+          <SectionTitle>Categorias</SectionTitle>
+          <div className="space-y-1">
+            {cats.map((cat) => (
+              <Link key={cat.id} href={`/categoria/${cat.slug}`} data-testid={`link-category-${cat.id}`}>
+                <div className="flex items-center justify-between p-3 rounded-md hover-elevate active-elevate-2 cursor-pointer">
+                  <span className="text-sm font-medium">{cat.name}</span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Section8_DiverseCategories({ sections, randomPosts }: { sections: { category: Category; posts: PostWithRelations[] }[]; randomPosts: PostWithRelations[] }) {
+  if (sections.length === 0 && randomPosts.length === 0) return null;
+  return (
+    <section className="max-w-6xl mx-auto px-4 py-10" data-testid="section-diverse-categories">
+      {sections.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+          {sections.map((sec) => (
+            <div key={sec.category.id}>
+              <div className="flex items-center justify-between gap-2 mb-4">
+                <h3 className="font-serif text-lg font-bold">{sec.category.name}</h3>
+                <Link href={`/categoria/${sec.category.slug}`}>
+                  <Button variant="ghost" size="sm" className="text-xs">
+                    Ver mais <ChevronRight className="h-3 w-3 ml-0.5" />
+                  </Button>
+                </Link>
+              </div>
+              <div className="space-y-1">
+                {sec.posts.map((post) => (
+                  <PostCardCompact key={post.id} post={post} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {randomPosts.length > 0 && (
+        <div>
+          <SectionTitle>Voce tambem pode gostar</SectionTitle>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {randomPosts.slice(0, 6).map((post) => (
+              <PostCardHorizontal key={post.id} post={post} />
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function Section9_RowSections({ row1, row2 }: { row1: { category: Category; posts: PostWithRelations[] } | null; row2: { category: Category; posts: PostWithRelations[] } | null }) {
+  const rows = [row1, row2].filter(Boolean) as { category: Category; posts: PostWithRelations[] }[];
+  if (rows.length === 0) return null;
+  return (
+    <section className="max-w-6xl mx-auto px-4 py-10" data-testid="section-row-categories">
+      {rows.map((row) => (
+        <div key={row.category.id} className="mb-10 last:mb-0">
+          <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
+            <SectionTitle className="mb-0">{row.category.name}</SectionTitle>
+            <Link href={`/categoria/${row.category.slug}`}>
+              <Button variant="outline" size="sm">
+                Ver mais <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {row.posts.map((post) => (
+              <PostCardLarge key={post.id} post={post} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function Section10_FreeMaterials({ materials }: { materials: FreeMaterial[] }) {
+  if (materials.length === 0) return null;
+  return (
+    <section className="bg-primary/5" data-testid="section-free-materials">
+      <div className="max-w-6xl mx-auto px-4 py-10">
+        <div className="text-center mb-8">
+          <Download className="h-10 w-10 text-primary mx-auto mb-4" />
+          <h2 className="font-serif text-2xl font-bold mb-2">Materiais Gratuitos</h2>
+          <p className="text-muted-foreground">Baixe nossos recursos de estudo gratuitamente</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {materials.map((mat) => (
+            <a key={mat.id} href={mat.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`material-${mat.id}`}>
+              <Card className="overflow-visible hover-elevate active-elevate-2 cursor-pointer h-full flex flex-col">
+                {mat.imageUrl && (
+                  <div className="aspect-video overflow-hidden rounded-t-md">
+                    <img src={mat.imageUrl} alt={mat.title} className="w-full h-full object-cover" loading="lazy" />
+                  </div>
+                )}
+                <div className="p-4 flex flex-col flex-1 gap-2">
+                  <h3 className="font-serif text-base font-semibold leading-snug">{mat.title}</h3>
+                  {mat.description && <p className="text-sm text-muted-foreground line-clamp-2">{mat.description}</p>}
+                  <div className="flex items-center gap-1 text-primary text-sm font-medium mt-auto pt-2">
+                    <Download className="h-4 w-4" />
+                    Baixar gratis
+                  </div>
+                </div>
+              </Card>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HomeSkeleton() {
+  return (
+    <div>
+      <div className="bg-primary h-64" />
+      <div className="max-w-6xl mx-auto px-4 py-10">
+        <Skeleton className="h-8 w-48 mb-6" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="space-y-3">
-              <Skeleton className="h-48 w-full rounded-md" />
+              <Skeleton className="h-40 w-full rounded-md" />
               <Skeleton className="h-4 w-3/4" />
               <Skeleton className="h-4 w-1/2" />
             </div>
           ))}
         </div>
-      ) : data?.posts.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-muted-foreground text-lg" data-testid="text-no-posts">
-            Nenhum post publicado ainda.
-          </p>
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data?.posts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
-          </div>
-          {data && (
-            <PaginationControls
-              total={data.total}
-              limit={limit}
-              offset={offset}
-              onPageChange={setOffset}
-            />
-          )}
-        </>
-      )}
+      </div>
+    </div>
+  );
+}
+
+export default function Home() {
+  const { data, isLoading } = useQuery<HomeData>({
+    queryKey: ["/api/home"],
+  });
+
+  if (isLoading || !data) {
+    return <HomeSkeleton />;
+  }
+
+  return (
+    <div>
+      <Section2_Hero settings={data.settings} />
+      <Section3_RecentWithBanners posts={data.recentPosts} bannerList={data.sidebarBanners} />
+      <Section4_HorizontalBanner bannerList={data.horizontalBanners} />
+      <Section5_FeaturedCategory category={data.featuredCategory} posts={data.featuredCategoryPosts} />
+      <Section6_Newsletter settings={data.settings} />
+      <Section7_MostReadAndCategories mostRead={data.mostRead} categories={data.categories} />
+      <Section8_DiverseCategories sections={data.diverseSections} randomPosts={data.randomPosts} />
+      <Section9_RowSections row1={data.rowSection1} row2={data.rowSection2} />
+      <Section10_FreeMaterials materials={data.materials} />
     </div>
   );
 }

@@ -29,6 +29,7 @@ export const posts = pgTable("posts", {
   status: text("status").notNull().default("draft"),
   authorName: text("author_name"),
   sourceUrl: text("source_url"),
+  viewCount: integer("view_count").notNull().default(0),
   publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -67,9 +68,36 @@ export const postTagsRelations = relations(postTags, ({ one }) => ({
   tag: one(tags, { fields: [postTags.tagId], references: [tags.id] }),
 }));
 
+export const banners = pgTable("banners", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  title: text("title").notNull(),
+  imageUrl: text("image_url").notNull(),
+  linkUrl: text("link_url"),
+  slot: text("slot").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const freeMaterials = pgTable("free_materials", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  title: text("title").notNull(),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  linkUrl: text("link_url").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const siteSettings = pgTable("site_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+});
+
 export const insertCategorySchema = createInsertSchema(categories).omit({ id: true });
 export const insertTagSchema = createInsertSchema(tags).omit({ id: true });
 export const insertPostSchema = createInsertSchema(posts).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertBannerSchema = createInsertSchema(banners).omit({ id: true });
+export const insertFreeMaterialSchema = createInsertSchema(freeMaterials).omit({ id: true });
 
 export type Category = typeof categories.$inferSelect;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
@@ -77,6 +105,11 @@ export type Tag = typeof tags.$inferSelect;
 export type InsertTag = z.infer<typeof insertTagSchema>;
 export type Post = typeof posts.$inferSelect;
 export type InsertPost = z.infer<typeof insertPostSchema>;
+export type Banner = typeof banners.$inferSelect;
+export type InsertBanner = z.infer<typeof insertBannerSchema>;
+export type FreeMaterial = typeof freeMaterials.$inferSelect;
+export type InsertFreeMaterial = z.infer<typeof insertFreeMaterialSchema>;
+export type SiteSetting = typeof siteSettings.$inferSelect;
 
 export type PostWithRelations = Post & {
   categories: Category[];
