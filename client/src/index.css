@@ -172,6 +172,57 @@
   @apply font-serif;
 }
 
+.prose pre {
+  @apply rounded-md overflow-x-auto;
+  background: hsl(222 18% 14%) !important;
+  padding: 1rem;
+}
+
+.prose pre code {
+  @apply text-sm leading-relaxed;
+  background: none !important;
+  padding: 0 !important;
+  font-family: 'Fira Code', monospace;
+}
+
+.prose code:not(pre code) {
+  @apply text-sm px-1.5 py-0.5 rounded-md;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.math-block {
+  @apply text-center py-4 overflow-x-auto;
+}
+
+.math-inline {
+  display: inline;
+}
+
+.tiptap pre {
+  @apply rounded-md overflow-x-auto my-4;
+  background: hsl(222 18% 14%) !important;
+  padding: 1rem;
+}
+
+.tiptap pre code {
+  @apply text-sm leading-relaxed;
+  background: none !important;
+  color: #e1e4e8;
+  font-family: 'Fira Code', monospace;
+}
+
+.tiptap .math-inline,
+.tiptap .math-block {
+  @apply bg-muted/50 rounded-md px-2 py-1;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.9em;
+}
+
+.tiptap .math-block {
+  @apply text-center py-3 my-4 block;
+}
+
 .tiptap {
   outline: none;
   min-height: 300px;

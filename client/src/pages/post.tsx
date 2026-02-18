@@ -8,13 +8,74 @@ import type { PostWithRelations } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import DOMPurify from "dompurify";
+import { useEffect, useRef } from "react";
+import katex from "katex";
+import "katex/dist/katex.min.css";
+import hljs from "highlight.js/lib/core";
+import python from "highlight.js/lib/languages/python";
+import r from "highlight.js/lib/languages/r";
+import javascript from "highlight.js/lib/languages/javascript";
+import typescript from "highlight.js/lib/languages/typescript";
+import sql from "highlight.js/lib/languages/sql";
+import bash from "highlight.js/lib/languages/bash";
+import css from "highlight.js/lib/languages/css";
+import xml from "highlight.js/lib/languages/xml";
+import json from "highlight.js/lib/languages/json";
+import yaml from "highlight.js/lib/languages/yaml";
+import latex from "highlight.js/lib/languages/latex";
+import "highlight.js/styles/github-dark.css";
+
+hljs.registerLanguage("python", python);
+hljs.registerLanguage("r", r);
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("typescript", typescript);
+hljs.registerLanguage("sql", sql);
+hljs.registerLanguage("bash", bash);
+hljs.registerLanguage("css", css);
+hljs.registerLanguage("html", xml);
+hljs.registerLanguage("xml", xml);
+hljs.registerLanguage("json", json);
+hljs.registerLanguage("yaml", yaml);
+hljs.registerLanguage("latex", latex);
+
+function renderMathAndCode(contentRef: React.RefObject<HTMLDivElement | null>) {
+  const el = contentRef.current;
+  if (!el) return;
+
+  el.querySelectorAll('span[data-type="math-inline"]').forEach((node) => {
+    const latexStr = (node as HTMLElement).getAttribute("data-latex") || node.textContent || "";
+    try {
+      node.innerHTML = katex.renderToString(latexStr, { throwOnError: false, displayMode: false });
+    } catch {}
+  });
+
+  el.querySelectorAll('div[data-type="math-block"]').forEach((node) => {
+    const latexStr = (node as HTMLElement).getAttribute("data-latex") || node.textContent || "";
+    try {
+      node.innerHTML = katex.renderToString(latexStr, { throwOnError: false, displayMode: true });
+    } catch {}
+  });
+
+  el.querySelectorAll("pre code").forEach((block) => {
+    if (!(block as HTMLElement).dataset.highlighted) {
+      hljs.highlightElement(block as HTMLElement);
+    }
+  });
+}
 
 export default function PostPage() {
   const { slug } = useParams<{ slug: string }>();
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const { data: post, isLoading } = useQuery<PostWithRelations>({
     queryKey: [`/api/posts/slug/${slug}`],
   });
+
+  useEffect(() => {
+    if (post && contentRef.current) {
+      setTimeout(() => renderMathAndCode(contentRef), 50);
+    }
+  }, [post]);
 
   if (isLoading) {
     return (
@@ -101,8 +162,9 @@ export default function PostPage() {
       )}
 
       <div
+        ref={contentRef}
         className="prose prose-lg dark:prose-invert max-w-none"
-        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content, { ADD_TAGS: ["iframe"], ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "scrolling"] }) }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content, { ADD_TAGS: ["iframe", "span", "div"], ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "scrolling", "data-type", "data-latex", "class"] }) }}
         data-testid="div-post-content"
       />
 

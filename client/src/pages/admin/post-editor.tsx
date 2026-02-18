@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Code, Sigma } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -20,6 +20,13 @@ import StarterKit from "@tiptap/starter-kit";
 import LinkExtension from "@tiptap/extension-link";
 import ImageExtension from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
+import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import { common, createLowlight } from "lowlight";
+import { MathInline, MathBlock } from "@/lib/tiptap-math";
+import katex from "katex";
+import "katex/dist/katex.min.css";
+
+const lowlight = createLowlight(common);
 
 function slugify(text: string): string {
   return text
@@ -30,13 +37,45 @@ function slugify(text: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+function MathPreview({ latex }: { latex: string }) {
+  try {
+    const html = katex.renderToString(latex, { throwOnError: false, displayMode: false });
+    return <span dangerouslySetInnerHTML={{ __html: html }} />;
+  } catch {
+    return <span className="text-destructive text-xs">{latex}</span>;
+  }
+}
+
+const LANGUAGES = [
+  { value: "", label: "Auto-detectar" },
+  { value: "python", label: "Python" },
+  { value: "r", label: "R" },
+  { value: "javascript", label: "JavaScript" },
+  { value: "typescript", label: "TypeScript" },
+  { value: "sql", label: "SQL" },
+  { value: "bash", label: "Bash" },
+  { value: "css", label: "CSS" },
+  { value: "html", label: "HTML" },
+  { value: "json", label: "JSON" },
+  { value: "yaml", label: "YAML" },
+  { value: "latex", label: "LaTeX" },
+];
+
 function TiptapEditor({ content, onChange }: { content: string; onChange: (html: string) => void }) {
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        codeBlock: false,
+      }),
       LinkExtension.configure({ openOnClick: false }),
       ImageExtension,
       Placeholder.configure({ placeholder: "Escreva o conteudo do post aqui..." }),
+      CodeBlockLowlight.configure({
+        lowlight,
+        defaultLanguage: null,
+      }),
+      MathInline,
+      MathBlock,
     ],
     content,
     onUpdate: ({ editor }) => {
@@ -49,6 +88,26 @@ function TiptapEditor({ content, onChange }: { content: string; onChange: (html:
       editor.commands.setContent(content);
     }
   }, [content, editor]);
+
+  const insertMath = useCallback((isBlock: boolean) => {
+    if (!editor) return;
+    const latex = window.prompt(
+      isBlock ? "Formula em bloco (LaTeX):" : "Formula inline (LaTeX):",
+      isBlock ? "\\sum_{i=1}^{n} x_i" : "x^2 + y^2 = r^2"
+    );
+    if (!latex) return;
+
+    if (isBlock) {
+      (editor.commands as any).insertMathBlock(latex);
+    } else {
+      (editor.commands as any).insertMathInline(latex);
+    }
+  }, [editor]);
+
+  const insertCodeBlock = useCallback(() => {
+    if (!editor) return;
+    editor.chain().focus().toggleCodeBlock().run();
+  }, [editor]);
 
   if (!editor) return null;
 
@@ -141,6 +200,42 @@ function TiptapEditor({ content, onChange }: { content: string; onChange: (html:
           data-testid="button-image"
         >
           Imagem
+        </Button>
+
+        <div className="w-px h-6 bg-border mx-1" />
+
+        <Button
+          type="button"
+          size="sm"
+          variant={editor.isActive("codeBlock") ? "default" : "ghost"}
+          onClick={insertCodeBlock}
+          data-testid="button-code-block"
+          title="Bloco de codigo"
+        >
+          <Code className="h-4 w-4 mr-1" />
+          Codigo
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => insertMath(false)}
+          data-testid="button-math-inline"
+          title="Formula matematica inline"
+        >
+          <Sigma className="h-4 w-4 mr-1" />
+          f(x)
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => insertMath(true)}
+          data-testid="button-math-block"
+          title="Formula matematica em bloco"
+        >
+          <Sigma className="h-4 w-4 mr-1" />
+          Equacao
         </Button>
       </div>
       <div className="border border-t-0 rounded-b-md p-4">
