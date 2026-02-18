@@ -81,7 +81,7 @@ export default function PostPage() {
   if (isLoading) {
     return (
       <>
-        <HeroBar />
+        <HeroBar showHeadline={true} />
         <div className="max-w-4xl mx-auto px-4 py-8">
           <Skeleton className="h-8 w-3/4 mb-4" />
           <Skeleton className="h-4 w-1/3 mb-8" />
@@ -99,7 +99,7 @@ export default function PostPage() {
   if (!post) {
     return (
       <>
-        <HeroBar />
+        <HeroBar showHeadline={true} />
         <div className="max-w-4xl mx-auto px-4 py-16 text-center">
           <h1 className="text-2xl font-bold mb-4">Post nao encontrado</h1>
           <Link href="/">
@@ -119,7 +119,7 @@ export default function PostPage() {
 
   return (
     <>
-      <HeroBar />
+      <HeroBar showHeadline={true} />
       <article className="max-w-4xl mx-auto px-4 py-8">
       <Link href="/">
         <Button variant="ghost" size="sm" className="mb-4" data-testid="button-back">

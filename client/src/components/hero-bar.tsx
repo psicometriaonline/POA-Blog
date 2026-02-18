@@ -6,7 +6,7 @@ import { useState, useRef, useEffect } from "react";
 import type { Category } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 
-export function HeroBar({ showHeadline = false, settings = {} }: { showHeadline?: boolean; settings?: Record<string, string> }) {
+export function HeroBar({ showHeadline = true, settings = {} }: { showHeadline?: boolean; settings?: Record<string, string> }) {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [catDropdownOpen, setCatDropdownOpen] = useState(false);
@@ -127,32 +127,6 @@ export function HeroBar({ showHeadline = false, settings = {} }: { showHeadline?
           </div>
         )}
 
-        {!showHeadline && (
-          <div className="pb-4">
-            <div className="max-w-4xl mx-auto">
-              <p className="text-white/80 text-sm mb-3">
-                Junte-se a mais de <span className="text-accent-bright font-semibold">22.300</span> membros e receba conteudos exclusivos e com prioridade
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Input
-                  type="text"
-                  placeholder="Seu primeiro nome"
-                  className="bg-white text-foreground placeholder:text-muted-foreground flex-1"
-                  data-testid="input-hero-name"
-                />
-                <Input
-                  type="email"
-                  placeholder="Digite seu e-mail"
-                  className="bg-white text-foreground placeholder:text-muted-foreground flex-1"
-                  data-testid="input-hero-email"
-                />
-                <Button className="flex-shrink-0 bg-accent-bright text-accent-bright-foreground border-accent-bright" data-testid="button-hero-subscribe">
-                  Quero receber materiais gratuitos
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </section>
   );
