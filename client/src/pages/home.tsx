@@ -182,7 +182,7 @@ function SectionHero({ settings, categories }: { settings: Record<string, string
   };
 
   return (
-    <section style={{ backgroundColor: "hsl(220 30% 15%)" }} data-testid="section-hero">
+    <section className="bg-dark-bg" data-testid="section-hero">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between gap-4 py-4">
           <div className="relative" ref={catRef}>
@@ -198,7 +198,7 @@ function SectionHero({ settings, categories }: { settings: Record<string, string
               <ChevronDown className="h-3 w-3 ml-1" />
             </Button>
             {catDropdownOpen && (
-              <div className="absolute top-full left-0 mt-1 min-w-56 rounded-md shadow-lg border z-50" style={{ backgroundColor: "hsl(220 30% 18%)", borderColor: "hsl(220 20% 25%)" }}>
+              <div className="absolute top-full left-0 mt-1 min-w-56 rounded-md shadow-lg border border-white/10 z-50 bg-dark-bg">
                 {categories.map((cat) => (
                   <Link
                     key={cat.id}
@@ -338,7 +338,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
 
         <div className="flex flex-col gap-6 h-full" data-testid="sidebar-banners">
           {banner1 && (
-            <div className="flex-1 bg-dark-bg rounded-md p-4">
+            <div className="flex-1 border rounded-md p-4">
               <a href={banner1.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner1.id}`}>
                 <div className="aspect-[1400/788] overflow-hidden rounded-md">
                   <img src={banner1.imageUrl} alt={banner1.title} className="w-full h-full object-cover" loading="lazy" />
@@ -346,7 +346,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
               </a>
               {banner1.title && (
                 <div className="mt-3">
-                  <p className="text-sm text-dark-bg-foreground/70 line-clamp-2 mb-2">{banner1.title}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{banner1.title}</p>
                   {banner1.linkUrl && (
                     <a href={banner1.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-banner-cta-${banner1.id}`}>
                       <Button size="sm" className="bg-accent-bright text-accent-bright-foreground border-accent-bright" data-testid={`button-banner-cta-${banner1.id}`}>
