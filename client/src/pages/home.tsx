@@ -446,8 +446,8 @@ function SectionNewsletter({ settings }: { settings: Record<string, string> }) {
 function SectionMostReadAndCategories({ mostRead, categories: cats }: { mostRead: PostWithRelations[]; categories: Category[] }) {
   return (
     <section className="max-w-7xl mx-auto px-4 py-10" data-testid="section-most-read">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
+        <div>
           <SectionTitle>Mais Lidos</SectionTitle>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
             {mostRead.map((post, i) => (
