@@ -338,7 +338,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
 
         <div className="flex flex-col gap-6 h-full" data-testid="sidebar-banners">
           {banner1 && (
-            <div className="flex-1">
+            <div className="flex-1 border rounded-md p-4">
               <a href={banner1.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner1.id}`}>
                 <div className="aspect-[1400/788] overflow-hidden rounded-md">
                   <img src={banner1.imageUrl} alt={banner1.title} className="w-full h-full object-cover" loading="lazy" />
@@ -361,7 +361,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
           )}
 
           {banner2 && (
-            <div className="flex-1">
+            <div className="flex-1 border rounded-md p-4">
               <a href={banner2.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner2.id}`}>
                 <div className="aspect-[1400/788] overflow-hidden rounded-md">
                   <img src={banner2.imageUrl} alt={banner2.title} className="w-full h-full object-cover" loading="lazy" />
@@ -371,7 +371,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
           )}
 
           {!banner1 && !banner2 && (
-            <div className="aspect-[1400/788] rounded-md bg-muted flex items-center justify-center">
+            <div className="aspect-[1400/788] rounded-md border p-4 flex items-center justify-center">
               <p className="text-sm text-muted-foreground">Espaco para banner</p>
             </div>
           )}
