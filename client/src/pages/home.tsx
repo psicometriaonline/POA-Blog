@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, User, ArrowRight, BookOpen, Mail, ChevronRight, Eye, Download } from "lucide-react";
+import { Calendar, User, ArrowRight, Mail, ChevronRight, Eye, Download } from "lucide-react";
 import type { PostWithRelations, Category, Banner, FreeMaterial } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -129,10 +129,29 @@ function PostCardHorizontal({ post }: { post: PostWithRelations }) {
   );
 }
 
-function Section2_Hero({ settings }: { settings: Record<string, string> }) {
+function BannerSidebar({ banner }: { banner: Banner }) {
+  return (
+    <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner.id}`}>
+      <Card className="overflow-visible hover-elevate cursor-pointer">
+        <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto rounded-md" loading="lazy" />
+      </Card>
+    </a>
+  );
+}
+
+function BannerHorizontal({ banner }: { banner: Banner }) {
+  return (
+    <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-horizontal-${banner.id}`}>
+      <Card className="overflow-visible hover-elevate cursor-pointer">
+        <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto rounded-md" loading="lazy" />
+      </Card>
+    </a>
+  );
+}
+
+function SectionHero({ settings }: { settings: Record<string, string> }) {
   const headline = settings["hero_headline"] || "Blog Psicometria Online";
   const subheadline = settings["hero_subheadline"] || "Recursos de aprendizagem em psicometria e analises quantitativas";
-  const ctaUrl = settings["hero_cta_url"] || "";
 
   return (
     <section className="bg-primary text-primary-foreground" data-testid="section-hero">
@@ -158,26 +177,80 @@ function Section2_Hero({ settings }: { settings: Record<string, string> }) {
   );
 }
 
-function Section3_RecentWithBanners({ posts, bannerList }: { posts: PostWithRelations[]; bannerList: Banner[] }) {
+function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelations[]; sidebarBanners: Banner[] }) {
   if (posts.length === 0) return null;
+  const mainPost = posts[0];
+  const sidePosts = posts.slice(1, 4);
+  const mainDate = formatDate(mainPost.publishedAt);
+
   return (
     <section className="max-w-6xl mx-auto px-4 py-10" data-testid="section-recent-posts">
       <SectionTitle>Posts Recentes</SectionTitle>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {posts.map((post) => (
-            <PostCardLarge key={post.id} post={post} />
-          ))}
-        </div>
-        <div className="space-y-4">
-          {bannerList.map((banner) => (
-            <a key={banner.id} href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner.id}`}>
-              <Card className="overflow-visible hover-elevate cursor-pointer">
-                <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto rounded-md" loading="lazy" />
+        <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Link href={`/post/${mainPost.slug}`} data-testid={`card-post-${mainPost.id}`}>
+              <Card className="overflow-visible hover-elevate active-elevate-2 cursor-pointer h-full flex flex-col">
+                {mainPost.featuredImage && (
+                  <div className="aspect-video overflow-hidden rounded-t-md">
+                    <img src={mainPost.featuredImage} alt={mainPost.title} className="w-full h-full object-cover" loading="lazy" />
+                  </div>
+                )}
+                <div className="p-4 flex flex-col flex-1 gap-2">
+                  {mainPost.categories.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {mainPost.categories.map((cat) => (
+                        <Badge key={cat.id} variant="secondary" className="text-xs">{cat.name}</Badge>
+                      ))}
+                    </div>
+                  )}
+                  <h3 className="font-serif text-lg font-bold leading-snug line-clamp-3">{mainPost.title}</h3>
+                  {mainPost.excerpt && <p className="text-sm text-muted-foreground line-clamp-3 flex-1">{mainPost.excerpt}</p>}
+                  <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground mt-auto pt-2">
+                    {mainDate && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{mainDate}</span>}
+                    {mainPost.authorName && <span className="flex items-center gap-1"><User className="h-3 w-3" />{mainPost.authorName}</span>}
+                  </div>
+                </div>
               </Card>
-            </a>
+            </Link>
+
+            <div className="flex flex-col gap-4">
+              {sidePosts.map((post) => {
+                const d = formatDateShort(post.publishedAt);
+                return (
+                  <Link key={post.id} href={`/post/${post.slug}`} data-testid={`card-post-${post.id}`}>
+                    <Card className="overflow-visible hover-elevate active-elevate-2 cursor-pointer flex flex-row h-full">
+                      {post.featuredImage && (
+                        <div className="w-28 flex-shrink-0 overflow-hidden rounded-l-md">
+                          <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover" loading="lazy" />
+                        </div>
+                      )}
+                      <div className="p-3 flex flex-col flex-1 gap-1 min-w-0">
+                        {post.categories.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {post.categories.slice(0, 1).map((cat) => (
+                              <Badge key={cat.id} variant="secondary" className="text-xs">{cat.name}</Badge>
+                            ))}
+                          </div>
+                        )}
+                        <h4 className="font-serif text-sm font-semibold leading-snug line-clamp-2">{post.title}</h4>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-auto">
+                          {d && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{d}</span>}
+                        </div>
+                      </div>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4" data-testid="sidebar-banners">
+          {sidebarBanners.map((banner) => (
+            <BannerSidebar key={banner.id} banner={banner} />
           ))}
-          {bannerList.length === 0 && (
+          {sidebarBanners.length === 0 && (
             <Card className="p-6 text-center">
               <p className="text-sm text-muted-foreground">Espaco para banner</p>
             </Card>
@@ -188,21 +261,20 @@ function Section3_RecentWithBanners({ posts, bannerList }: { posts: PostWithRela
   );
 }
 
-function Section4_HorizontalBanner({ bannerList }: { bannerList: Banner[] }) {
-  if (bannerList.length === 0) return null;
-  const banner = bannerList[0];
+function SectionHorizontalBanner({ banners }: { banners: Banner[] }) {
+  if (banners.length === 0) return null;
   return (
     <section className="max-w-6xl mx-auto px-4 py-4" data-testid="section-horizontal-banner">
-      <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer">
-        <Card className="overflow-visible hover-elevate cursor-pointer">
-          <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto rounded-md" loading="lazy" />
-        </Card>
-      </a>
+      {banners.map((banner) => (
+        <div key={banner.id} className="mb-4 last:mb-0">
+          <BannerHorizontal banner={banner} />
+        </div>
+      ))}
     </section>
   );
 }
 
-function Section5_FeaturedCategory({ category, posts }: { category: Category | null; posts: PostWithRelations[] }) {
+function SectionFeaturedCategory({ category, posts }: { category: Category | null; posts: PostWithRelations[] }) {
   if (!category || posts.length === 0) return null;
   return (
     <section className="max-w-6xl mx-auto px-4 py-10" data-testid="section-featured-category">
@@ -224,7 +296,7 @@ function Section5_FeaturedCategory({ category, posts }: { category: Category | n
   );
 }
 
-function Section6_Newsletter({ settings }: { settings: Record<string, string> }) {
+function SectionNewsletter({ settings }: { settings: Record<string, string> }) {
   const text = settings["newsletter_text"] || "Receba nossos conteudos diretamente no seu e-mail";
   return (
     <section className="bg-muted/50" data-testid="section-newsletter">
@@ -251,7 +323,7 @@ function Section6_Newsletter({ settings }: { settings: Record<string, string> })
   );
 }
 
-function Section7_MostReadAndCategories({ mostRead, categories: cats }: { mostRead: PostWithRelations[]; categories: Category[] }) {
+function SectionMostReadAndCategories({ mostRead, categories: cats }: { mostRead: PostWithRelations[]; categories: Category[] }) {
   return (
     <section className="max-w-6xl mx-auto px-4 py-10" data-testid="section-most-read">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -268,7 +340,7 @@ function Section7_MostReadAndCategories({ mostRead, categories: cats }: { mostRe
           <div className="space-y-1">
             {cats.map((cat) => (
               <Link key={cat.id} href={`/categoria/${cat.slug}`} data-testid={`link-category-${cat.id}`}>
-                <div className="flex items-center justify-between p-3 rounded-md hover-elevate active-elevate-2 cursor-pointer">
+                <div className="flex items-center justify-between gap-2 p-3 rounded-md hover-elevate active-elevate-2 cursor-pointer">
                   <span className="text-sm font-medium">{cat.name}</span>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
@@ -281,46 +353,48 @@ function Section7_MostReadAndCategories({ mostRead, categories: cats }: { mostRe
   );
 }
 
-function Section8_DiverseCategories({ sections, randomPosts }: { sections: { category: Category; posts: PostWithRelations[] }[]; randomPosts: PostWithRelations[] }) {
-  if (sections.length === 0 && randomPosts.length === 0) return null;
+function SectionDiverseCategories({ sections }: { sections: { category: Category; posts: PostWithRelations[] }[] }) {
+  if (sections.length === 0) return null;
   return (
     <section className="max-w-6xl mx-auto px-4 py-10" data-testid="section-diverse-categories">
-      {sections.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
-          {sections.map((sec) => (
-            <div key={sec.category.id}>
-              <div className="flex items-center justify-between gap-2 mb-4">
-                <h3 className="font-serif text-lg font-bold">{sec.category.name}</h3>
-                <Link href={`/categoria/${sec.category.slug}`}>
-                  <Button variant="ghost" size="sm" className="text-xs">
-                    Ver mais <ChevronRight className="h-3 w-3 ml-0.5" />
-                  </Button>
-                </Link>
-              </div>
-              <div className="space-y-1">
-                {sec.posts.map((post) => (
-                  <PostCardCompact key={post.id} post={post} />
-                ))}
-              </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {sections.map((sec) => (
+          <div key={sec.category.id}>
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <h3 className="font-serif text-lg font-bold">{sec.category.name}</h3>
+              <Link href={`/categoria/${sec.category.slug}`}>
+                <Button variant="ghost" size="sm" className="text-xs">
+                  Ver mais <ChevronRight className="h-3 w-3 ml-0.5" />
+                </Button>
+              </Link>
             </div>
-          ))}
-        </div>
-      )}
-      {randomPosts.length > 0 && (
-        <div>
-          <SectionTitle>Voce tambem pode gostar</SectionTitle>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {randomPosts.slice(0, 6).map((post) => (
-              <PostCardHorizontal key={post.id} post={post} />
-            ))}
+            <div className="space-y-1">
+              {sec.posts.map((post) => (
+                <PostCardCompact key={post.id} post={post} />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
     </section>
   );
 }
 
-function Section9_RowSections({ row1, row2 }: { row1: { category: Category; posts: PostWithRelations[] } | null; row2: { category: Category; posts: PostWithRelations[] } | null }) {
+function SectionRandomPosts({ posts }: { posts: PostWithRelations[] }) {
+  if (posts.length === 0) return null;
+  return (
+    <section className="max-w-6xl mx-auto px-4 py-10" data-testid="section-random-posts">
+      <SectionTitle>Voce tambem pode gostar</SectionTitle>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {posts.slice(0, 6).map((post) => (
+          <PostCardHorizontal key={post.id} post={post} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SectionRowCategories({ row1, row2 }: { row1: { category: Category; posts: PostWithRelations[] } | null; row2: { category: Category; posts: PostWithRelations[] } | null }) {
   const rows = [row1, row2].filter(Boolean) as { category: Category; posts: PostWithRelations[] }[];
   if (rows.length === 0) return null;
   return (
@@ -335,7 +409,7 @@ function Section9_RowSections({ row1, row2 }: { row1: { category: Category; post
               </Button>
             </Link>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {row.posts.map((post) => (
               <PostCardLarge key={post.id} post={post} />
             ))}
@@ -346,7 +420,7 @@ function Section9_RowSections({ row1, row2 }: { row1: { category: Category; post
   );
 }
 
-function Section10_FreeMaterials({ materials }: { materials: FreeMaterial[] }) {
+function SectionFreeMaterials({ materials }: { materials: FreeMaterial[] }) {
   if (materials.length === 0) return null;
   return (
     <section className="bg-primary/5" data-testid="section-free-materials">
@@ -413,15 +487,35 @@ export default function Home() {
 
   return (
     <div>
-      <Section2_Hero settings={data.settings} />
-      <Section3_RecentWithBanners posts={data.recentPosts} bannerList={data.sidebarBanners} />
-      <Section4_HorizontalBanner bannerList={data.horizontalBanners} />
-      <Section5_FeaturedCategory category={data.featuredCategory} posts={data.featuredCategoryPosts} />
-      <Section6_Newsletter settings={data.settings} />
-      <Section7_MostReadAndCategories mostRead={data.mostRead} categories={data.categories} />
-      <Section8_DiverseCategories sections={data.diverseSections} randomPosts={data.randomPosts} />
-      <Section9_RowSections row1={data.rowSection1} row2={data.rowSection2} />
-      <Section10_FreeMaterials materials={data.materials} />
+      {/* 1. Hero */}
+      <SectionHero settings={data.settings} />
+
+      {/* 2. Recent posts (main + sidebar) with sidebar banners on the right */}
+      <SectionRecentPosts posts={data.recentPosts} sidebarBanners={data.sidebarBanners} />
+
+      {/* 3. Horizontal banner (full width) */}
+      <SectionHorizontalBanner banners={data.horizontalBanners} />
+
+      {/* 4. Featured category */}
+      <SectionFeaturedCategory category={data.featuredCategory} posts={data.featuredCategoryPosts} />
+
+      {/* 5. Newsletter */}
+      <SectionNewsletter settings={data.settings} />
+
+      {/* 6. Most read + categories sidebar */}
+      <SectionMostReadAndCategories mostRead={data.mostRead} categories={data.categories} />
+
+      {/* 7. Diverse categories (3 columns) */}
+      <SectionDiverseCategories sections={data.diverseSections} />
+
+      {/* 8. Random posts */}
+      <SectionRandomPosts posts={data.randomPosts} />
+
+      {/* 9. Row category sections */}
+      <SectionRowCategories row1={data.rowSection1} row2={data.rowSection2} />
+
+      {/* 10. Free materials */}
+      <SectionFreeMaterials materials={data.materials} />
     </div>
   );
 }
