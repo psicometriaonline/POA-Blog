@@ -1,16 +1,313 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { insertCategorySchema, insertTagSchema, insertPostSchema } from "@shared/schema";
+import { crawlMultipleUrls } from "./crawler";
+import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
+  await setupAuth(app);
+  registerAuthRoutes(app);
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+  // ===== PUBLIC ROUTES =====
+
+  app.get("/api/posts", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 12;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const status = (req.query.status as string) || "published";
+      const posts = await storage.getPosts({ status, limit, offset });
+      const total = await storage.getPostCount(status);
+      res.json({ posts, total, limit, offset });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/posts/search", async (req, res) => {
+    try {
+      const query = (req.query.q as string) || "";
+      const limit = parseInt(req.query.limit as string) || 12;
+      const offset = parseInt(req.query.offset as string) || 0;
+      if (!query) return res.json({ posts: [], total: 0, limit, offset });
+      const posts = await storage.searchPosts(query, { limit, offset });
+      const total = await storage.searchPostCount(query);
+      res.json({ posts, total, limit, offset });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/posts/slug/:slug", async (req, res) => {
+    try {
+      const post = await storage.getPostBySlug(req.params.slug);
+      if (!post) return res.status(404).json({ message: "Post not found" });
+      res.json(post);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/posts/:id", async (req, res) => {
+    try {
+      const post = await storage.getPost(parseInt(req.params.id));
+      if (!post) return res.status(404).json({ message: "Post not found" });
+      res.json(post);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/categories", async (_req, res) => {
+    try {
+      const cats = await storage.getCategories();
+      res.json(cats);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/categories/slug/:slug", async (req, res) => {
+    try {
+      const cat = await storage.getCategoryBySlug(req.params.slug);
+      if (!cat) return res.status(404).json({ message: "Category not found" });
+      res.json(cat);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/categories/:slug/posts", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 12;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const posts = await storage.getPostsByCategory(req.params.slug, { limit, offset });
+      const total = await storage.getPostCountByCategory(req.params.slug);
+      const category = await storage.getCategoryBySlug(req.params.slug);
+      res.json({ posts, total, limit, offset, category });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/tags", async (_req, res) => {
+    try {
+      const allTags = await storage.getTags();
+      res.json(allTags);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/tags/:slug/posts", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 12;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const posts = await storage.getPostsByTag(req.params.slug, { limit, offset });
+      const total = await storage.getPostCountByTag(req.params.slug);
+      const tag = await storage.getTagBySlug(req.params.slug);
+      res.json({ posts, total, limit, offset, tag });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ===== ADMIN ROUTES (Protected) =====
+
+  app.get("/api/admin/posts", isAuthenticated, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const status = req.query.status as string | undefined;
+      const posts = await storage.getPosts({ status, limit, offset });
+      const total = await storage.getPostCount(status);
+      res.json({ posts, total, limit, offset });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/posts", isAuthenticated, async (req, res) => {
+    try {
+      const { categoryIds, tagIds, ...postData } = req.body;
+      const parsed = insertPostSchema.parse(postData);
+      const post = await storage.createPost(parsed, categoryIds, tagIds);
+      res.status(201).json(post);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/posts/:id", isAuthenticated, async (req, res) => {
+    try {
+      const { categoryIds, tagIds, ...postData } = req.body;
+      const post = await storage.updatePost(parseInt(req.params.id), postData, categoryIds, tagIds);
+      if (!post) return res.status(404).json({ message: "Post not found" });
+      res.json(post);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/posts/:id", isAuthenticated, async (req, res) => {
+    try {
+      const success = await storage.deletePost(parseInt(req.params.id));
+      if (!success) return res.status(404).json({ message: "Post not found" });
+      res.json({ message: "Post deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/categories", isAuthenticated, async (req, res) => {
+    try {
+      const parsed = insertCategorySchema.parse(req.body);
+      const cat = await storage.createCategory(parsed);
+      res.status(201).json(cat);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/categories/:id", isAuthenticated, async (req, res) => {
+    try {
+      const cat = await storage.updateCategory(parseInt(req.params.id), req.body);
+      if (!cat) return res.status(404).json({ message: "Category not found" });
+      res.json(cat);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/categories/:id", isAuthenticated, async (req, res) => {
+    try {
+      const success = await storage.deleteCategory(parseInt(req.params.id));
+      if (!success) return res.status(404).json({ message: "Category not found" });
+      res.json({ message: "Category deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/tags", isAuthenticated, async (req, res) => {
+    try {
+      const parsed = insertTagSchema.parse(req.body);
+      const tag = await storage.createTag(parsed);
+      res.status(201).json(tag);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/tags/:id", isAuthenticated, async (req, res) => {
+    try {
+      const tag = await storage.updateTag(parseInt(req.params.id), req.body);
+      if (!tag) return res.status(404).json({ message: "Tag not found" });
+      res.json(tag);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/tags/:id", isAuthenticated, async (req, res) => {
+    try {
+      const success = await storage.deleteTag(parseInt(req.params.id));
+      if (!success) return res.status(404).json({ message: "Tag not found" });
+      res.json({ message: "Tag deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ===== CRAWLING ROUTES (Protected) =====
+
+  app.post("/api/admin/crawl", isAuthenticated, async (req, res) => {
+    try {
+      const { urls } = req.body;
+      if (!urls || !Array.isArray(urls) || urls.length === 0) {
+        return res.status(400).json({ message: "Please provide an array of URLs" });
+      }
+
+      const result = await crawlMultipleUrls(urls);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/crawl/import", isAuthenticated, async (req, res) => {
+    try {
+      const { posts: crawledPosts } = req.body;
+      if (!crawledPosts || !Array.isArray(crawledPosts)) {
+        return res.status(400).json({ message: "Please provide crawled posts to import" });
+      }
+
+      const imported = [];
+      const errors: { title: string; error: string }[] = [];
+
+      for (const crawledPost of crawledPosts) {
+        try {
+          const categoryIds: number[] = [];
+          for (const catName of (crawledPost.categories || [])) {
+            const catSlug = slugify(catName);
+            let cat = await storage.getCategoryBySlug(catSlug);
+            if (!cat) {
+              cat = await storage.createCategory({ name: catName, slug: catSlug, description: null });
+            }
+            categoryIds.push(cat.id);
+          }
+
+          const tagIds: number[] = [];
+          for (const tagName of (crawledPost.tags || [])) {
+            const tagSlug = slugify(tagName);
+            let tag = await storage.getTagBySlug(tagSlug);
+            if (!tag) {
+              tag = await storage.createTag({ name: tagName, slug: tagSlug });
+            }
+            tagIds.push(tag.id);
+          }
+
+          let uniqueSlug = crawledPost.slug;
+          const existingPost = await storage.getPostBySlug(uniqueSlug);
+          if (existingPost) {
+            uniqueSlug = `${uniqueSlug}-${Date.now()}`;
+          }
+
+          const post = await storage.createPost({
+            title: crawledPost.title,
+            slug: uniqueSlug,
+            content: crawledPost.content,
+            excerpt: crawledPost.excerpt,
+            featuredImage: crawledPost.featuredImage,
+            authorName: crawledPost.authorName,
+            sourceUrl: crawledPost.sourceUrl,
+            status: "published",
+            publishedAt: crawledPost.publishedAt ? new Date(crawledPost.publishedAt) : new Date(),
+          }, categoryIds, tagIds);
+
+          imported.push(post);
+        } catch (err: any) {
+          errors.push({ title: crawledPost.title, error: err.message });
+        }
+      }
+
+      res.json({ imported: imported.length, errors });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   return httpServer;
 }
