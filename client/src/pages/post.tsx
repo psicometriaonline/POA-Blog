@@ -408,7 +408,7 @@ function TableOfContents({ contentRef, postId }: { contentRef: React.RefObject<H
   };
 
   return (
-    <Card className="p-4 sticky top-20 z-[9999]" data-testid="card-toc">
+    <Card className="p-4" data-testid="card-toc">
       <div className="flex items-center gap-2 mb-3">
         <List className="h-4 w-4 text-accent-bright" />
         <h3 className="font-bold text-sm">Conteúdo</h3>
@@ -559,26 +559,24 @@ export default function PostPage() {
               <h1 className="font-serif text-2xl md:text-3xl font-bold mb-4 leading-tight" data-testid="text-post-title">
                 {post.title}
               </h1>
-
-              {post.featuredImage && (
-                <div className="rounded-md overflow-hidden">
-                  <img
-                    src={post.featuredImage}
-                    alt={post.title}
-                    className="w-full h-auto"
-                    data-testid="img-featured"
-                  />
-                </div>
-              )}
             </Card>
 
             <Card className="p-6 mb-6" data-testid="card-post-content">
               <div
                 ref={contentRef}
                 className="prose prose-lg dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content, { ADD_TAGS: ["iframe", "span", "div"], ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "scrolling", "data-type", "data-latex", "class"] }) }}
                 data-testid="div-post-content"
-              />
+              >
+                {post.featuredImage && (
+                  <img
+                    src={post.featuredImage}
+                    alt={post.title}
+                    className="float-right w-48 h-auto rounded-md ml-5 mb-4 mt-1 not-prose"
+                    data-testid="img-featured"
+                  />
+                )}
+                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content, { ADD_TAGS: ["iframe", "span", "div"], ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "scrolling", "data-type", "data-latex", "class"] }) }} />
+              </div>
             </Card>
 
             {post.tags.length > 0 && (
@@ -600,9 +598,13 @@ export default function PostPage() {
             <CommentsSection postId={post.id} />
           </article>
 
-          <aside className="space-y-6">
+          <aside className="flex flex-col gap-6">
             <SidebarBanner />
-            <TableOfContents contentRef={contentRef} postId={post?.id} />
+            <div className="flex-1 min-h-0">
+              <div className="sticky top-20 z-[9999]">
+                <TableOfContents contentRef={contentRef} postId={post?.id} />
+              </div>
+            </div>
             {primaryCategory && (
               <MostReadSidebar postId={post.id} categoryId={primaryCategory.id} />
             )}
