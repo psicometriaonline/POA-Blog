@@ -15,9 +15,9 @@ import { insertCommentSchema } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import DOMPurify from "dompurify";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HeroBar } from "@/components/hero-bar";
-import { Calendar, User, Tag, ChevronRight, Eye, Send, MessageSquare } from "lucide-react";
+import { Calendar, User, Tag, ChevronRight, Eye, Send, MessageSquare, List } from "lucide-react";
 import { SiFacebook, SiLinkedin, SiWhatsapp, SiX } from "react-icons/si";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -327,22 +327,128 @@ function CommentsSection({ postId }: { postId: number }) {
   );
 }
 
-function SidebarBanners() {
+interface TocItem {
+  id: string;
+  text: string;
+  level: number;
+}
+
+function useTableOfContents(contentRef: React.RefObject<HTMLDivElement | null>, postId: number | undefined) {
+  const [headings, setHeadings] = useState<TocItem[]>([]);
+  const [activeId, setActiveId] = useState<string>("");
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el || !postId) return;
+
+    const extractHeadings = () => {
+      const nodes = el.querySelectorAll("h1, h2, h3");
+      if (nodes.length === 0) return false;
+      const items: TocItem[] = [];
+      nodes.forEach((node, i) => {
+        const id = node.id || `heading-${i}`;
+        if (!node.id) node.id = id;
+        items.push({
+          id,
+          text: node.textContent || "",
+          level: parseInt(node.tagName.charAt(1)),
+        });
+      });
+      setHeadings(items);
+      if (items.length > 0) setActiveId(items[0].id);
+      return true;
+    };
+
+    if (extractHeadings()) return;
+
+    const mo = new MutationObserver(() => {
+      if (extractHeadings()) mo.disconnect();
+    });
+    mo.observe(el, { childList: true, subtree: true });
+
+    return () => mo.disconnect();
+  }, [postId]);
+
+  useEffect(() => {
+    if (headings.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible.length > 0) {
+          setActiveId(visible[0].target.id);
+        }
+      },
+      { rootMargin: "-80px 0px -60% 0px", threshold: 0.1 }
+    );
+
+    headings.forEach((h) => {
+      const el = document.getElementById(h.id);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [headings]);
+
+  return { headings, activeId };
+}
+
+function TableOfContents({ contentRef, postId }: { contentRef: React.RefObject<HTMLDivElement | null>; postId: number | undefined }) {
+  const { headings, activeId } = useTableOfContents(contentRef, postId);
+
+  if (headings.length === 0) return null;
+
+  const handleClick = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  return (
+    <Card className="p-4 sticky top-20 z-[9999]" data-testid="card-toc">
+      <div className="flex items-center gap-2 mb-3">
+        <List className="h-4 w-4 text-accent-bright" />
+        <h3 className="font-bold text-sm">Conteúdo</h3>
+      </div>
+      <nav className="space-y-1" data-testid="nav-toc">
+        {headings.map((h) => (
+          <button
+            key={h.id}
+            onClick={() => handleClick(h.id)}
+            className={`block w-full text-left text-sm leading-snug py-1 transition-colors rounded-md cursor-pointer ${
+              h.level === 2 ? "pl-3" : h.level === 3 ? "pl-5" : "pl-1"
+            } ${
+              activeId === h.id
+                ? "text-accent-bright font-semibold"
+                : "text-muted-foreground"
+            }`}
+            data-testid={`toc-item-${h.id}`}
+          >
+            {h.text}
+          </button>
+        ))}
+      </nav>
+    </Card>
+  );
+}
+
+function SidebarBanner() {
   const { data: banners } = useQuery<Banner[]>({
     queryKey: ["/api/banners?slot=sidebar"],
   });
-  const sidebarBanners = (banners || []).sort((a, b) => a.sortOrder - b.sortOrder);
-  if (sidebarBanners.length === 0) return null;
+  const banner = (banners || []).sort((a, b) => a.sortOrder - b.sortOrder)[0];
+  if (!banner) return null;
   return (
-    <>
-      {sidebarBanners.map((banner) => (
-        <a key={banner.id} href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner.id}`}>
-          <Card className="overflow-visible hover-elevate cursor-pointer">
-            <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto rounded-md" loading="lazy" />
-          </Card>
-        </a>
-      ))}
-    </>
+    <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner.id}`}>
+      <Card className="p-4 overflow-visible hover-elevate cursor-pointer">
+        <div className="aspect-[1400/788] overflow-hidden rounded-md">
+          <img src={banner.imageUrl} alt={banner.title} className="w-full h-full object-cover" loading="lazy" />
+        </div>
+      </Card>
+    </a>
   );
 }
 
@@ -495,10 +601,11 @@ export default function PostPage() {
           </article>
 
           <aside className="space-y-6">
+            <SidebarBanner />
+            <TableOfContents contentRef={contentRef} postId={post?.id} />
             {primaryCategory && (
               <MostReadSidebar postId={post.id} categoryId={primaryCategory.id} />
             )}
-            <SidebarBanners />
           </aside>
         </div>
       </div>
