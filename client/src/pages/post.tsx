@@ -518,24 +518,24 @@ export default function PostPage() {
     <>
       <HeroBar showHeadline={true} />
       <div className="max-w-7xl mx-auto px-4 py-8">
+        <Breadcrumb post={post} />
+        <SocialShare post={post} />
+
+        {post.categories.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-5 mb-4">
+            {post.categories.map((cat) => (
+              <Link key={cat.id} href={`/categoria/${cat.slug}`}>
+                <Badge variant="secondary" className="bg-accent-bright/15 text-accent-bright border-0" data-testid={`badge-category-${cat.id}`}>
+                  <Tag className="h-3 w-3 mr-1" />
+                  {cat.name}
+                </Badge>
+              </Link>
+            ))}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
           <article>
-            <Breadcrumb post={post} />
-            <SocialShare post={post} />
-
-            {post.categories.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-5 mb-4">
-                {post.categories.map((cat) => (
-                  <Link key={cat.id} href={`/categoria/${cat.slug}`}>
-                    <Badge variant="secondary" className="bg-accent-bright/15 text-accent-bright border-0" data-testid={`badge-category-${cat.id}`}>
-                      <Tag className="h-3 w-3 mr-1" />
-                      {cat.name}
-                    </Badge>
-                  </Link>
-                ))}
-              </div>
-            )}
-
             <Card className="p-6 mb-6" data-testid="card-post-header">
               <div className="flex items-center gap-3 mb-4 flex-wrap text-sm text-muted-foreground">
                 {post.authorName && (
@@ -598,16 +598,14 @@ export default function PostPage() {
             <CommentsSection postId={post.id} />
           </article>
 
-          <aside className="flex flex-col gap-6">
-            <SidebarBanner />
-            <div className="flex-1 min-h-0">
-              <div className="sticky top-20 z-[9999]">
-                <TableOfContents contentRef={contentRef} postId={post?.id} />
-              </div>
+          <aside>
+            <div className="sticky top-20 z-[9999] space-y-6">
+              <SidebarBanner />
+              <TableOfContents contentRef={contentRef} postId={post?.id} />
+              {primaryCategory && (
+                <MostReadSidebar postId={post.id} categoryId={primaryCategory.id} />
+              )}
             </div>
-            {primaryCategory && (
-              <MostReadSidebar postId={post.id} categoryId={primaryCategory.id} />
-            )}
           </aside>
         </div>
       </div>
