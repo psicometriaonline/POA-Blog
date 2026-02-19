@@ -534,7 +534,7 @@ export default function PostPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-14">
           <article>
             <Card className="p-6 mb-6" data-testid="card-post-header">
               <div className="flex items-center gap-3 mb-4 flex-wrap text-sm text-muted-foreground">
