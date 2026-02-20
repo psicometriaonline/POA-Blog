@@ -28,9 +28,11 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `client/src/pages/admin/manage-tags.tsx` - Tag management
 - `client/src/pages/admin/crawl.tsx` - WordPress import tool
 - `client/src/pages/admin/home-settings.tsx` - Home page section configuration
+- `client/src/pages/admin/manage-authors.tsx` - Author management
 
 ## Database Schema
-- `posts` - Blog posts with title, slug, content, status, featured image, viewCount
+- `authors` - Author profiles (name, photo, bio) - linked to posts via authorId
+- `posts` - Blog posts with title, slug, content, status, featured image, viewCount, authorId
 - `categories` - Post categories with slug
 - `tags` - Post tags with slug
 - `post_categories` - Many-to-many junction table
@@ -68,6 +70,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `/admin/tags` - Tag management
 - `/admin/crawl` - WordPress content importer
 - `/admin/home` - Home page section configuration
+- `/admin/autores` - Author management
 
 ### API
 - `GET /api/home` - Aggregated home page data (all sections in one request)
@@ -77,6 +80,8 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `POST /api/posts/:id/comments` - Create comment (authorName, authorEmail, content)
 - `GET/POST/PUT/DELETE /api/admin/banners` - Banner CRUD
 - `GET/POST/PUT/DELETE /api/admin/materials` - Free materials CRUD
+- `GET /api/authors` - Public authors list
+- `POST/PUT/DELETE /api/admin/authors` - Author CRUD
 - `GET/PUT /api/admin/settings` - Site settings (key-value)
 
 ## User Preferences

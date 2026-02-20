@@ -19,6 +19,13 @@ export const tags = pgTable("tags", {
   slug: text("slug").notNull().unique(),
 });
 
+export const authors = pgTable("authors", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  photo: text("photo"),
+  bio: text("bio"),
+});
+
 export const posts = pgTable("posts", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   title: text("title").notNull(),
@@ -27,6 +34,7 @@ export const posts = pgTable("posts", {
   excerpt: text("excerpt"),
   featuredImage: text("featured_image"),
   status: text("status").notNull().default("draft"),
+  authorId: integer("author_id").references(() => authors.id, { onDelete: "set null" }),
   authorName: text("author_name"),
   sourceUrl: text("source_url"),
   viewCount: integer("view_count").notNull().default(0),
@@ -103,6 +111,7 @@ export const siteSettings = pgTable("site_settings", {
   value: text("value").notNull(),
 });
 
+export const insertAuthorSchema = createInsertSchema(authors).omit({ id: true });
 export const insertCategorySchema = createInsertSchema(categories).omit({ id: true });
 export const insertTagSchema = createInsertSchema(tags).omit({ id: true });
 export const insertPostSchema = createInsertSchema(posts).omit({ id: true, createdAt: true, updatedAt: true });
@@ -110,6 +119,8 @@ export const insertBannerSchema = createInsertSchema(banners).omit({ id: true })
 export const insertFreeMaterialSchema = createInsertSchema(freeMaterials).omit({ id: true });
 export const insertCommentSchema = createInsertSchema(comments).omit({ id: true, createdAt: true });
 
+export type Author = typeof authors.$inferSelect;
+export type InsertAuthor = z.infer<typeof insertAuthorSchema>;
 export type Category = typeof categories.$inferSelect;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Tag = typeof tags.$inferSelect;
@@ -127,4 +138,5 @@ export type SiteSetting = typeof siteSettings.$inferSelect;
 export type PostWithRelations = Post & {
   categories: Category[];
   tags: Tag[];
+  author?: Author | null;
 };

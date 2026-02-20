@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema } from "@shared/schema";
+import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema } from "@shared/schema";
 import { crawlMultipleUrls } from "./crawler";
 import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
 
@@ -142,6 +142,15 @@ export async function registerRoutes(
       const total = await storage.getPostCountByTag(req.params.slug);
       const tag = await storage.getTagBySlug(req.params.slug);
       res.json({ posts, total, limit, offset, tag });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/authors", async (_req, res) => {
+    try {
+      const allAuthors = await storage.getAuthors();
+      res.json(allAuthors);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -292,6 +301,38 @@ export async function registerRoutes(
       const success = await storage.deleteTag(parseInt(req.params.id));
       if (!success) return res.status(404).json({ message: "Tag not found" });
       res.json({ message: "Tag deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ===== AUTHOR ROUTES (Protected) =====
+
+  app.post("/api/admin/authors", isAuthenticated, async (req, res) => {
+    try {
+      const parsed = insertAuthorSchema.parse(req.body);
+      const author = await storage.createAuthor(parsed);
+      res.status(201).json(author);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/authors/:id", isAuthenticated, async (req, res) => {
+    try {
+      const author = await storage.updateAuthor(parseInt(req.params.id), req.body);
+      if (!author) return res.status(404).json({ message: "Author not found" });
+      res.json(author);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/authors/:id", isAuthenticated, async (req, res) => {
+    try {
+      const success = await storage.deleteAuthor(parseInt(req.params.id));
+      if (!success) return res.status(404).json({ message: "Author not found" });
+      res.json({ message: "Author deleted" });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2, Settings } from "lucide-react";
+import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2, Settings, Users } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import type { PostWithRelations, Category, Tag as TagType } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -142,6 +142,12 @@ export default function AdminDashboard() {
           <Link href="/admin/tags">
             <Button variant="outline" size="sm" data-testid="link-manage-tags">
               Gerenciar Tags
+            </Button>
+          </Link>
+          <Link href="/admin/autores">
+            <Button variant="outline" size="sm" data-testid="link-manage-authors">
+              <Users className="h-3 w-3 mr-1" />
+              Gerenciar Autores
             </Button>
           </Link>
         </div>

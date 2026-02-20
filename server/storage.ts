@@ -1,4 +1,5 @@
 import {
+  type Author, type InsertAuthor,
   type Category, type InsertCategory,
   type Tag, type InsertTag,
   type Post, type InsertPost,
@@ -6,13 +7,19 @@ import {
   type Banner, type InsertBanner,
   type FreeMaterial, type InsertFreeMaterial,
   type Comment, type InsertComment,
-  categories, tags, posts, postCategories, postTags,
+  authors, categories, tags, posts, postCategories, postTags,
   banners, freeMaterials, siteSettings, comments,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, or, desc, sql, inArray, and, asc } from "drizzle-orm";
 
 export interface IStorage {
+  getAuthors(): Promise<Author[]>;
+  getAuthor(id: number): Promise<Author | undefined>;
+  createAuthor(data: InsertAuthor): Promise<Author>;
+  updateAuthor(id: number, data: Partial<InsertAuthor>): Promise<Author | undefined>;
+  deleteAuthor(id: number): Promise<boolean>;
+
   getCategories(): Promise<Category[]>;
   getCategory(id: number): Promise<Category | undefined>;
   getCategoryBySlug(slug: string): Promise<Category | undefined>;
@@ -87,6 +94,12 @@ async function enrichPostsWithRelations(rawPosts: Post[]): Promise<PostWithRelat
     ? await db.select().from(tags).where(inArray(tags.id, tagIds))
     : [];
 
+  const authorIds = [...new Set(rawPosts.map(p => p.authorId).filter(Boolean))] as number[];
+  const allAuthors = authorIds.length > 0
+    ? await db.select().from(authors).where(inArray(authors.id, authorIds))
+    : [];
+  const authorMap = new Map(allAuthors.map(a => [a.id, a]));
+
   const catMap = new Map(allCats.map(c => [c.id, c]));
   const tagMap = new Map(allTags.map(t => [t.id, t]));
 
@@ -100,10 +113,35 @@ async function enrichPostsWithRelations(rawPosts: Post[]): Promise<PostWithRelat
       .filter(r => r.postId === post.id)
       .map(r => tagMap.get(r.tagId)!)
       .filter(Boolean),
+    author: post.authorId ? authorMap.get(post.authorId) || null : null,
   }));
 }
 
 export class DatabaseStorage implements IStorage {
+  async getAuthors(): Promise<Author[]> {
+    return db.select().from(authors).orderBy(authors.name);
+  }
+
+  async getAuthor(id: number): Promise<Author | undefined> {
+    const [a] = await db.select().from(authors).where(eq(authors.id, id));
+    return a;
+  }
+
+  async createAuthor(data: InsertAuthor): Promise<Author> {
+    const [a] = await db.insert(authors).values(data).returning();
+    return a;
+  }
+
+  async updateAuthor(id: number, data: Partial<InsertAuthor>): Promise<Author | undefined> {
+    const [a] = await db.update(authors).set(data).where(eq(authors.id, id)).returning();
+    return a;
+  }
+
+  async deleteAuthor(id: number): Promise<boolean> {
+    const result = await db.delete(authors).where(eq(authors.id, id)).returning();
+    return result.length > 0;
+  }
+
   async getCategories(): Promise<Category[]> {
     return db.select().from(categories).orderBy(categories.name);
   }

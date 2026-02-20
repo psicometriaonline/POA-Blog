@@ -9,11 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Code, Sigma } from "lucide-react";
+import { ArrowLeft, Save, Code, Sigma, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { PostWithRelations, Category, Tag } from "@shared/schema";
+import type { PostWithRelations, Category, Tag, Author } from "@shared/schema";
 import { Link } from "wouter";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -257,15 +257,22 @@ export default function PostEditor() {
   const [content, setContent] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [featuredImage, setFeaturedImage] = useState("");
-  const [authorName, setAuthorName] = useState("");
+  const [authorId, setAuthorId] = useState<string>("");
   const [status, setStatus] = useState("draft");
   const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
   const [selectedTags, setSelectedTags] = useState<number[]>([]);
   const [slugManual, setSlugManual] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newTagName, setNewTagName] = useState("");
 
   const { data: post, isLoading: postLoading } = useQuery<PostWithRelations>({
     queryKey: [`/api/posts/${params.id}`],
     enabled: !isNew && !!user,
+  });
+
+  const { data: allAuthors } = useQuery<Author[]>({
+    queryKey: ["/api/authors"],
+    enabled: !!user,
   });
 
   const { data: categories } = useQuery<Category[]>({
@@ -285,7 +292,7 @@ export default function PostEditor() {
       setContent(post.content);
       setExcerpt(post.excerpt || "");
       setFeaturedImage(post.featuredImage || "");
-      setAuthorName(post.authorName || "");
+      setAuthorId(post.authorId ? String(post.authorId) : "");
       setStatus(post.status);
       setSelectedCategories(post.categories.map(c => c.id));
       setSelectedTags(post.tags.map(t => t.id));
@@ -301,13 +308,15 @@ export default function PostEditor() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const selectedAuthor = allAuthors?.find(a => a.id === parseInt(authorId));
       const body = {
         title,
         slug,
         content,
         excerpt: excerpt || null,
         featuredImage: featuredImage || null,
-        authorName: authorName || null,
+        authorId: authorId ? parseInt(authorId) : null,
+        authorName: selectedAuthor?.name || null,
         status,
         publishedAt: status === "published" ? new Date().toISOString() : null,
         categoryIds: selectedCategories,
@@ -351,6 +360,40 @@ export default function PostEditor() {
       </div>
     );
   }
+
+  const createCategoryMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const catSlug = slugify(name);
+      const res = await apiRequest("POST", "/api/admin/categories", { name, slug: catSlug, description: null });
+      return res.json();
+    },
+    onSuccess: (cat: Category) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      setSelectedCategories(prev => [...prev, cat.id]);
+      setNewCategoryName("");
+      toast({ title: `Categoria "${cat.name}" criada` });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro ao criar categoria", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const createTagMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const tagSlug = slugify(name);
+      const res = await apiRequest("POST", "/api/admin/tags", { name, slug: tagSlug });
+      return res.json();
+    },
+    onSuccess: (tag: Tag) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tags"] });
+      setSelectedTags(prev => [...prev, tag.id]);
+      setNewTagName("");
+      toast({ title: `Tag "${tag.name}" criada` });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro ao criar tag", description: error.message, variant: "destructive" });
+    },
+  });
 
   const handleCategoryToggle = (catId: number) => {
     setSelectedCategories(prev =>
@@ -458,14 +501,19 @@ export default function PostEditor() {
           </Card>
 
           <Card className="p-4">
-            <Label htmlFor="authorName" className="mb-2 block">Autor</Label>
-            <Input
-              id="authorName"
-              value={authorName}
-              onChange={(e) => setAuthorName(e.target.value)}
-              placeholder="Nome do autor"
-              data-testid="input-author"
-            />
+            <Label className="mb-2 block">Autor</Label>
+            <Select value={authorId} onValueChange={setAuthorId}>
+              <SelectTrigger data-testid="select-author">
+                <SelectValue placeholder="Selecionar autor..." />
+              </SelectTrigger>
+              <SelectContent>
+                {allAuthors?.map((author) => (
+                  <SelectItem key={author.id} value={String(author.id)}>
+                    {author.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Card>
 
           <Card className="p-4">
@@ -485,8 +533,34 @@ export default function PostEditor() {
                 </div>
               ))}
               {(!categories || categories.length === 0) && (
-                <p className="text-sm text-muted-foreground">Nenhuma categoria. Crie uma primeiro.</p>
+                <p className="text-sm text-muted-foreground">Nenhuma categoria ainda.</p>
               )}
+            </div>
+            <div className="flex gap-1 mt-3 pt-3 border-t">
+              <Input
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="Nova categoria..."
+                className="h-8 text-sm"
+                data-testid="input-new-category"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newCategoryName.trim()) {
+                    e.preventDefault();
+                    createCategoryMutation.mutate(newCategoryName.trim());
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 px-2"
+                disabled={!newCategoryName.trim() || createCategoryMutation.isPending}
+                onClick={() => createCategoryMutation.mutate(newCategoryName.trim())}
+                data-testid="button-add-category"
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
             </div>
           </Card>
 
@@ -507,8 +581,34 @@ export default function PostEditor() {
                 </div>
               ))}
               {(!tags || tags.length === 0) && (
-                <p className="text-sm text-muted-foreground">Nenhuma tag. Crie uma primeiro.</p>
+                <p className="text-sm text-muted-foreground">Nenhuma tag ainda.</p>
               )}
+            </div>
+            <div className="flex gap-1 mt-3 pt-3 border-t">
+              <Input
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                placeholder="Nova tag..."
+                className="h-8 text-sm"
+                data-testid="input-new-tag"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newTagName.trim()) {
+                    e.preventDefault();
+                    createTagMutation.mutate(newTagName.trim());
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 px-2"
+                disabled={!newTagName.trim() || createTagMutation.isPending}
+                onClick={() => createTagMutation.mutate(newTagName.trim())}
+                data-testid="button-add-tag"
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
             </div>
           </Card>
         </div>
