@@ -217,10 +217,14 @@ export async function registerRoutes(
   app.post("/api/admin/posts", isAuthenticated, async (req, res) => {
     try {
       const { categoryIds, tagIds, ...postData } = req.body;
+      if (postData.publishedAt) {
+        postData.publishedAt = new Date(postData.publishedAt);
+      }
       const parsed = insertPostSchema.parse(postData);
       const post = await storage.createPost(parsed, categoryIds, tagIds);
       res.status(201).json(post);
     } catch (error: any) {
+      console.error("Error creating post:", error);
       res.status(400).json({ message: error.message });
     }
   });
@@ -228,10 +232,14 @@ export async function registerRoutes(
   app.put("/api/admin/posts/:id", isAuthenticated, async (req, res) => {
     try {
       const { categoryIds, tagIds, ...postData } = req.body;
+      if (postData.publishedAt) {
+        postData.publishedAt = new Date(postData.publishedAt);
+      }
       const post = await storage.updatePost(parseInt(req.params.id), postData, categoryIds, tagIds);
       if (!post) return res.status(404).json({ message: "Post not found" });
       res.json(post);
     } catch (error: any) {
+      console.error("Error updating post:", error);
       res.status(400).json({ message: error.message });
     }
   });

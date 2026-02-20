@@ -352,7 +352,7 @@ export default function PostEditor() {
         authorId: authorId ? parseInt(authorId) : null,
         authorName: selectedAuthor?.name || null,
         status,
-        publishedAt: status === "published" ? new Date() : null,
+        publishedAt: status === "published" ? new Date().toISOString() : null,
         categoryIds: selectedCategories,
         tagIds: selectedTags,
       };
