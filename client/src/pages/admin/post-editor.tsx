@@ -285,6 +285,40 @@ export default function PostEditor() {
     enabled: !!user,
   });
 
+  const createCategoryMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const catSlug = slugify(name);
+      const res = await apiRequest("POST", "/api/admin/categories", { name, slug: catSlug, description: null });
+      return res.json();
+    },
+    onSuccess: (cat: Category) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      setSelectedCategories(prev => [...prev, cat.id]);
+      setNewCategoryName("");
+      toast({ title: `Categoria "${cat.name}" criada` });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro ao criar categoria", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const createTagMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const tagSlug = slugify(name);
+      const res = await apiRequest("POST", "/api/admin/tags", { name, slug: tagSlug });
+      return res.json();
+    },
+    onSuccess: (tag: Tag) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tags"] });
+      setSelectedTags(prev => [...prev, tag.id]);
+      setNewTagName("");
+      toast({ title: `Tag "${tag.name}" criada` });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro ao criar tag", description: error.message, variant: "destructive" });
+    },
+  });
+
   useEffect(() => {
     if (post && !isNew) {
       setTitle(post.title);
@@ -318,7 +352,7 @@ export default function PostEditor() {
         authorId: authorId ? parseInt(authorId) : null,
         authorName: selectedAuthor?.name || null,
         status,
-        publishedAt: status === "published" ? new Date().toISOString() : null,
+        publishedAt: status === "published" ? new Date() : null,
         categoryIds: selectedCategories,
         tagIds: selectedTags,
       };
@@ -360,40 +394,6 @@ export default function PostEditor() {
       </div>
     );
   }
-
-  const createCategoryMutation = useMutation({
-    mutationFn: async (name: string) => {
-      const catSlug = slugify(name);
-      const res = await apiRequest("POST", "/api/admin/categories", { name, slug: catSlug, description: null });
-      return res.json();
-    },
-    onSuccess: (cat: Category) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
-      setSelectedCategories(prev => [...prev, cat.id]);
-      setNewCategoryName("");
-      toast({ title: `Categoria "${cat.name}" criada` });
-    },
-    onError: (error: any) => {
-      toast({ title: "Erro ao criar categoria", description: error.message, variant: "destructive" });
-    },
-  });
-
-  const createTagMutation = useMutation({
-    mutationFn: async (name: string) => {
-      const tagSlug = slugify(name);
-      const res = await apiRequest("POST", "/api/admin/tags", { name, slug: tagSlug });
-      return res.json();
-    },
-    onSuccess: (tag: Tag) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tags"] });
-      setSelectedTags(prev => [...prev, tag.id]);
-      setNewTagName("");
-      toast({ title: `Tag "${tag.name}" criada` });
-    },
-    onError: (error: any) => {
-      toast({ title: "Erro ao criar tag", description: error.message, variant: "destructive" });
-    },
-  });
 
   const handleCategoryToggle = (catId: number) => {
     setSelectedCategories(prev =>
