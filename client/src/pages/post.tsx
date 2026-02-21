@@ -517,6 +517,14 @@ function SuggestedPosts({ postId, categoryId }: { postId: number; categoryId: nu
 function AcademyForm() {
   return (
     <Card className="p-5 bg-primary/5 border-primary/20" data-testid="card-academy-form">
+      <div className="aspect-[1400/788] overflow-hidden rounded-md mb-4">
+        <img 
+          src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=800" 
+          alt="Psicometria Online Academy" 
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+      </div>
       <div className="text-center mb-4">
         <h3 className="font-bold text-lg leading-tight">Psicometria Online Academy</h3>
         <p className="text-xs text-muted-foreground mt-1">Cadastro gratuito na melhor plataforma de psicometria</p>
@@ -683,7 +691,7 @@ export default function PostPage() {
           </article>
 
           <aside>
-            <div className="sticky top-20 z-[9999] space-y-6">
+            <div className="sticky top-24 space-y-6">
               <SidebarBanner />
               <TableOfContents contentRef={contentRef} postId={post?.id} />
               {primaryCategory && (
