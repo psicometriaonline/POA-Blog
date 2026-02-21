@@ -452,6 +452,86 @@ function SidebarBanner() {
   );
 }
 
+function SectionTitle({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`mb-6 ${className}`}>
+      <h2 className="font-serif text-2xl font-bold text-foreground">{children}</h2>
+      <div className="h-1 w-16 bg-primary mt-2 rounded-full" />
+    </div>
+  );
+}
+
+function PostCardLarge({ post }: { post: PostWithRelations }) {
+  const date = post.publishedAt ? format(new Date(post.publishedAt), "dd 'de' MMMM, yyyy", { locale: ptBR }) : null;
+  return (
+    <Link href={`/post/${post.slug}`} data-testid={`card-post-${post.id}`}>
+      <Card className="overflow-visible hover-elevate active-elevate-2 cursor-pointer h-full flex flex-col">
+        {post.featuredImage && (
+          <div className="aspect-video overflow-hidden rounded-t-md">
+            <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover" loading="lazy" />
+          </div>
+        )}
+        <div className="p-4 flex flex-col flex-1 gap-2">
+          {post.categories.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {post.categories.map((cat) => (
+                <Badge key={cat.id} variant="secondary" className="text-xs">{cat.name}</Badge>
+              ))}
+            </div>
+          )}
+          <h3 className="font-serif text-lg font-semibold leading-snug line-clamp-2">{post.title}</h3>
+          {post.excerpt && <p className="text-sm text-muted-foreground line-clamp-2 flex-1">{post.excerpt}</p>}
+          <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground mt-auto pt-2">
+            {date && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{date}</span>}
+            {post.authorName && <span className="flex items-center gap-1"><User className="h-3 w-3" />{post.authorName}</span>}
+          </div>
+        </div>
+      </Card>
+    </Link>
+  );
+}
+
+function SuggestedPosts({ postId, categoryId }: { postId: number; categoryId: number }) {
+  const { data: suggested } = useQuery<PostWithRelations[]>({
+    queryKey: [`/api/posts/${postId}/most-read-category?categoryId=${categoryId}`, 4],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/posts/${postId}/most-read-category?categoryId=${categoryId}&limit=4`);
+      return res.json();
+    }
+  });
+
+  if (!suggested || suggested.length === 0) return null;
+
+  return (
+    <section className="mt-16 pt-8 border-t" data-testid="section-suggested-posts">
+      <SectionTitle>Posts Sugeridos</SectionTitle>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {suggested.map((p) => (
+          <PostCardLarge key={p.id} post={p} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function AcademyForm() {
+  return (
+    <Card className="p-5 bg-primary/5 border-primary/20" data-testid="card-academy-form">
+      <div className="text-center mb-4">
+        <h3 className="font-bold text-lg leading-tight">Psicometria Online Academy</h3>
+        <p className="text-xs text-muted-foreground mt-1">Cadastro gratuito na melhor plataforma de psicometria</p>
+      </div>
+      <div className="space-y-3">
+        <Input placeholder="Seu nome" className="h-9 text-sm" />
+        <Input type="email" placeholder="Seu melhor e-mail" className="h-9 text-sm" />
+        <Button className="w-full bg-accent-bright text-accent-bright-foreground hover:bg-accent-bright/90" data-testid="button-academy-signup">
+          Quero me cadastrar
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
 export default function PostPage() {
   const { slug } = useParams<{ slug: string }>();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -596,6 +676,10 @@ export default function PostPage() {
             )}
 
             <CommentsSection postId={post.id} />
+
+            {primaryCategory && (
+              <SuggestedPosts postId={post.id} categoryId={primaryCategory.id} />
+            )}
           </article>
 
           <aside>
@@ -605,6 +689,7 @@ export default function PostPage() {
               {primaryCategory && (
                 <MostReadSidebar postId={post.id} categoryId={primaryCategory.id} />
               )}
+              <AcademyForm />
             </div>
           </aside>
         </div>
