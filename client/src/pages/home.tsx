@@ -5,11 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, User, ArrowRight, Mail, ChevronRight, ChevronDown, Eye, Download, Search, Menu as MenuIcon } from "lucide-react";
+import { Calendar, User, ArrowRight, Mail, ChevronRight, ChevronLeft, ChevronDown, Eye, Download, Search, Menu as MenuIcon } from "lucide-react";
+import useEmblaCarousel from "embla-carousel-react";
 import type { PostWithRelations, Category, Banner, FreeMaterial } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { HeroBar } from "@/components/hero-bar";
 
 interface HomeData {
@@ -427,34 +428,71 @@ function SectionRowCategories({ row1, row2 }: { row1: { category: Category; post
 
 function SectionFreeMaterials({ materials }: { materials: FreeMaterial[] }) {
   if (materials.length === 0) return null;
+
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    loop: true,
+    align: "start",
+    slidesToScroll: 1,
+  });
+
+  const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi]);
+
   return (
-    <section className="bg-primary/5" data-testid="section-free-materials">
-      <div className="max-w-7xl mx-auto px-4 py-10">
-        <div className="text-center mb-8">
-          <Download className="h-10 w-10 text-primary mx-auto mb-4" />
-          <h2 className="font-serif text-2xl font-bold mb-2">Materiais Gratuitos</h2>
-          <p className="text-muted-foreground">Baixe nossos recursos de estudo gratuitamente</p>
+    <section className="bg-dark-bg" data-testid="section-free-materials">
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="font-serif text-2xl font-bold text-white mb-1">Materiais Gratuitos</h2>
+            <p className="text-white/60 text-sm">Baixe nossos recursos de estudo gratuitamente</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={scrollPrev}
+              className="flex items-center justify-center h-10 w-10 rounded-full border border-white/20 text-white/70 hover:text-white hover:border-white/40 transition-colors"
+              data-testid="button-materials-prev"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={scrollNext}
+              className="flex items-center justify-center h-10 w-10 rounded-full border border-white/20 text-white/70 hover:text-white hover:border-white/40 transition-colors"
+              data-testid="button-materials-next"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {materials.map((mat) => (
-            <a key={mat.id} href={mat.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`material-${mat.id}`}>
-              <Card className="overflow-visible hover-elevate active-elevate-2 cursor-pointer h-full flex flex-col">
-                {mat.imageUrl && (
-                  <div className="aspect-video overflow-hidden rounded-t-md">
-                    <img src={mat.imageUrl} alt={mat.title} className="w-full h-full object-cover" loading="lazy" />
+
+        <div className="overflow-hidden" ref={emblaRef}>
+          <div className="flex gap-5">
+            {materials.map((mat) => (
+              <div key={mat.id} className="flex-[0_0_70%] sm:flex-[0_0_45%] lg:flex-[0_0_23%] min-w-0">
+                <a href={mat.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`material-${mat.id}`} className="block group">
+                  <div className="rounded-xl overflow-hidden border border-white/10 bg-white/5 transition-colors hover:bg-white/10">
+                    {mat.imageUrl && (
+                      <div className="aspect-[3/4] overflow-hidden">
+                        <img
+                          src={mat.imageUrl}
+                          alt={mat.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
+                    <div className="p-4">
+                      <h3 className="font-serif text-sm font-semibold text-white leading-snug mb-1">{mat.title}</h3>
+                      {mat.description && <p className="text-xs text-white/50 line-clamp-2">{mat.description}</p>}
+                      <div className="flex items-center gap-1 text-accent-bright text-xs font-medium mt-3">
+                        <Download className="h-3.5 w-3.5" />
+                        Baixar grátis
+                      </div>
+                    </div>
                   </div>
-                )}
-                <div className="p-4 flex flex-col flex-1 gap-2">
-                  <h3 className="font-serif text-base font-semibold leading-snug">{mat.title}</h3>
-                  {mat.description && <p className="text-sm text-muted-foreground line-clamp-2">{mat.description}</p>}
-                  <div className="flex items-center gap-1 text-primary text-sm font-medium mt-auto pt-2">
-                    <Download className="h-4 w-4" />
-                    Baixar gratis
-                  </div>
-                </div>
-              </Card>
-            </a>
-          ))}
+                </a>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
