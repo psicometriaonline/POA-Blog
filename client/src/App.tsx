@@ -19,6 +19,7 @@ import ManageTags from "@/pages/admin/manage-tags";
 import CrawlPage from "@/pages/admin/crawl";
 import HomeSettings from "@/pages/admin/home-settings";
 import ManageAuthors from "@/pages/admin/manage-authors";
+import AnalyticsPage from "@/pages/admin/analytics";
 
 function Router() {
   return (
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/admin/crawl" component={CrawlPage} />
       <Route path="/admin/home" component={HomeSettings} />
       <Route path="/admin/autores" component={ManageAuthors} />
+      <Route path="/admin/metricas" component={AnalyticsPage} />
       <Route path="/:slug" component={PostPage} />
       <Route component={NotFound} />
     </Switch>

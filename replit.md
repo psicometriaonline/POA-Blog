@@ -12,7 +12,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - **Crawling**: Cheerio-based WordPress/Elementor post extraction + WP REST API for categories/tags
 
 ## Key Files
-- `shared/schema.ts` - Database schema (posts, categories, tags, banners, free_materials, site_settings, comments)
+- `shared/schema.ts` - Database schema (posts, categories, tags, banners, free_materials, site_settings, comments, post_views)
 - `server/storage.ts` - Database CRUD operations + home page data aggregation
 - `server/routes.ts` - API endpoints (public + admin)
 - `server/crawler.ts` - WordPress post crawler using Cheerio
@@ -29,6 +29,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `client/src/pages/admin/crawl.tsx` - WordPress import tool
 - `client/src/pages/admin/home-settings.tsx` - Home page section configuration
 - `client/src/pages/admin/manage-authors.tsx` - Author management
+- `client/src/pages/admin/analytics.tsx` - Post views analytics with charts and filters
 
 ## Database Schema
 - `authors` - Author profiles (name, photo, bio) - linked to posts via authorId
@@ -40,6 +41,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `banners` - Configurable banner ads (sidebar/horizontal slots)
 - `free_materials` - Downloadable materials section
 - `comments` - Post comments (authorName, authorEmail, content, isApproved)
+- `post_views` - Individual post view events with timestamps (for analytics)
 - `site_settings` - Key-value store for home page configuration
 - Auth tables from Replit Auth integration
 
@@ -71,6 +73,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `/admin/crawl` - WordPress content importer
 - `/admin/home` - Home page section configuration
 - `/admin/autores` - Author management
+- `/admin/metricas` - Post views analytics dashboard
 
 ### API
 - `GET /api/home` - Aggregated home page data (all sections in one request)
@@ -83,6 +86,8 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `GET /api/authors` - Public authors list
 - `POST/PUT/DELETE /api/admin/authors` - Author CRUD
 - `GET/PUT /api/admin/settings` - Site settings (key-value)
+- `GET /api/admin/analytics/timeseries?start=&end=&granularity=` - View time series (hourly/daily/monthly)
+- `GET /api/admin/analytics/posts?start=&end=&sort=` - Post views summary
 
 ## User Preferences
 - Portuguese language throughout the UI

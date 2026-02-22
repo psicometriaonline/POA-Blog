@@ -473,7 +473,7 @@ export async function registerRoutes(
         data = await storage.getViewsTimeSeries(startDate, endDate, postId);
       }
 
-      const total = await storage.getTotalViews(startDate, endDate);
+      const total = await storage.getTotalViews(startDate, endDate, postId);
       res.json({ data, total });
     } catch (error: any) {
       res.status(500).json({ message: error.message });

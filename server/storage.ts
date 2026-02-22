@@ -72,6 +72,12 @@ export interface IStorage {
   getAllSettings(): Promise<Record<string, string>>;
 
   getHomePageData(): Promise<any>;
+
+  getViewsTimeSeries(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]>;
+  getViewsTimeSeriesMonthly(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]>;
+  getViewsTimeSeriesHourly(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]>;
+  getPostViewsSummary(startDate: Date, endDate: Date, sortDir?: 'asc' | 'desc'): Promise<{ postId: number; title: string; slug: string; views: number }[]>;
+  getTotalViews(startDate: Date, endDate: Date, postId?: number): Promise<number>;
 }
 
 async function enrichPostsWithRelations(rawPosts: Post[]): Promise<PostWithRelations[]> {
@@ -471,15 +477,18 @@ export class DatabaseStorage implements IStorage {
     return rows;
   }
 
-  async getTotalViews(startDate: Date, endDate: Date): Promise<number> {
+  async getTotalViews(startDate: Date, endDate: Date, postId?: number): Promise<number> {
+    const conditions = [
+      gte(postViews.viewedAt, startDate),
+      lte(postViews.viewedAt, endDate),
+    ];
+    if (postId) conditions.push(eq(postViews.postId, postId));
+
     const [result] = await db.select({
       total: sql<number>`count(*)::int`,
     })
       .from(postViews)
-      .where(and(
-        gte(postViews.viewedAt, startDate),
-        lte(postViews.viewedAt, endDate),
-      ));
+      .where(and(...conditions));
     return result?.total || 0;
   }
 
