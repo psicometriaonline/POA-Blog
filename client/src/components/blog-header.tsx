@@ -1,8 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Search, Menu, X, ChevronDown, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/hooks/use-auth";
 import { useState, useRef, useEffect } from "react";
 import type { Category } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
@@ -14,15 +12,21 @@ export interface MenuItem {
   children?: MenuItem[];
 }
 
+const materiaisGratuitos = [
+  { label: "Glossário de Análise Fatorial Exploratória", url: "https://psicometriaonline.com.br/glossario-afe-blog" },
+  { label: "Glossário Análises Bi e Multivariadas", url: "https://psicometriaonline.com.br/analises-bi-e-multivariadas-blog/" },
+  { label: "Escrita Científica de Alto Impacto", url: "https://psicometriaonline.com.br/escrita-cientifica-blog/" },
+  { label: "Profissão Psicometrista", url: "https://psicometriaonline.com.br/profissao-psicometrista-blog/" },
+];
+
 export function BlogHeader() {
-  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [materiaisOpen, setMateriaisOpen] = useState(false);
   const categoriesRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const materiaisRef = useRef<HTMLDivElement>(null);
 
   const { data: categories } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
@@ -37,23 +41,19 @@ export function BlogHeader() {
       if (categoriesRef.current && !categoriesRef.current.contains(e.target as Node)) {
         setCategoriesOpen(false);
       }
+      if (materiaisRef.current && !materiaisRef.current.contains(e.target as Node)) {
+        setMateriaisOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
-
-  useEffect(() => {
-    if (searchOpen && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [searchOpen]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       setLocation(`/busca?q=${encodeURIComponent(searchQuery.trim())}`);
       setSearchQuery("");
-      setSearchOpen(false);
     }
   };
 
@@ -109,68 +109,77 @@ export function BlogHeader() {
               )}
             </div>
 
+            <div className="relative" ref={materiaisRef}>
+              <button
+                className="flex items-center gap-1 px-3 py-2 text-sm text-white/80 hover:text-white transition-colors rounded-full hover:bg-white/5"
+                onClick={() => setMateriaisOpen(!materiaisOpen)}
+                data-testid="nav-materiais-gratuitos"
+              >
+                Materiais Gratuitos
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${materiaisOpen ? "rotate-180" : ""}`} />
+              </button>
+              {materiaisOpen && (
+                <div
+                  className="absolute top-full left-0 mt-2 min-w-72 rounded-xl shadow-2xl border py-2 z-50"
+                  style={{ backgroundColor: "#e8f7fc", borderColor: "#b8e8f5" }}
+                >
+                  {materiaisGratuitos.map((item, idx) => (
+                    <a
+                      key={idx}
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block px-5 py-3 text-sm text-gray-800 hover:bg-white/60 cursor-pointer transition-colors"
+                      style={{ borderBottom: idx < materiaisGratuitos.length - 1 ? "1px solid #d0edf5" : "none" }}
+                      onClick={() => setMateriaisOpen(false)}
+                      data-testid={`nav-material-${idx}`}
+                    >
+                      {item.label}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <a href="https://academy.psicometriaonline.com.br" target="_blank" rel="noopener noreferrer">
+              <button
+                className="px-3 py-2 text-sm text-white/80 hover:text-white transition-colors rounded-full hover:bg-white/5"
+                data-testid="nav-academy"
+              >
+                Psicometria Online Academy
+              </button>
+            </a>
+
+            <a href="https://quantidados.com.br" target="_blank" rel="noopener noreferrer">
+              <button
+                className="px-3 py-2 text-sm text-white/80 hover:text-white transition-colors rounded-full hover:bg-white/5"
+                data-testid="nav-consultoria"
+              >
+                Consultoria
+              </button>
+            </a>
+
             {navItems.map((item, idx) => (
               <NavItem key={idx} item={item} onNavigate={() => {}} />
             ))}
           </nav>
 
           <div className="flex items-center gap-2">
-            {searchOpen ? (
-              <form onSubmit={handleSearch} className="hidden lg:flex items-center">
-                <div className="relative">
-                  <Input
-                    ref={searchInputRef}
-                    type="search"
-                    placeholder="Buscar..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50 w-48 h-9 pr-8 rounded-full text-sm"
-                    data-testid="input-header-search"
-                  />
-                  <button type="button" onClick={() => { setSearchOpen(false); setSearchQuery(""); }} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/50 hover:text-white">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <button
-                className="hidden lg:flex items-center justify-center h-9 w-9 rounded-full text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-                onClick={() => setSearchOpen(true)}
-                data-testid="button-search-toggle"
-              >
-                <Search className="h-4 w-4" />
-              </button>
-            )}
-
-            {user && (
-              <Link href="/admin">
-                <button
-                  className="hidden lg:inline-flex items-center px-5 py-2 text-sm text-white/90 hover:text-white rounded-full border border-white/20 hover:border-white/40 transition-colors"
-                  data-testid="link-admin"
-                >
-                  Admin
+            <form onSubmit={handleSearch} className="hidden lg:flex items-center">
+              <div className="relative">
+                <Input
+                  type="search"
+                  placeholder="BUSCAR"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-transparent border-white/30 text-white placeholder:text-white/50 w-48 h-9 pr-9 rounded-full text-sm"
+                  data-testid="input-header-search"
+                />
+                <button type="submit" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/50 hover:text-white">
+                  <Search className="h-4 w-4" />
                 </button>
-              </Link>
-            )}
-
-            <Link href="/busca">
-              <button
-                className="hidden lg:inline-flex items-center px-5 py-2 text-sm text-white/90 hover:text-white rounded-full border border-white/20 hover:border-white/40 transition-colors"
-                data-testid="link-entrar"
-              >
-                Buscar
-              </button>
-            </Link>
-
-            <a href="https://academy.psicometriaonline.com.br" target="_blank" rel="noopener noreferrer">
-              <button
-                className="hidden lg:inline-flex items-center px-5 py-2 text-sm font-medium rounded-full transition-colors"
-                style={{ backgroundColor: "#31D5FF", color: "#000A24" }}
-                data-testid="link-academy"
-              >
-                Academy
-              </button>
-            </a>
+              </div>
+            </form>
 
             <button
               className="xl:hidden flex items-center justify-center h-9 w-9 rounded-full text-white/80 hover:text-white hover:bg-white/5 transition-colors"
@@ -191,7 +200,7 @@ export function BlogHeader() {
               <div className="relative">
                 <Input
                   type="search"
-                  placeholder="Buscar..."
+                  placeholder="BUSCAR"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="bg-white/10 border-white/20 text-white placeholder:text-white/50 w-full pr-9 rounded-full"
@@ -204,11 +213,7 @@ export function BlogHeader() {
             </form>
 
             <nav className="flex flex-col gap-0.5">
-              {navItems.map((item, idx) => (
-                <MobileNavItem key={idx} item={item} onNavigate={() => setMobileMenuOpen(false)} />
-              ))}
-
-              <div className="border-t border-white/10 mt-2 pt-2">
+              <div className="border-b border-white/10 pb-2 mb-1">
                 <p className="text-xs text-white/40 px-3 mb-1.5 uppercase tracking-wider">Categorias</p>
                 {cats.map((cat) => (
                   <Link key={cat.id} href={`/categoria/${cat.slug}`} onClick={() => setMobileMenuOpen(false)}>
@@ -219,23 +224,27 @@ export function BlogHeader() {
                 ))}
               </div>
 
-              <div className="border-t border-white/10 mt-2 pt-3 flex flex-col gap-2">
-                {user && (
-                  <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>
-                    <div className="text-center py-2.5 text-sm text-white/90 rounded-full border border-white/20">
-                      Admin
-                    </div>
-                  </Link>
-                )}
-                <a href="https://academy.psicometriaonline.com.br" target="_blank" rel="noopener noreferrer">
-                  <div
-                    className="text-center py-2.5 text-sm font-medium rounded-full"
-                    style={{ backgroundColor: "#31D5FF", color: "#000A24" }}
-                  >
-                    Academy
-                  </div>
-                </a>
-              </div>
+              <MobileDropdown
+                label="Materiais Gratuitos"
+                items={materiaisGratuitos}
+                onNavigate={() => setMobileMenuOpen(false)}
+              />
+
+              <a href="https://academy.psicometriaonline.com.br" target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)}>
+                <div className="px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                  Psicometria Online Academy
+                </div>
+              </a>
+
+              <a href="https://quantidados.com.br" target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)}>
+                <div className="px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                  Consultoria
+                </div>
+              </a>
+
+              {navItems.map((item, idx) => (
+                <MobileNavItem key={idx} item={item} onNavigate={() => setMobileMenuOpen(false)} />
+              ))}
             </nav>
           </div>
         )}
@@ -316,6 +325,33 @@ function NavItem({ item, onNavigate }: { item: MenuItem; onNavigate: () => void 
         {item.label}
       </button>
     </Link>
+  );
+}
+
+function MobileDropdown({ label, items, onNavigate }: { label: string; items: { label: string; url: string }[]; onNavigate: () => void }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div>
+      <button
+        className="w-full flex items-center justify-between px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+        onClick={() => setOpen(!open)}
+      >
+        {label}
+        <ChevronRight className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-90" : ""}`} />
+      </button>
+      {open && (
+        <div className="ml-3 border-l border-white/10 pl-3">
+          {items.map((item, idx) => (
+            <a key={idx} href={item.url} target="_blank" rel="noopener noreferrer" onClick={onNavigate}>
+              <div className="px-3 py-2 text-sm text-white/60 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                {item.label}
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
