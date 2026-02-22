@@ -343,10 +343,10 @@ function SectionMostReadAndCategories({ mostRead, categories: cats }: { mostRead
         </div>
         <div>
           <SectionTitle>Categorias</SectionTitle>
-          <div className="space-y-1">
+          <div className="space-y-1 border border-border rounded-xl p-3">
             {cats.map((cat) => (
               <Link key={cat.id} href={`/categoria/${cat.slug}`} data-testid={`link-category-${cat.id}`}>
-                <div className="flex items-center justify-between gap-2 p-3 rounded-md hover-elevate active-elevate-2 cursor-pointer">
+                <div className="flex items-center justify-between gap-2 p-3 rounded-lg hover-elevate active-elevate-2 cursor-pointer">
                   <span className="text-sm font-medium">{cat.name}</span>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
@@ -363,9 +363,9 @@ function SectionDiverseCategories({ sections }: { sections: { category: Category
   if (sections.length === 0) return null;
   return (
     <section className="max-w-7xl mx-auto px-4 py-10" data-testid="section-diverse-categories">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {sections.map((sec) => (
-          <div key={sec.category.id}>
+      <div className="grid grid-cols-1 md:grid-cols-3 divide-x-0 md:divide-x divide-border">
+        {sections.map((sec, idx) => (
+          <div key={sec.category.id} className={idx === 0 ? "md:pr-6" : idx === sections.length - 1 ? "md:pl-6" : "md:px-6"}>
             <div className="flex items-center justify-between gap-2 mb-4">
               <h3 className="font-serif text-lg font-bold">{sec.category.name}</h3>
               <Link href={`/categoria/${sec.category.slug}`}>
@@ -471,11 +471,11 @@ function SectionFreeMaterials({ materials }: { materials: FreeMaterial[] }) {
                 <a href={mat.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`material-${mat.id}`} className="block group">
                   <div className="rounded-xl overflow-hidden border border-white/10 bg-white/5 transition-colors hover:bg-white/10">
                     {mat.imageUrl && (
-                      <div className="aspect-[3/4] overflow-hidden">
+                      <div className="overflow-hidden">
                         <img
                           src={mat.imageUrl}
                           alt={mat.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-auto block group-hover:scale-105 transition-transform duration-300"
                           loading="lazy"
                         />
                       </div>
