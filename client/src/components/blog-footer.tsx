@@ -13,7 +13,7 @@ export function BlogFooter() {
         <div className="py-16 grid grid-cols-1 md:grid-cols-12 gap-12">
 
           <div className="md:col-span-5 space-y-6">
-            <img src={footerLogo} alt="Psicometria Online" className="h-9 w-auto brightness-0 invert" data-testid="img-footer-logo" />
+            <img src={footerLogo} alt="Psicometria Online" className="h-12 w-auto brightness-0 invert" data-testid="img-footer-logo" />
             <p className="text-white/50 text-sm leading-relaxed max-w-sm">
               Maior portal de conteúdo sobre psicometria, análise de dados e pesquisa quantitativa da América Latina.
             </p>
@@ -49,7 +49,7 @@ export function BlogFooter() {
           </div>
 
           <div className="md:col-span-2 space-y-5">
-            <h3 className="text-white font-semibold text-xs uppercase tracking-widest">Navegação</h3>
+            <h3 className="text-[#31D5FF] font-semibold text-xs uppercase tracking-widest">Navegação</h3>
             <ul className="space-y-3 text-sm">
               <li>
                 <Link href="/" className="text-white/50 hover:text-[#31D5FF] transition-colors">Home</Link>
@@ -64,14 +64,14 @@ export function BlogFooter() {
           </div>
 
           <div className="md:col-span-2 space-y-5">
-            <h3 className="text-white font-semibold text-xs uppercase tracking-widest">Formação</h3>
+            <h3 className="text-[#31D5FF] font-semibold text-xs uppercase tracking-widest">Formação</h3>
             <ul className="space-y-3 text-sm">
               <li>
                 <a
                   href="https://academy.psicometriaonline.com.br"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#31D5FF] hover:text-white transition-colors font-medium"
+                  className="text-white/50 hover:text-[#31D5FF] transition-colors"
                 >
                   Psicometria Online Academy
                 </a>
@@ -90,17 +90,21 @@ export function BlogFooter() {
           </div>
 
           <div className="md:col-span-3 space-y-5">
-            <h3 className="text-white font-semibold text-xs uppercase tracking-widest">Suporte</h3>
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-[#25D366] text-white text-sm font-medium hover:bg-[#1ebe5d] transition-colors shadow-lg shadow-[#25D366]/20"
-              data-testid="link-footer-whatsapp"
-            >
-              <SiWhatsapp className="h-4.5 w-4.5" />
-              Fale Conosco
-            </a>
+            <h3 className="text-[#31D5FF] font-semibold text-xs uppercase tracking-widest">Suporte</h3>
+            <ul className="space-y-3 text-sm">
+              <li>
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-white/50 hover:text-[#31D5FF] transition-colors"
+                  data-testid="link-footer-whatsapp"
+                >
+                  <SiWhatsapp className="h-4 w-4" />
+                  Fale Conosco via WhatsApp
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
 
