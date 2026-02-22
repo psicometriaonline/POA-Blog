@@ -55,7 +55,7 @@ function SectionTitle({ children, className = "" }: { children: React.ReactNode;
 function PostCardLarge({ post }: { post: PostWithRelations }) {
   const date = formatDate(post.publishedAt);
   return (
-    <Link href={`/post/${post.slug}`} data-testid={`card-post-${post.id}`}>
+    <Link href={`/${post.slug}`} data-testid={`card-post-${post.id}`}>
       <Card className="overflow-visible hover-elevate active-elevate-2 cursor-pointer h-full flex flex-col">
         {post.featuredImage && (
           <div className="aspect-video overflow-hidden rounded-t-md">
@@ -85,7 +85,7 @@ function PostCardLarge({ post }: { post: PostWithRelations }) {
 function PostCardCompact({ post, index }: { post: PostWithRelations; index?: number }) {
   const date = formatDateShort(post.publishedAt);
   return (
-    <Link href={`/post/${post.slug}`} data-testid={`card-compact-${post.id}`}>
+    <Link href={`/${post.slug}`} data-testid={`card-compact-${post.id}`}>
       <div className="flex gap-3 p-3 rounded-md hover-elevate active-elevate-2 cursor-pointer">
         {index !== undefined && (
           <span className="text-3xl font-bold text-primary/20 flex-shrink-0 w-8 text-center">{index}</span>
@@ -110,7 +110,7 @@ function PostCardCompact({ post, index }: { post: PostWithRelations; index?: num
 function PostCardHorizontal({ post }: { post: PostWithRelations }) {
   const date = formatDate(post.publishedAt);
   return (
-    <Link href={`/post/${post.slug}`} data-testid={`card-horiz-${post.id}`}>
+    <Link href={`/${post.slug}`} data-testid={`card-horiz-${post.id}`}>
       <Card className="overflow-visible hover-elevate active-elevate-2 cursor-pointer flex flex-col sm:flex-row h-full">
         {post.featuredImage && (
           <div className="sm:w-48 aspect-video sm:aspect-auto flex-shrink-0 overflow-hidden rounded-t-md sm:rounded-l-md sm:rounded-tr-none">
@@ -170,7 +170,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
       <SectionTitle>Posts Recentes</SectionTitle>
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-stretch">
         <div className="flex flex-col h-full">
-          <Link href={`/post/${mainPost.slug}`} data-testid={`card-post-${mainPost.id}`}>
+          <Link href={`/${mainPost.slug}`} data-testid={`card-post-${mainPost.id}`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-0 cursor-pointer hover-elevate active-elevate-2 rounded-md overflow-visible">
               {mainPost.featuredImage && (
                 <div className="aspect-[16/10] md:aspect-auto overflow-hidden relative rounded-l-md">
@@ -200,7 +200,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
             {bottomPosts.map((post) => {
               const d = formatDateMonth(post.publishedAt);
               return (
-                <Link key={post.id} href={`/post/${post.slug}`} data-testid={`card-post-${post.id}`}>
+                <Link key={post.id} href={`/${post.slug}`} data-testid={`card-post-${post.id}`}>
                   <div className="cursor-pointer hover-elevate active-elevate-2 rounded-md p-1">
                     {post.featuredImage && (
                       <div className="aspect-[16/10] overflow-hidden rounded-md mb-3">

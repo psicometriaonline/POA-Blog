@@ -16,7 +16,7 @@ export function PostCard({ post }: PostCardProps) {
     : null;
 
   return (
-    <Link href={`/post/${post.slug}`} data-testid={`card-post-${post.id}`}>
+    <Link href={`/${post.slug}`} data-testid={`card-post-${post.id}`}>
       <Card className="overflow-visible hover-elevate active-elevate-2 cursor-pointer h-full flex flex-col">
         {post.featuredImage && (
           <div className="aspect-video overflow-hidden rounded-t-md">

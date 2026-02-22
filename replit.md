@@ -9,7 +9,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - **Auth**: Replit Auth integration for admin access
 - **Styling**: Tailwind CSS with shadcn/ui components, blue/academic theme
 - **Rich Text**: TipTap editor for post editing
-- **Crawling**: Cheerio-based WordPress post extraction
+- **Crawling**: Cheerio-based WordPress/Elementor post extraction + WP REST API for categories/tags
 
 ## Key Files
 - `shared/schema.ts` - Database schema (posts, categories, tags, banners, free_materials, site_settings, comments)
@@ -58,7 +58,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 ## Routes
 ### Public
 - `/` - Home page with magazine layout
-- `/post/:slug` - Individual post (increments viewCount)
+- `/:slug` - Individual post (SEO-friendly, no /post/ prefix, matches original WP URLs)
 - `/categoria/:slug` - Posts by category
 - `/tag/:slug` - Posts by tag
 - `/busca` - Search page

@@ -159,7 +159,7 @@ function MostReadSidebar({ postId, categoryId }: { postId: number; categoryId: n
       </div>
       <div className="space-y-4">
         {mostRead.map((p) => (
-          <Link key={p.id} href={`/post/${p.slug}`} data-testid={`card-most-read-${p.id}`}>
+          <Link key={p.id} href={`/${p.slug}`} data-testid={`card-most-read-${p.id}`}>
             <Card className="overflow-visible hover-elevate cursor-pointer">
               <div className="flex gap-3 p-3">
                 {p.featuredImage && (
@@ -464,7 +464,7 @@ function SectionTitle({ children, className = "" }: { children: React.ReactNode;
 function PostCardLarge({ post }: { post: PostWithRelations }) {
   const date = post.publishedAt ? format(new Date(post.publishedAt), "dd 'de' MMMM, yyyy", { locale: ptBR }) : null;
   return (
-    <Link href={`/post/${post.slug}`} data-testid={`card-post-${post.id}`}>
+    <Link href={`/${post.slug}`} data-testid={`card-post-${post.id}`}>
       <Card className="overflow-visible hover-elevate active-elevate-2 cursor-pointer h-full flex flex-col">
         {post.featuredImage && (
           <div className="aspect-video overflow-hidden rounded-t-md">

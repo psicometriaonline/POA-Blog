@@ -114,6 +114,23 @@ export async function crawlWordPressPost(url: string): Promise<CrawledPost> {
 
   let contentHtml = contentEl.html() || "";
 
+  const blogDomainPattern = /href="https?:\/\/(?:www\.)?blog\.psicometriaonline\.com\.br\/([^"]*?)"/g;
+  contentHtml = contentHtml.replace(blogDomainPattern, (_match, path) => {
+    const cleanPath = path.replace(/\/+$/, "");
+    if (cleanPath.startsWith("category/")) {
+      const catSlug = cleanPath.replace("category/", "");
+      return `href="/categoria/${catSlug}"`;
+    }
+    if (cleanPath.startsWith("tag/")) {
+      const tagSlug = cleanPath.replace("tag/", "");
+      return `href="/tag/${tagSlug}"`;
+    }
+    if (cleanPath.startsWith("wp-content/")) {
+      return `href="https://www.blog.psicometriaonline.com.br/${cleanPath}"`;
+    }
+    return `href="/${cleanPath}"`;
+  });
+
   const comoCitarMatch = contentHtml.match(/<h2[^>]*>[\s]*Como citar[\s]*<\/h2>/i);
   if (comoCitarMatch && comoCitarMatch.index !== undefined) {
     const afterHeading = contentHtml.substring(comoCitarMatch.index + comoCitarMatch[0].length);

@@ -24,7 +24,6 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/post/:slug" component={PostPage} />
       <Route path="/categoria/:slug" component={CategoryPage} />
       <Route path="/tag/:slug" component={TagPage} />
       <Route path="/busca" component={SearchPage} />
@@ -35,6 +34,7 @@ function Router() {
       <Route path="/admin/crawl" component={CrawlPage} />
       <Route path="/admin/home" component={HomeSettings} />
       <Route path="/admin/autores" component={ManageAuthors} />
+      <Route path="/:slug" component={PostPage} />
       <Route component={NotFound} />
     </Switch>
   );
