@@ -1,5 +1,5 @@
-import { Link } from "wouter";
-import { Menu, X, ChevronDown, ChevronRight } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { Menu, X, ChevronDown, ChevronRight, Search } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import type { Category } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
@@ -16,6 +16,8 @@ export function BlogHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [materiaisOpen, setMateriaisOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [, navigate] = useLocation();
   const categoriesRef = useRef<HTMLDivElement>(null);
   const materiaisRef = useRef<HTMLDivElement>(null);
 
@@ -139,6 +141,34 @@ export function BlogHeader() {
           </nav>
 
           <div className="flex items-center gap-2">
+            <form
+              className="hidden xl:flex items-center gap-0 rounded-full border border-white/15 bg-white/5 overflow-hidden"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (searchQuery.trim()) {
+                  navigate(`/busca?q=${encodeURIComponent(searchQuery.trim())}`);
+                  setSearchQuery("");
+                }
+              }}
+              data-testid="form-header-search"
+            >
+              <button
+                type="submit"
+                className="flex items-center justify-center h-9 w-9 text-white/50 hover:text-white transition-colors flex-shrink-0"
+                data-testid="button-header-search"
+              >
+                <Search className="h-4 w-4" />
+              </button>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar..."
+                className="bg-transparent text-sm text-white placeholder:text-white/40 outline-none border-none h-9 w-36 pr-3"
+                data-testid="input-header-search"
+              />
+            </form>
+
             <a href="https://academy.psicometriaonline.com.br" target="_blank" rel="noopener noreferrer" className="hidden xl:block">
               <button
                 className="inline-flex items-center px-5 py-2 text-sm font-medium rounded-full transition-colors"
@@ -194,7 +224,34 @@ export function BlogHeader() {
                 onNavigate={() => setMobileMenuOpen(false)}
               />
 
-              <div className="border-t border-white/10 mt-2 pt-3">
+              <div className="border-t border-white/10 mt-2 pt-3 flex flex-col gap-2">
+                <form
+                  className="flex items-center gap-0 rounded-full border border-white/15 bg-white/5 overflow-hidden"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (searchQuery.trim()) {
+                      navigate(`/busca?q=${encodeURIComponent(searchQuery.trim())}`);
+                      setSearchQuery("");
+                      setMobileMenuOpen(false);
+                    }
+                  }}
+                  data-testid="form-mobile-search"
+                >
+                  <button
+                    type="submit"
+                    className="flex items-center justify-center h-10 w-10 text-white/50 hover:text-white transition-colors flex-shrink-0"
+                  >
+                    <Search className="h-4 w-4" />
+                  </button>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Buscar..."
+                    className="bg-transparent text-sm text-white placeholder:text-white/40 outline-none border-none h-10 w-full pr-3"
+                    data-testid="input-mobile-search"
+                  />
+                </form>
                 <a href="https://academy.psicometriaonline.com.br" target="_blank" rel="noopener noreferrer">
                   <div
                     className="text-center py-2.5 text-sm font-medium rounded-full"
