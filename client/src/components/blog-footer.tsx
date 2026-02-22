@@ -8,75 +8,107 @@ export function BlogFooter() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-white text-gray-500 py-12 border-t border-gray-200" data-testid="footer">
+    <footer className="bg-[#000A24]" data-testid="footer">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="space-y-4">
-            <img src={footerLogo} alt="Psicometria Online" className="h-10 w-auto" data-testid="img-footer-logo" />
-            <p className="text-sm leading-relaxed">
+        <div className="py-16 grid grid-cols-1 md:grid-cols-12 gap-12">
+
+          <div className="md:col-span-5 space-y-6">
+            <img src={footerLogo} alt="Psicometria Online" className="h-9 w-auto brightness-0 invert" data-testid="img-footer-logo" />
+            <p className="text-white/50 text-sm leading-relaxed max-w-sm">
               Maior portal de conteúdo sobre psicometria, análise de dados e pesquisa quantitativa da América Latina.
             </p>
-            <div className="flex items-center gap-4">
-              <a href="https://instagram.com/psicometriaonline" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#000A24] transition-colors" data-testid="link-footer-instagram">
-                <SiInstagram className="h-5 w-5" />
+            <div className="flex items-center gap-3">
+              <a
+                href="https://instagram.com/psicometriaonline"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center h-9 w-9 rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all"
+                data-testid="link-footer-instagram"
+              >
+                <SiInstagram className="h-4 w-4" />
               </a>
-              <a href="https://br.linkedin.com/company/psicometriaonline" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#000A24] transition-colors" data-testid="link-footer-linkedin">
-                <SiLinkedin className="h-5 w-5" />
+              <a
+                href="https://br.linkedin.com/company/psicometriaonline"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center h-9 w-9 rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all"
+                data-testid="link-footer-linkedin"
+              >
+                <SiLinkedin className="h-4 w-4" />
               </a>
-              <a href="https://www.youtube.com/c/psicometriaonline?sub_confirmation=1" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#000A24] transition-colors" data-testid="link-footer-youtube">
-                <SiYoutube className="h-5 w-5" />
+              <a
+                href="https://www.youtube.com/c/psicometriaonline?sub_confirmation=1"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center h-9 w-9 rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all"
+                data-testid="link-footer-youtube"
+              >
+                <SiYoutube className="h-4 w-4" />
               </a>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <h3 className="text-[#000A24] font-bold text-sm uppercase tracking-wider">Navegação</h3>
-            <ul className="space-y-2 text-sm">
+          <div className="md:col-span-2 space-y-5">
+            <h3 className="text-white font-semibold text-xs uppercase tracking-widest">Navegação</h3>
+            <ul className="space-y-3 text-sm">
               <li>
-                <Link href="/" className="hover:text-[#000A24] transition-colors">Home</Link>
+                <Link href="/" className="text-white/50 hover:text-[#31D5FF] transition-colors">Home</Link>
               </li>
               <li>
-                <Link href="/busca" className="hover:text-[#000A24] transition-colors">Buscar Artigos</Link>
+                <Link href="/busca" className="text-white/50 hover:text-[#31D5FF] transition-colors">Buscar Artigos</Link>
               </li>
               <li>
-                <Link href="/categorias" className="hover:text-[#000A24] transition-colors">Categorias</Link>
-              </li>
-            </ul>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-[#000A24] font-bold text-sm uppercase tracking-wider">Formação</h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <a href="https://academy.psicometriaonline.com.br" target="_blank" rel="noopener noreferrer" className="hover:text-[#000A24] transition-colors font-medium text-[#31D5FF]">Psicometria Online Academy</a>
+                <Link href="/categorias" className="text-white/50 hover:text-[#31D5FF] transition-colors">Categorias</Link>
               </li>
             </ul>
           </div>
 
-          <div className="space-y-4">
-            <h3 className="text-[#000A24] font-bold text-sm uppercase tracking-wider">Suporte</h3>
-            <ul className="space-y-2 text-sm">
+          <div className="md:col-span-2 space-y-5">
+            <h3 className="text-white font-semibold text-xs uppercase tracking-widest">Formação</h3>
+            <ul className="space-y-3 text-sm">
               <li>
                 <a
-                  href={whatsappUrl}
+                  href="https://academy.psicometriaonline.com.br"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#25D366] text-white text-sm font-medium hover:bg-[#1da851] transition-colors"
-                  data-testid="link-footer-whatsapp"
+                  className="text-[#31D5FF] hover:text-white transition-colors font-medium"
                 >
-                  <SiWhatsapp className="h-4 w-4" />
-                  Fale Conosco
+                  Psicometria Online Academy
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://quantidados.com.br"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white/50 hover:text-[#31D5FF] transition-colors"
+                >
+                  Consultoria
                 </a>
               </li>
             </ul>
           </div>
+
+          <div className="md:col-span-3 space-y-5">
+            <h3 className="text-white font-semibold text-xs uppercase tracking-widest">Suporte</h3>
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-[#25D366] text-white text-sm font-medium hover:bg-[#1ebe5d] transition-colors shadow-lg shadow-[#25D366]/20"
+              data-testid="link-footer-whatsapp"
+            >
+              <SiWhatsapp className="h-4.5 w-4.5" />
+              Fale Conosco
+            </a>
+          </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-400">
+        <div className="border-t border-white/10 py-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-white/30">
           <p>© {currentYear} Psicometria Online. Todos os direitos reservados.</p>
           <div className="flex items-center gap-6">
-            <a href="#" className="hover:text-[#000A24] transition-colors">Políticas de Privacidade</a>
-            <a href="#" className="hover:text-[#000A24] transition-colors">Termos de Uso</a>
+            <a href="#" className="hover:text-white/60 transition-colors">Políticas de Privacidade</a>
+            <a href="#" className="hover:text-white/60 transition-colors">Termos de Uso</a>
           </div>
         </div>
       </div>
