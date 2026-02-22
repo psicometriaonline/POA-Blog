@@ -451,6 +451,52 @@ export async function registerRoutes(
     }
   });
 
+  // ===== ANALYTICS ROUTES (Protected) =====
+
+  app.get("/api/admin/analytics/timeseries", isAuthenticated, async (req, res) => {
+    try {
+      const startDate = new Date(req.query.start as string);
+      const endDate = new Date(req.query.end as string);
+      const granularity = (req.query.granularity as string) || "daily";
+      const postId = req.query.postId ? parseInt(req.query.postId as string) : undefined;
+
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return res.status(400).json({ message: "Invalid date range" });
+      }
+
+      let data;
+      if (granularity === "hourly") {
+        data = await storage.getViewsTimeSeriesHourly(startDate, endDate, postId);
+      } else if (granularity === "monthly") {
+        data = await storage.getViewsTimeSeriesMonthly(startDate, endDate, postId);
+      } else {
+        data = await storage.getViewsTimeSeries(startDate, endDate, postId);
+      }
+
+      const total = await storage.getTotalViews(startDate, endDate);
+      res.json({ data, total });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/analytics/posts", isAuthenticated, async (req, res) => {
+    try {
+      const startDate = new Date(req.query.start as string);
+      const endDate = new Date(req.query.end as string);
+      const sortDir = (req.query.sort as string) === "asc" ? "asc" as const : "desc" as const;
+
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return res.status(400).json({ message: "Invalid date range" });
+      }
+
+      const data = await storage.getPostViewsSummary(startDate, endDate, sortDir);
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ===== CRAWLING ROUTES (Protected) =====
 
   app.post("/api/admin/crawl", isAuthenticated, async (req, res) => {

@@ -8,10 +8,10 @@ import {
   type FreeMaterial, type InsertFreeMaterial,
   type Comment, type InsertComment,
   authors, categories, tags, posts, postCategories, postTags,
-  banners, freeMaterials, siteSettings, comments,
+  banners, freeMaterials, siteSettings, comments, postViews,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, or, desc, sql, inArray, and, asc } from "drizzle-orm";
+import { eq, ilike, or, desc, sql, inArray, and, asc, gte, lte, count } from "drizzle-orm";
 
 export interface IStorage {
   getAuthors(): Promise<Author[]>;
@@ -392,6 +392,95 @@ export class DatabaseStorage implements IStorage {
 
   async incrementViewCount(id: number): Promise<void> {
     await db.update(posts).set({ viewCount: sql`${posts.viewCount} + 1` }).where(eq(posts.id, id));
+    await db.insert(postViews).values({ postId: id });
+  }
+
+  async getViewsTimeSeries(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]> {
+    const conditions = [
+      gte(postViews.viewedAt, startDate),
+      lte(postViews.viewedAt, endDate),
+    ];
+    if (postId) conditions.push(eq(postViews.postId, postId));
+
+    const rows = await db.select({
+      date: sql<string>`date_trunc('day', ${postViews.viewedAt})::date::text`,
+      views: sql<number>`count(*)::int`,
+    })
+      .from(postViews)
+      .where(and(...conditions))
+      .groupBy(sql`date_trunc('day', ${postViews.viewedAt})::date`)
+      .orderBy(sql`date_trunc('day', ${postViews.viewedAt})::date`);
+
+    return rows;
+  }
+
+  async getViewsTimeSeriesMonthly(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]> {
+    const conditions = [
+      gte(postViews.viewedAt, startDate),
+      lte(postViews.viewedAt, endDate),
+    ];
+    if (postId) conditions.push(eq(postViews.postId, postId));
+
+    const rows = await db.select({
+      date: sql<string>`to_char(date_trunc('month', ${postViews.viewedAt}), 'YYYY-MM')`,
+      views: sql<number>`count(*)::int`,
+    })
+      .from(postViews)
+      .where(and(...conditions))
+      .groupBy(sql`date_trunc('month', ${postViews.viewedAt})`)
+      .orderBy(sql`date_trunc('month', ${postViews.viewedAt})`);
+
+    return rows;
+  }
+
+  async getViewsTimeSeriesHourly(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]> {
+    const conditions = [
+      gte(postViews.viewedAt, startDate),
+      lte(postViews.viewedAt, endDate),
+    ];
+    if (postId) conditions.push(eq(postViews.postId, postId));
+
+    const rows = await db.select({
+      date: sql<string>`to_char(date_trunc('hour', ${postViews.viewedAt}), 'YYYY-MM-DD HH24:00')`,
+      views: sql<number>`count(*)::int`,
+    })
+      .from(postViews)
+      .where(and(...conditions))
+      .groupBy(sql`date_trunc('hour', ${postViews.viewedAt})`)
+      .orderBy(sql`date_trunc('hour', ${postViews.viewedAt})`);
+
+    return rows;
+  }
+
+  async getPostViewsSummary(startDate: Date, endDate: Date, sortDir: 'asc' | 'desc' = 'desc'): Promise<{ postId: number; title: string; slug: string; views: number }[]> {
+    const rows = await db.select({
+      postId: postViews.postId,
+      title: posts.title,
+      slug: posts.slug,
+      views: sql<number>`count(*)::int`,
+    })
+      .from(postViews)
+      .innerJoin(posts, eq(postViews.postId, posts.id))
+      .where(and(
+        gte(postViews.viewedAt, startDate),
+        lte(postViews.viewedAt, endDate),
+      ))
+      .groupBy(postViews.postId, posts.title, posts.slug)
+      .orderBy(sortDir === 'desc' ? desc(sql`count(*)`) : asc(sql`count(*)`));
+
+    return rows;
+  }
+
+  async getTotalViews(startDate: Date, endDate: Date): Promise<number> {
+    const [result] = await db.select({
+      total: sql<number>`count(*)::int`,
+    })
+      .from(postViews)
+      .where(and(
+        gte(postViews.viewedAt, startDate),
+        lte(postViews.viewedAt, endDate),
+      ));
+    return result?.total || 0;
   }
 
   async getBanners(slot?: string): Promise<Banner[]> {
