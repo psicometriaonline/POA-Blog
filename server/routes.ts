@@ -499,6 +499,60 @@ export async function registerRoutes(
 
   // ===== CRAWLING ROUTES (Protected) =====
 
+  app.post("/api/admin/crawl/single", isAuthenticated, async (req, res) => {
+    try {
+      const { url } = req.body;
+      if (!url || typeof url !== "string") {
+        return res.status(400).json({ message: "Please provide a URL" });
+      }
+
+      const { crawlWordPressPost } = await import("./crawler");
+      const crawledPost = await crawlWordPressPost(url.trim());
+
+      const categoryIds: number[] = [];
+      for (const catName of (crawledPost.categories || [])) {
+        const catSlug = slugify(catName);
+        let cat = await storage.getCategoryBySlug(catSlug);
+        if (!cat) {
+          cat = await storage.createCategory({ name: catName, slug: catSlug, description: null });
+        }
+        categoryIds.push(cat.id);
+      }
+
+      const tagIds: number[] = [];
+      for (const tagName of (crawledPost.tags || [])) {
+        const tagSlug = slugify(tagName);
+        let tag = await storage.getTagBySlug(tagSlug);
+        if (!tag) {
+          tag = await storage.createTag({ name: tagName, slug: tagSlug });
+        }
+        tagIds.push(tag.id);
+      }
+
+      let uniqueSlug = crawledPost.slug;
+      const existingPost = await storage.getPostBySlug(uniqueSlug);
+      if (existingPost) {
+        uniqueSlug = `${uniqueSlug}-${Date.now()}`;
+      }
+
+      const post = await storage.createPost({
+        title: crawledPost.title,
+        slug: uniqueSlug,
+        content: crawledPost.content,
+        excerpt: crawledPost.excerpt,
+        featuredImage: crawledPost.featuredImage,
+        authorName: crawledPost.authorName,
+        sourceUrl: crawledPost.sourceUrl,
+        status: "published",
+        publishedAt: crawledPost.publishedAt ? new Date(crawledPost.publishedAt) : new Date(),
+      }, categoryIds, tagIds);
+
+      res.json({ success: true, title: crawledPost.title, slug: post.slug, postId: post.id });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
   app.post("/api/admin/crawl", isAuthenticated, async (req, res) => {
     try {
       const { urls } = req.body;
