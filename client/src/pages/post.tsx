@@ -17,7 +17,7 @@ import { ptBR } from "date-fns/locale";
 import DOMPurify from "dompurify";
 import { useEffect, useRef, useState } from "react";
 import { HeroBar } from "@/components/hero-bar";
-import { Calendar, User, Tag, ChevronRight, Eye, Send, MessageSquare, List } from "lucide-react";
+import { Calendar, User, Tag, ChevronRight, Send, MessageSquare, List } from "lucide-react";
 import { SiFacebook, SiLinkedin, SiWhatsapp, SiX } from "react-icons/si";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -638,10 +638,6 @@ export default function PostPage() {
                     {publishedDate}
                   </span>
                 )}
-                <span className="flex items-center gap-1">
-                  <Eye className="h-4 w-4" />
-                  {post.viewCount} visualizacoes
-                </span>
               </div>
 
               <h1 className="font-serif text-2xl md:text-3xl font-bold mb-4 leading-tight" data-testid="text-post-title">

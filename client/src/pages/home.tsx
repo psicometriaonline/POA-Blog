@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, User, ArrowRight, Mail, ChevronRight, ChevronLeft, ChevronDown, Eye, Download, Search, Menu as MenuIcon } from "lucide-react";
+import { Calendar, User, ArrowRight, Mail, ChevronRight, ChevronLeft, ChevronDown, Download, Search, Menu as MenuIcon } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import type { PostWithRelations, Category, Banner, FreeMaterial } from "@shared/schema";
 import { format } from "date-fns";
@@ -100,7 +100,6 @@ function PostCardCompact({ post, index }: { post: PostWithRelations; index?: num
           <h4 className="font-serif text-sm font-semibold leading-snug line-clamp-2">{post.title}</h4>
           <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
             {date && <span>{date}</span>}
-            {post.viewCount > 0 && <span className="flex items-center gap-0.5"><Eye className="h-3 w-3" />{post.viewCount}</span>}
           </div>
         </div>
       </div>
