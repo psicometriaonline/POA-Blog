@@ -106,6 +106,12 @@ export const comments = pgTable("comments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const postViews = pgTable("post_views", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+  viewedAt: timestamp("viewed_at").defaultNow().notNull(),
+});
+
 export const siteSettings = pgTable("site_settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
