@@ -8,7 +8,7 @@ export function BlogFooter() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-[#000A24]" data-testid="footer">
+    <footer className="bg-[#000A24] border-t border-white/10" data-testid="footer">
       <div className="max-w-7xl mx-auto px-4">
         <div className="py-16 grid grid-cols-1 md:grid-cols-12 gap-12">
 
