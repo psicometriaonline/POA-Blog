@@ -68,23 +68,25 @@ export function BlogHeader() {
               </button>
               {categoriesOpen && (
                 <div
-                  className="absolute top-full left-0 mt-2 min-w-56 rounded-xl shadow-2xl border border-white/10 py-2 z-50"
-                  style={{ backgroundColor: "#0a1535" }}
+                  className="absolute top-full left-0 mt-2 rounded-xl shadow-2xl border border-white/10 py-2 z-50"
+                  style={{ backgroundColor: "#0a1535", width: "28rem" }}
                 >
-                  {cats.map((cat) => (
-                    <Link
-                      key={cat.id}
-                      href={`/categoria/${cat.slug}`}
-                      onClick={() => setCategoriesOpen(false)}
-                    >
-                      <div
-                        className="block px-4 py-2.5 text-sm text-white/80 hover:text-white hover:bg-white/5 cursor-pointer transition-colors"
-                        data-testid={`nav-cat-${cat.id}`}
+                  <div className="grid grid-cols-2">
+                    {cats.map((cat) => (
+                      <Link
+                        key={cat.id}
+                        href={`/categoria/${cat.slug}`}
+                        onClick={() => setCategoriesOpen(false)}
                       >
-                        {cat.name}
-                      </div>
-                    </Link>
-                  ))}
+                        <div
+                          className="block px-4 py-2.5 text-sm text-white/80 hover:text-white hover:bg-white/5 cursor-pointer transition-colors"
+                          data-testid={`nav-cat-${cat.id}`}
+                        >
+                          {cat.name}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
