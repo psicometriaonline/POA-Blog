@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema } from "@shared/schema";
+import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema } from "@shared/schema";
 import { crawlMultipleUrls } from "./crawler";
 import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
 
@@ -423,6 +423,136 @@ export async function registerRoutes(
       const success = await storage.deleteFreeMaterial(parseInt(req.params.id));
       if (!success) return res.status(404).json({ message: "Material not found" });
       res.json({ message: "Material deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ===== CONTAINER MANAGEMENT ROUTES (Protected) =====
+
+  app.get("/api/admin/image-groups", isAuthenticated, async (_req, res) => {
+    try {
+      const groups = await storage.getImageGroupsWithItems();
+      res.json(groups);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/image-groups", isAuthenticated, async (req, res) => {
+    try {
+      const data = insertImageGroupSchema.parse(req.body);
+      const group = await storage.createImageGroup(data);
+      res.json(group);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/image-groups/:id", isAuthenticated, async (req, res) => {
+    try {
+      const group = await storage.updateImageGroup(parseInt(req.params.id), req.body);
+      if (!group) return res.status(404).json({ message: "Group not found" });
+      res.json(group);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/image-groups/:id", isAuthenticated, async (req, res) => {
+    try {
+      const success = await storage.deleteImageGroup(parseInt(req.params.id));
+      if (!success) return res.status(404).json({ message: "Group not found" });
+      res.json({ message: "Group deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/image-bank", isAuthenticated, async (req, res) => {
+    try {
+      const groupId = req.query.groupId ? parseInt(req.query.groupId as string) : undefined;
+      const items = await storage.getImageBankItems(groupId);
+      res.json(items);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/image-bank", isAuthenticated, async (req, res) => {
+    try {
+      const data = insertImageBankItemSchema.parse(req.body);
+      const item = await storage.createImageBankItem(data);
+      res.json(item);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/image-bank/:id", isAuthenticated, async (req, res) => {
+    try {
+      const item = await storage.updateImageBankItem(parseInt(req.params.id), req.body);
+      if (!item) return res.status(404).json({ message: "Item not found" });
+      res.json(item);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/image-bank/:id", isAuthenticated, async (req, res) => {
+    try {
+      const success = await storage.deleteImageBankItem(parseInt(req.params.id));
+      if (!success) return res.status(404).json({ message: "Item not found" });
+      res.json({ message: "Item deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/container-rules", isAuthenticated, async (req, res) => {
+    try {
+      const containerType = req.query.containerType as string | undefined;
+      const rules = await storage.getContainerRules(containerType);
+      res.json(rules);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/container-rules", isAuthenticated, async (req, res) => {
+    try {
+      const data = insertContainerRuleSchema.parse(req.body);
+      const rule = await storage.createContainerRule(data);
+      res.json(rule);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/container-rules/:id", isAuthenticated, async (req, res) => {
+    try {
+      const rule = await storage.updateContainerRule(parseInt(req.params.id), req.body);
+      if (!rule) return res.status(404).json({ message: "Rule not found" });
+      res.json(rule);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/container-rules/:id", isAuthenticated, async (req, res) => {
+    try {
+      const success = await storage.deleteContainerRule(parseInt(req.params.id));
+      if (!success) return res.status(404).json({ message: "Rule not found" });
+      res.json({ message: "Rule deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/posts/:id/container-images", async (req, res) => {
+    try {
+      const results = await storage.getContainerImagesForPost(parseInt(req.params.id));
+      res.json(results);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { PostWithRelations, Comment, Banner } from "@shared/schema";
+import type { PostWithRelations, Comment, Banner, ImageBankItem, ContainerRule } from "@shared/schema";
 import { insertCommentSchema } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -49,6 +49,43 @@ hljs.registerLanguage("xml", xml);
 hljs.registerLanguage("json", json);
 hljs.registerLanguage("yaml", yaml);
 hljs.registerLanguage("latex", latex);
+
+function injectContainerImages(html: string, images: ImageBankItem[]): string {
+  if (!images || images.length === 0) return html;
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  const headings = doc.querySelectorAll("h2, h3");
+
+  if (headings.length === 0) return html;
+
+  const positions = Array.from(headings);
+  const imageCount = Math.min(images.length, positions.length);
+
+  for (let i = imageCount - 1; i >= 0; i--) {
+    const heading = positions[i];
+    const img = images[i];
+    const container = doc.createElement("div");
+    container.className = "container-image-block my-6 rounded-lg overflow-hidden not-prose";
+    container.setAttribute("data-testid", `container-image-${img.id}`);
+    const imgEl = doc.createElement("img");
+    imgEl.src = img.imageUrl;
+    imgEl.alt = img.altText || "";
+    imgEl.className = "w-full h-auto rounded-lg";
+    imgEl.loading = "lazy";
+    if (img.title) imgEl.title = img.title;
+    container.appendChild(imgEl);
+    if (img.title) {
+      const caption = doc.createElement("p");
+      caption.className = "text-xs text-muted-foreground text-center mt-1 italic";
+      caption.textContent = img.title;
+      container.appendChild(caption);
+    }
+    heading.parentNode?.insertBefore(container, heading);
+  }
+
+  return doc.body.innerHTML;
+}
 
 function renderMathAndCode(contentRef: React.RefObject<HTMLDivElement | null>) {
   const el = contentRef.current;
@@ -548,11 +585,23 @@ export default function PostPage() {
     queryKey: [`/api/posts/slug/${slug}`],
   });
 
+  const { data: containerData } = useQuery<{ images: ImageBankItem[]; rule: ContainerRule }[]>({
+    queryKey: ["/api/posts", post?.id, "container-images"],
+    queryFn: async () => {
+      const res = await fetch(`/api/posts/${post!.id}/container-images`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!post?.id,
+  });
+
+  const containerImages = containerData && containerData.length > 0 ? containerData[0].images : [];
+
   useEffect(() => {
     if (post && contentRef.current) {
       setTimeout(() => renderMathAndCode(contentRef), 50);
     }
-  }, [post]);
+  }, [post, containerImages]);
 
   if (isLoading) {
     return (
@@ -659,7 +708,7 @@ export default function PostPage() {
                     data-testid="img-featured"
                   />
                 )}
-                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content, { ADD_TAGS: ["iframe", "span", "div"], ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "scrolling", "data-type", "data-latex", "class"] }) }} />
+                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(injectContainerImages(post.content, containerImages), { ADD_TAGS: ["iframe", "span", "div"], ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "scrolling", "data-type", "data-latex", "class", "loading", "title"] }) }} />
               </div>
             </Card>
 

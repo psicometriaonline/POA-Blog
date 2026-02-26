@@ -7,8 +7,12 @@ import {
   type Banner, type InsertBanner,
   type FreeMaterial, type InsertFreeMaterial,
   type Comment, type InsertComment,
+  type ImageGroup, type InsertImageGroup, type ImageGroupWithItems,
+  type ImageBankItem, type InsertImageBankItem,
+  type ContainerRule, type InsertContainerRule, type ContainerRuleWithGroup,
   authors, categories, tags, posts, postCategories, postTags,
   banners, freeMaterials, siteSettings, comments, postViews,
+  imageGroups, imageBankItems, containerRules,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, or, desc, sql, inArray, and, asc, gte, lte, count } from "drizzle-orm";
@@ -72,6 +76,27 @@ export interface IStorage {
   getAllSettings(): Promise<Record<string, string>>;
 
   getHomePageData(): Promise<any>;
+
+  getImageGroups(): Promise<ImageGroup[]>;
+  getImageGroupsWithItems(): Promise<ImageGroupWithItems[]>;
+  getImageGroup(id: number): Promise<ImageGroup | undefined>;
+  createImageGroup(data: InsertImageGroup): Promise<ImageGroup>;
+  updateImageGroup(id: number, data: Partial<InsertImageGroup>): Promise<ImageGroup | undefined>;
+  deleteImageGroup(id: number): Promise<boolean>;
+
+  getImageBankItems(groupId?: number): Promise<ImageBankItem[]>;
+  getImageBankItem(id: number): Promise<ImageBankItem | undefined>;
+  createImageBankItem(data: InsertImageBankItem): Promise<ImageBankItem>;
+  updateImageBankItem(id: number, data: Partial<InsertImageBankItem>): Promise<ImageBankItem | undefined>;
+  deleteImageBankItem(id: number): Promise<boolean>;
+
+  getContainerRules(containerType?: string): Promise<ContainerRuleWithGroup[]>;
+  getContainerRule(id: number): Promise<ContainerRule | undefined>;
+  createContainerRule(data: InsertContainerRule): Promise<ContainerRule>;
+  updateContainerRule(id: number, data: Partial<InsertContainerRule>): Promise<ContainerRule | undefined>;
+  deleteContainerRule(id: number): Promise<boolean>;
+
+  getContainerImagesForPost(postId: number): Promise<{ images: ImageBankItem[]; rule: ContainerRule }[]>;
 
   getViewsTimeSeries(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]>;
   getViewsTimeSeriesMonthly(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]>;
@@ -657,6 +682,151 @@ export class DatabaseStorage implements IStorage {
   async deleteComment(id: number): Promise<boolean> {
     const result = await db.delete(comments).where(eq(comments.id, id)).returning();
     return result.length > 0;
+  }
+
+  async getImageGroups(): Promise<ImageGroup[]> {
+    return db.select().from(imageGroups).orderBy(imageGroups.name);
+  }
+
+  async getImageGroupsWithItems(): Promise<ImageGroupWithItems[]> {
+    const groups = await db.select().from(imageGroups).orderBy(imageGroups.name);
+    if (groups.length === 0) return [];
+    const groupIds = groups.map(g => g.id);
+    const items = await db.select().from(imageBankItems)
+      .where(inArray(imageBankItems.groupId, groupIds))
+      .orderBy(asc(imageBankItems.sortOrder));
+    return groups.map(g => ({
+      ...g,
+      items: items.filter(i => i.groupId === g.id),
+    }));
+  }
+
+  async getImageGroup(id: number): Promise<ImageGroup | undefined> {
+    const [g] = await db.select().from(imageGroups).where(eq(imageGroups.id, id));
+    return g;
+  }
+
+  async createImageGroup(data: InsertImageGroup): Promise<ImageGroup> {
+    const [g] = await db.insert(imageGroups).values(data).returning();
+    return g;
+  }
+
+  async updateImageGroup(id: number, data: Partial<InsertImageGroup>): Promise<ImageGroup | undefined> {
+    const [g] = await db.update(imageGroups).set(data).where(eq(imageGroups.id, id)).returning();
+    return g;
+  }
+
+  async deleteImageGroup(id: number): Promise<boolean> {
+    const result = await db.delete(imageGroups).where(eq(imageGroups.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getImageBankItems(groupId?: number): Promise<ImageBankItem[]> {
+    if (groupId) {
+      return db.select().from(imageBankItems)
+        .where(eq(imageBankItems.groupId, groupId))
+        .orderBy(asc(imageBankItems.sortOrder));
+    }
+    return db.select().from(imageBankItems).orderBy(asc(imageBankItems.sortOrder));
+  }
+
+  async getImageBankItem(id: number): Promise<ImageBankItem | undefined> {
+    const [item] = await db.select().from(imageBankItems).where(eq(imageBankItems.id, id));
+    return item;
+  }
+
+  async createImageBankItem(data: InsertImageBankItem): Promise<ImageBankItem> {
+    const [item] = await db.insert(imageBankItems).values(data).returning();
+    return item;
+  }
+
+  async updateImageBankItem(id: number, data: Partial<InsertImageBankItem>): Promise<ImageBankItem | undefined> {
+    const [item] = await db.update(imageBankItems).set(data).where(eq(imageBankItems.id, id)).returning();
+    return item;
+  }
+
+  async deleteImageBankItem(id: number): Promise<boolean> {
+    const result = await db.delete(imageBankItems).where(eq(imageBankItems.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getContainerRules(containerType?: string): Promise<ContainerRuleWithGroup[]> {
+    let query = db.select().from(containerRules).orderBy(desc(containerRules.priority)).$dynamic();
+    if (containerType) {
+      query = query.where(eq(containerRules.containerType, containerType));
+    }
+    const rules = await query;
+    if (rules.length === 0) return [];
+    const groupIds = [...new Set(rules.map(r => r.imageGroupId))];
+    const groups = await db.select().from(imageGroups).where(inArray(imageGroups.id, groupIds));
+    const groupMap = new Map(groups.map(g => [g.id, g]));
+    return rules.map(r => ({
+      ...r,
+      imageGroup: groupMap.get(r.imageGroupId)!,
+    }));
+  }
+
+  async getContainerRule(id: number): Promise<ContainerRule | undefined> {
+    const [r] = await db.select().from(containerRules).where(eq(containerRules.id, id));
+    return r;
+  }
+
+  async createContainerRule(data: InsertContainerRule): Promise<ContainerRule> {
+    const [r] = await db.insert(containerRules).values(data).returning();
+    return r;
+  }
+
+  async updateContainerRule(id: number, data: Partial<InsertContainerRule>): Promise<ContainerRule | undefined> {
+    const [r] = await db.update(containerRules).set(data).where(eq(containerRules.id, id)).returning();
+    return r;
+  }
+
+  async deleteContainerRule(id: number): Promise<boolean> {
+    const result = await db.delete(containerRules).where(eq(containerRules.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getContainerImagesForPost(postId: number): Promise<{ images: ImageBankItem[]; rule: ContainerRule }[]> {
+    const post = await this.getPost(postId);
+    if (!post) return [];
+
+    const categorySlugs = post.categories.map(c => c.slug);
+    const tagSlugs = post.tags.map(t => t.slug);
+
+    const allRules = await db.select().from(containerRules)
+      .where(and(
+        eq(containerRules.containerType, "post-image"),
+        eq(containerRules.isActive, true),
+      ))
+      .orderBy(desc(containerRules.priority));
+
+    const matchingRules = allRules.filter(rule => {
+      if (rule.criteriaType === "all") return true;
+      if (rule.criteriaType === "category" && rule.criteriaValue) {
+        return categorySlugs.includes(rule.criteriaValue);
+      }
+      if (rule.criteriaType === "tag" && rule.criteriaValue) {
+        return tagSlugs.includes(rule.criteriaValue);
+      }
+      return false;
+    });
+
+    if (matchingRules.length === 0) return [];
+
+    const bestRule = matchingRules[0];
+
+    const items = await db.select().from(imageBankItems)
+      .where(and(
+        eq(imageBankItems.groupId, bestRule.imageGroupId),
+        eq(imageBankItems.isActive, true),
+      ));
+
+    if (items.length === 0) return [];
+
+    const shuffled = items.sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, bestRule.maxImages);
+
+    return [{ images: selected, rule: bestRule }];
   }
 }
 

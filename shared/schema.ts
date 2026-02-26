@@ -112,6 +112,47 @@ export const postViews = pgTable("post_views", {
   viewedAt: timestamp("viewed_at").defaultNow().notNull(),
 });
 
+export const imageGroups = pgTable("image_groups", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  description: text("description"),
+});
+
+export const imageBankItems = pgTable("image_bank_items", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  groupId: integer("group_id").notNull().references(() => imageGroups.id, { onDelete: "cascade" }),
+  imageUrl: text("image_url").notNull(),
+  altText: text("alt_text"),
+  title: text("title"),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const containerRules = pgTable("container_rules", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  containerType: text("container_type").notNull(),
+  criteriaType: text("criteria_type").notNull(),
+  criteriaValue: text("criteria_value"),
+  imageGroupId: integer("image_group_id").notNull().references(() => imageGroups.id, { onDelete: "cascade" }),
+  maxImages: integer("max_images").notNull().default(3),
+  isActive: boolean("is_active").notNull().default(true),
+  priority: integer("priority").notNull().default(0),
+});
+
+export const imageGroupsRelations = relations(imageGroups, ({ many }) => ({
+  items: many(imageBankItems),
+  rules: many(containerRules),
+}));
+
+export const imageBankItemsRelations = relations(imageBankItems, ({ one }) => ({
+  group: one(imageGroups, { fields: [imageBankItems.groupId], references: [imageGroups.id] }),
+}));
+
+export const containerRulesRelations = relations(containerRules, ({ one }) => ({
+  imageGroup: one(imageGroups, { fields: [containerRules.imageGroupId], references: [imageGroups.id] }),
+}));
+
 export const siteSettings = pgTable("site_settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
@@ -124,6 +165,9 @@ export const insertPostSchema = createInsertSchema(posts).omit({ id: true, creat
 export const insertBannerSchema = createInsertSchema(banners).omit({ id: true });
 export const insertFreeMaterialSchema = createInsertSchema(freeMaterials).omit({ id: true });
 export const insertCommentSchema = createInsertSchema(comments).omit({ id: true, createdAt: true });
+export const insertImageGroupSchema = createInsertSchema(imageGroups).omit({ id: true });
+export const insertImageBankItemSchema = createInsertSchema(imageBankItems).omit({ id: true });
+export const insertContainerRuleSchema = createInsertSchema(containerRules).omit({ id: true });
 
 export type Author = typeof authors.$inferSelect;
 export type InsertAuthor = z.infer<typeof insertAuthorSchema>;
@@ -139,7 +183,21 @@ export type FreeMaterial = typeof freeMaterials.$inferSelect;
 export type InsertFreeMaterial = z.infer<typeof insertFreeMaterialSchema>;
 export type Comment = typeof comments.$inferSelect;
 export type InsertComment = z.infer<typeof insertCommentSchema>;
+export type ImageGroup = typeof imageGroups.$inferSelect;
+export type InsertImageGroup = z.infer<typeof insertImageGroupSchema>;
+export type ImageBankItem = typeof imageBankItems.$inferSelect;
+export type InsertImageBankItem = z.infer<typeof insertImageBankItemSchema>;
+export type ContainerRule = typeof containerRules.$inferSelect;
+export type InsertContainerRule = z.infer<typeof insertContainerRuleSchema>;
 export type SiteSetting = typeof siteSettings.$inferSelect;
+
+export type ImageGroupWithItems = ImageGroup & {
+  items: ImageBankItem[];
+};
+
+export type ContainerRuleWithGroup = ContainerRule & {
+  imageGroup: ImageGroup;
+};
 
 export type PostWithRelations = Post & {
   categories: Category[];

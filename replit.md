@@ -30,6 +30,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `client/src/pages/admin/home-settings.tsx` - Home page section configuration
 - `client/src/pages/admin/manage-authors.tsx` - Author management
 - `client/src/pages/admin/analytics.tsx` - Post views analytics with charts and filters
+- `client/src/pages/admin/containers.tsx` - Container management (image groups, rules, preview)
 
 ## Database Schema
 - `authors` - Author profiles (name, photo, bio) - linked to posts via authorId
@@ -42,6 +43,9 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `free_materials` - Downloadable materials section
 - `comments` - Post comments (authorName, authorEmail, content, isApproved)
 - `post_views` - Individual post view events with timestamps (for analytics)
+- `image_groups` - Groups of images for container system (name, description)
+- `image_bank_items` - Individual images in groups (groupId, imageUrl, altText, title, isActive, sortOrder)
+- `container_rules` - Rules mapping image groups to containers based on criteria (containerType, criteriaType, criteriaValue, imageGroupId, maxImages, priority)
 - `site_settings` - Key-value store for home page configuration
 - Auth tables from Replit Auth integration
 
@@ -74,6 +78,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `/admin/home` - Home page section configuration
 - `/admin/autores` - Author management
 - `/admin/metricas` - Post views analytics dashboard
+- `/admin/conteineres` - Container management (image groups, rules, preview)
 
 ### API
 - `GET /api/home` - Aggregated home page data (all sections in one request)
@@ -88,6 +93,10 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `GET/PUT /api/admin/settings` - Site settings (key-value)
 - `GET /api/admin/analytics/timeseries?start=&end=&granularity=` - View time series (hourly/daily/monthly)
 - `GET /api/admin/analytics/posts?start=&end=&sort=` - Post views summary
+- `GET/POST/PUT/DELETE /api/admin/image-groups` - Image group CRUD
+- `GET/POST/PUT/DELETE /api/admin/image-bank` - Image bank item CRUD
+- `GET/POST/PUT/DELETE /api/admin/container-rules` - Container rule CRUD
+- `GET /api/posts/:id/container-images` - Resolved container images for a post
 
 ## User Preferences
 - Portuguese language throughout the UI
