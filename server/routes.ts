@@ -631,7 +631,14 @@ export async function registerRoutes(
         'ANOVA', 'MANOVA', 'ANCOVA', 'MANCOVA', 'JASP', 'SPSS', 'RStudio', 'FACTOR', 'R', 
         'ggplot2', 'Python', 'Excel', 'Stata', 'SAS', 'jamovi', 'APA', 'IEEE', 'McDonald', 'Mardia',
         'Mauchly', 'Bartlett', 'Student', 'Glass', 'Hedges', 'Bonett', 'Satterthwaite', 'Box',
-        'Duncan', 'Dunnett', 'Kaiser', 'Meyer', 'Olkin', 'Cochran', 'Yates', 'Geisser', 'Greenhouse'
+        'Duncan', 'Dunnett', 'Kaiser', 'Meyer', 'Olkin', 'Cochran', 'Yates', 'Geisser', 'Greenhouse',
+        'PICO', 'TRI', 'IRaMuTeQ', 'teste F', 'V de Cramér', 'Bland', 'Altman', 'Poisson', 'PEDro',
+        'Physiotherapy Evidence Database', 'Fleiss', 'Wilcoxon', 'Q de Cochran', 'U de Mann-Whitney',
+        'SRMR', 'RMSEA', 'GLMs', 'R²', 'AMSTAR', 'Tipo I', 'Tipo II', 'Cook', 'Curva ROC', 'FWER',
+        'EndNote', 'Mendeley', 'Zotero', 'PROCESS', 'MIMIC', 'HARKing', 'SciELO', 'Google Acadêmico',
+        'Periódicos CAPES', 'Qualis CAPES', 'PRISMA', 'G*Power', 'E-book Análises Bi e Multivariadas: Definições e Usos',
+        'Bessel', 'Benjamini-Hochberg', 'IA', 'SVM', 'Goodman-Kruskal', 'Yuen', 'KR-20', 'KR-21', 'Q-Q',
+        'Markov', 'Matthews', 'XGBoost', 'Wald-Wolfowitz', 'Psicometria Online Academy'
       ];
 
       for (const post of allPosts) {
