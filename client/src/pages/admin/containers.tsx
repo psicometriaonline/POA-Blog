@@ -16,7 +16,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useRef } from "react";
 import type { ImageGroupWithItems, ContainerRuleWithGroup, Category, Tag, PostWithRelations, ImageBankItem } from "@shared/schema";
-import { Upload, Link as LinkIcon } from "lucide-react";
+import { Upload, Link as LinkIcon, ImageIcon } from "lucide-react";
+import { MediaLibraryModal } from "@/components/media-library-modal";
 
 const CONTAINER_TYPES = [
   { value: "post-image", label: "Imagem no Post" },
@@ -43,6 +44,8 @@ function ImageGroupsTab() {
   const [editingGroup, setEditingGroup] = useState<number | null>(null);
   const [editGroupName, setEditGroupName] = useState("");
   const [editGroupDesc, setEditGroupDesc] = useState("");
+  const [mediaLibOpen, setMediaLibOpen] = useState(false);
+  const [mediaLibGroupId, setMediaLibGroupId] = useState<number | null>(null);
 
   const { data: groups, isLoading } = useQuery<ImageGroupWithItems[]>({
     queryKey: ["/api/admin/image-groups"],
@@ -309,30 +312,57 @@ function ImageGroupsTab() {
                     />
                   </div>
                 </div>
-                <Button
-                  className="mt-3"
-                  size="sm"
-                  onClick={() => {
-                    const file = fileInputRef.current?.files?.[0];
-                    if (file) handleFileUpload(group.id, file);
-                  }}
-                  disabled={uploading}
-                  data-testid="button-add-image"
-                >
-                  {uploading ? (
-                    <>Enviando...</>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4 mr-1" />
-                      Enviar Imagem
-                    </>
-                  )}
-                </Button>
+                <div className="flex gap-2 mt-3">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const file = fileInputRef.current?.files?.[0];
+                      if (file) handleFileUpload(group.id, file);
+                    }}
+                    disabled={uploading}
+                    data-testid="button-add-image"
+                  >
+                    {uploading ? (
+                      <>Enviando...</>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-1" />
+                        Enviar Imagem
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => { setMediaLibGroupId(group.id); setMediaLibOpen(true); }}
+                    data-testid={`button-media-library-${group.id}`}
+                  >
+                    <ImageIcon className="h-4 w-4 mr-1" />
+                    Biblioteca de Mídias
+                  </Button>
+                </div>
               </div>
             </div>
           )}
         </Card>
       ))}
+
+      <MediaLibraryModal
+        open={mediaLibOpen}
+        onClose={() => { setMediaLibOpen(false); setMediaLibGroupId(null); }}
+        onSelect={async (url, alt, title) => {
+          if (mediaLibGroupId) {
+            await apiRequest("POST", "/api/admin/image-bank", {
+              groupId: mediaLibGroupId,
+              imageUrl: url,
+              altText: alt || null,
+              title: title || null,
+            });
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/image-groups"] });
+            toast({ title: "Imagem adicionada do banco de mídias" });
+          }
+        }}
+      />
     </div>
   );
 }

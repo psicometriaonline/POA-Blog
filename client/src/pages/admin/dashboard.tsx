@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2, Settings, Users, BarChart3, Layers } from "lucide-react";
+import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2, Settings, Users, BarChart3, Layers, ImageIcon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import type { PostWithRelations, Category, Tag as TagType } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -160,6 +160,12 @@ export default function AdminDashboard() {
             <Button variant="outline" size="sm" data-testid="link-manage-containers">
               <Layers className="h-3 w-3 mr-1" />
               Contêineres
+            </Button>
+          </Link>
+          <Link href="/admin/midias">
+            <Button variant="outline" size="sm" data-testid="link-manage-media">
+              <ImageIcon className="h-3 w-3 mr-1" />
+              Gerenciar Imagens
             </Button>
           </Link>
         </div>

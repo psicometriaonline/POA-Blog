@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema } from "@shared/schema";
+import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema, insertMediaSchema } from "@shared/schema";
 import { crawlMultipleUrls } from "./crawler";
 import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
 import multer from "multer";
@@ -53,12 +53,136 @@ export async function registerRoutes(
 
   app.use("/uploads", (await import("express")).default.static(uploadsDir));
 
-  app.post("/api/admin/upload", isAuthenticated, upload.single("file"), (req, res) => {
+  app.post("/api/admin/upload", isAuthenticated, upload.single("file"), async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ message: "Nenhum arquivo enviado" });
     }
     const fileUrl = `/uploads/${req.file.filename}`;
-    res.json({ url: fileUrl, filename: req.file.filename });
+    const mediaItem = await storage.createMedia({
+      filename: req.file.originalname,
+      url: fileUrl,
+      mimeType: req.file.mimetype,
+      fileSize: req.file.size,
+      source: "upload",
+    });
+    res.json({ url: fileUrl, filename: req.file.originalname, mediaId: mediaItem.id });
+  });
+
+  app.get("/api/admin/media", isAuthenticated, async (req, res) => {
+    const { search, page, limit, sort } = req.query;
+    const result = await storage.listMedia({
+      search: search as string,
+      page: page ? parseInt(page as string) : 1,
+      limit: limit ? parseInt(limit as string) : 30,
+      sort: sort as string,
+    });
+    res.json(result);
+  });
+
+  app.get("/api/admin/media/stats", isAuthenticated, async (_req, res) => {
+    const stats = await storage.getMediaStats();
+    res.json(stats);
+  });
+
+  app.get("/api/admin/media/duplicates", isAuthenticated, async (_req, res) => {
+    const duplicates = await storage.findDuplicateMedia();
+    res.json(duplicates);
+  });
+
+  app.get("/api/admin/media/:id/usage", isAuthenticated, async (req, res) => {
+    const usages = await storage.getMediaUsage(parseInt(req.params.id));
+    res.json(usages);
+  });
+
+  app.post("/api/admin/media", isAuthenticated, upload.single("file"), async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "Nenhum arquivo enviado" });
+    }
+    const fileUrl = `/uploads/${req.file.filename}`;
+    const mediaItem = await storage.createMedia({
+      filename: req.file.originalname,
+      url: fileUrl,
+      altText: req.body.altText || null,
+      title: req.body.title || null,
+      mimeType: req.file.mimetype,
+      fileSize: req.file.size,
+      source: "upload",
+    });
+    res.json(mediaItem);
+  });
+
+  app.delete("/api/admin/media/:id", isAuthenticated, async (req, res) => {
+    const id = parseInt(req.params.id);
+    const force = req.query.force === "true";
+
+    if (!force) {
+      const usages = await storage.getMediaUsage(id);
+      if (usages.length > 0) {
+        return res.json({ requiresConfirmation: true, usages });
+      }
+    }
+
+    const media = await storage.getMedia(id);
+    if (media && media.url.startsWith("/uploads/")) {
+      const filePath = path.join(uploadsDir, path.basename(media.url));
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    const deleted = await storage.deleteMedia(id);
+    res.json({ deleted });
+  });
+
+  app.post("/api/admin/media/import-from-posts", isAuthenticated, async (_req, res) => {
+    try {
+      const allPosts = await storage.getPosts(1000, 0);
+      const seenUrls = new Set<string>();
+      const toInsert: { url: string; filename: string; altText?: string; source: string }[] = [];
+
+      for (const post of allPosts) {
+        if (post.featuredImage && !seenUrls.has(post.featuredImage)) {
+          seenUrls.add(post.featuredImage);
+          const urlParts = post.featuredImage.split("/");
+          const filename = decodeURIComponent(urlParts[urlParts.length - 1] || "unknown");
+          toInsert.push({ url: post.featuredImage, filename, source: "wordpress" });
+        }
+
+        if (post.content) {
+          const imgRegex = /<img[^>]+src=["']([^"']+)["'][^>]*(?:alt=["']([^"']*)["'])?[^>]*>/gi;
+          let match;
+          while ((match = imgRegex.exec(post.content)) !== null) {
+            const src = match[1];
+            if (src && !seenUrls.has(src)) {
+              seenUrls.add(src);
+              const urlParts = src.split("/");
+              const filename = decodeURIComponent(urlParts[urlParts.length - 1] || "unknown");
+              const altText = match[2] || null;
+              toInsert.push({ url: src, filename, altText: altText || undefined, source: "post-content" });
+            }
+          }
+        }
+      }
+
+      const existing = await storage.listMedia({ limit: 100000 });
+      const existingUrls = new Set(existing.items.map(m => m.url));
+      const newItems = toInsert.filter(i => !existingUrls.has(i.url));
+
+      let imported = 0;
+      for (const item of newItems) {
+        await storage.createMedia({
+          filename: item.filename,
+          url: item.url,
+          altText: item.altText || null,
+          source: item.source,
+        });
+        imported++;
+      }
+
+      res.json({ imported, total: toInsert.length, alreadyExisted: toInsert.length - imported });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
   });
 
   // ===== PUBLIC ROUTES =====

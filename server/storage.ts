@@ -10,9 +10,10 @@ import {
   type ImageGroup, type InsertImageGroup, type ImageGroupWithItems,
   type ImageBankItem, type InsertImageBankItem,
   type ContainerRule, type InsertContainerRule, type ContainerRuleWithGroup,
+  type MediaItem, type InsertMedia,
   authors, categories, tags, posts, postCategories, postTags,
   banners, freeMaterials, siteSettings, comments, postViews,
-  imageGroups, imageBankItems, containerRules,
+  imageGroups, imageBankItems, containerRules, mediaLibrary,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, or, desc, sql, inArray, and, asc, gte, lte, count } from "drizzle-orm";
@@ -97,6 +98,14 @@ export interface IStorage {
   deleteContainerRule(id: number): Promise<boolean>;
 
   getContainerImagesForPost(postId: number): Promise<{ images: ImageBankItem[]; rule: ContainerRule }[]>;
+
+  listMedia(options: { search?: string; page?: number; limit?: number; sort?: string }): Promise<{ items: MediaItem[]; total: number }>;
+  getMedia(id: number): Promise<MediaItem | undefined>;
+  createMedia(data: InsertMedia): Promise<MediaItem>;
+  deleteMedia(id: number): Promise<boolean>;
+  getMediaUsage(id: number): Promise<{ postId: number; title: string; slug: string; usage: string }[]>;
+  getMediaStats(): Promise<{ total: number; totalSize: number; bySource: { source: string; count: number }[] }>;
+  findDuplicateMedia(): Promise<{ filename: string; items: MediaItem[] }[]>;
 
   getViewsTimeSeries(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]>;
   getViewsTimeSeriesMonthly(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]>;
@@ -827,6 +836,113 @@ export class DatabaseStorage implements IStorage {
     const selected = shuffled.slice(0, bestRule.maxImages);
 
     return [{ images: selected, rule: bestRule }];
+  }
+
+  async listMedia(options: { search?: string; page?: number; limit?: number; sort?: string }): Promise<{ items: MediaItem[]; total: number }> {
+    const page = options.page || 1;
+    const limit = options.limit || 30;
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+    if (options.search) {
+      const term = `%${options.search}%`;
+      conditions.push(or(
+        ilike(mediaLibrary.filename, term),
+        ilike(mediaLibrary.title, term),
+        ilike(mediaLibrary.altText, term),
+      ));
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [totalResult, items] = await Promise.all([
+      db.select({ cnt: count() }).from(mediaLibrary).where(where),
+      db.select().from(mediaLibrary).where(where)
+        .orderBy(desc(mediaLibrary.createdAt))
+        .limit(limit).offset(offset),
+    ]);
+
+    return { items, total: Number(totalResult[0]?.cnt || 0) };
+  }
+
+  async getMedia(id: number): Promise<MediaItem | undefined> {
+    const [item] = await db.select().from(mediaLibrary).where(eq(mediaLibrary.id, id));
+    return item;
+  }
+
+  async createMedia(data: InsertMedia): Promise<MediaItem> {
+    const [item] = await db.insert(mediaLibrary).values(data).returning();
+    return item;
+  }
+
+  async deleteMedia(id: number): Promise<boolean> {
+    const result = await db.delete(mediaLibrary).where(eq(mediaLibrary.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getMediaUsage(id: number): Promise<{ postId: number; title: string; slug: string; usage: string }[]> {
+    const media = await this.getMedia(id);
+    if (!media) return [];
+
+    const allPosts = await db.select({
+      id: posts.id,
+      title: posts.title,
+      slug: posts.slug,
+      featuredImage: posts.featuredImage,
+      content: posts.content,
+    }).from(posts);
+
+    const usages: { postId: number; title: string; slug: string; usage: string }[] = [];
+
+    for (const post of allPosts) {
+      const usageTypes: string[] = [];
+      if (post.featuredImage && post.featuredImage === media.url) {
+        usageTypes.push("imagem destacada");
+      }
+      if (post.content && post.content.includes(media.url)) {
+        usageTypes.push("conteúdo");
+      }
+      if (usageTypes.length > 0) {
+        usages.push({ postId: post.id, title: post.title, slug: post.slug, usage: usageTypes.join(", ") });
+      }
+    }
+
+    return usages;
+  }
+
+  async getMediaStats(): Promise<{ total: number; totalSize: number; bySource: { source: string; count: number }[] }> {
+    const [totalResult] = await db.select({
+      total: count(),
+      totalSize: sql<number>`COALESCE(SUM(${mediaLibrary.fileSize}), 0)`,
+    }).from(mediaLibrary);
+
+    const bySource = await db.select({
+      source: mediaLibrary.source,
+      count: count(),
+    }).from(mediaLibrary).groupBy(mediaLibrary.source);
+
+    return {
+      total: Number(totalResult?.total || 0),
+      totalSize: Number(totalResult?.totalSize || 0),
+      bySource: bySource.map(s => ({ source: s.source, count: Number(s.count) })),
+    };
+  }
+
+  async findDuplicateMedia(): Promise<{ filename: string; items: MediaItem[] }[]> {
+    const dupeFilenames = await db.select({
+      filename: mediaLibrary.filename,
+      cnt: count(),
+    }).from(mediaLibrary)
+      .groupBy(mediaLibrary.filename)
+      .having(sql`count(*) > 1`);
+
+    const results: { filename: string; items: MediaItem[] }[] = [];
+    for (const dupe of dupeFilenames) {
+      const items = await db.select().from(mediaLibrary)
+        .where(eq(mediaLibrary.filename, dupe.filename));
+      results.push({ filename: dupe.filename, items });
+    }
+    return results;
   }
 }
 

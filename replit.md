@@ -23,7 +23,9 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `client/src/pages/tag.tsx` - Tag listing page
 - `client/src/pages/search.tsx` - Search results page
 - `client/src/pages/admin/dashboard.tsx` - Admin CMS dashboard
-- `client/src/pages/admin/post-editor.tsx` - Post editor with TipTap
+- `client/src/pages/admin/post-editor.tsx` - Post editor with TipTap + MediaLibrary integration
+- `client/src/components/media-library-modal.tsx` - Reusable media library modal (browse/upload/select images)
+- `client/src/pages/admin/manage-media.tsx` - Media library management page (stats, search, usage, duplicates)
 - `client/src/pages/admin/manage-categories.tsx` - Category management
 - `client/src/pages/admin/manage-tags.tsx` - Tag management
 - `client/src/pages/admin/crawl.tsx` - WordPress import tool
@@ -46,6 +48,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `image_groups` - Groups of images for container system (name, description)
 - `image_bank_items` - Individual images in groups (groupId, imageUrl, altText, title, isActive, sortOrder)
 - `container_rules` - Rules mapping image groups to containers based on criteria (containerType, criteriaType, criteriaValue, imageGroupId, maxImages, priority, linkUrl)
+- `media_library` - Centralized image library (filename, url, altText, title, mimeType, source, fileSize, createdAt)
 - `site_settings` - Key-value store for home page configuration
 - Auth tables from Replit Auth integration
 
@@ -79,6 +82,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `/admin/autores` - Author management
 - `/admin/metricas` - Post views analytics dashboard
 - `/admin/conteineres` - Container management (image groups, rules, preview)
+- `/admin/midias` - Media library management (stats, search, usage, duplicates)
 
 ### API
 - `GET /api/home` - Aggregated home page data (all sections in one request)
@@ -97,6 +101,11 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `GET/POST/PUT/DELETE /api/admin/image-bank` - Image bank item CRUD
 - `GET/POST/PUT/DELETE /api/admin/container-rules` - Container rule CRUD
 - `GET /api/posts/:id/container-images` - Resolved container images for a post
+- `GET/POST/PUT/DELETE /api/admin/media` - Media library CRUD
+- `GET /api/admin/media/stats` - Media storage overview
+- `GET /api/admin/media/duplicates` - Duplicate media detection
+- `GET /api/admin/media/:id/usage` - Posts using a media item
+- `POST /api/admin/media/import-from-posts` - Import images from existing posts
 - `POST /api/admin/upload` - File upload (multipart, stores in uploads/ dir, returns URL)
 
 ## User Preferences

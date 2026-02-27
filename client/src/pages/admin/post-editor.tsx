@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,8 +10,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Code, Sigma, Plus, Image } from "lucide-react";
+import { ArrowLeft, Save, Code, Sigma, Plus, Image as ImageIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { MediaLibraryModal } from "@/components/media-library-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -63,7 +64,7 @@ const LANGUAGES = [
   { value: "latex", label: "LaTeX" },
 ];
 
-function TiptapEditor({ content, onChange }: { content: string; onChange: (html: string) => void }) {
+function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef }: { content: string; onChange: (html: string) => void; onOpenMediaLib?: () => void; editorRef?: React.MutableRefObject<any> }) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -90,6 +91,12 @@ function TiptapEditor({ content, onChange }: { content: string; onChange: (html:
       editor.commands.setContent(content);
     }
   }, [content, editor]);
+
+  useEffect(() => {
+    if (editorRef && editor) {
+      editorRef.current = editor;
+    }
+  }, [editor, editorRef]);
 
   const insertMath = useCallback((isBlock: boolean) => {
     if (!editor) return;
@@ -196,8 +203,7 @@ function TiptapEditor({ content, onChange }: { content: string; onChange: (html:
           size="sm"
           variant="ghost"
           onClick={() => {
-            const url = window.prompt("URL da imagem:");
-            if (url) editor.chain().focus().setImage({ src: url }).run();
+            onOpenMediaLib?.();
           }}
           data-testid="button-image"
         >
@@ -267,6 +273,9 @@ export default function PostEditor() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newTagName, setNewTagName] = useState("");
   const [disabledContainers, setDisabledContainers] = useState<number[]>([]);
+  const [mediaLibOpen, setMediaLibOpen] = useState(false);
+  const [mediaLibTarget, setMediaLibTarget] = useState<"inline" | "featured">("inline");
+  const editorInstanceRef = useRef<any>(null);
 
   const { data: post, isLoading: postLoading } = useQuery<PostWithRelations>({
     queryKey: [`/api/posts/${params.id}`],
@@ -463,7 +472,7 @@ export default function PostEditor() {
 
           <div>
             <Label>Conteudo</Label>
-            <TiptapEditor content={content} onChange={setContent} />
+            <TiptapEditor content={content} onChange={setContent} onOpenMediaLib={() => { setMediaLibTarget("inline"); setMediaLibOpen(true); }} editorRef={editorInstanceRef} />
           </div>
 
           <div>
@@ -494,14 +503,26 @@ export default function PostEditor() {
           </Card>
 
           <Card className="p-4">
-            <Label htmlFor="featuredImage" className="mb-2 block">Imagem Destacada (URL)</Label>
-            <Input
-              id="featuredImage"
-              value={featuredImage}
-              onChange={(e) => setFeaturedImage(e.target.value)}
-              placeholder="https://..."
-              data-testid="input-featured-image"
-            />
+            <Label htmlFor="featuredImage" className="mb-2 block">Imagem Destacada</Label>
+            <div className="flex gap-2">
+              <Input
+                id="featuredImage"
+                value={featuredImage}
+                onChange={(e) => setFeaturedImage(e.target.value)}
+                placeholder="https://..."
+                className="flex-1"
+                data-testid="input-featured-image"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => { setMediaLibTarget("featured"); setMediaLibOpen(true); }}
+                data-testid="button-featured-media-lib"
+              >
+                <ImageIcon className="h-4 w-4" />
+              </Button>
+            </div>
             {featuredImage && (
               <img src={featuredImage} alt="Preview" className="mt-2 rounded-md w-full h-auto" />
             )}
@@ -663,6 +684,21 @@ export default function PostEditor() {
           </Card>
         </div>
       </div>
+
+      <MediaLibraryModal
+        open={mediaLibOpen}
+        onClose={() => setMediaLibOpen(false)}
+        onSelect={(url, alt) => {
+          if (mediaLibTarget === "inline") {
+            const editor = editorInstanceRef.current;
+            if (editor) {
+              editor.chain().focus().setImage({ src: url, alt: alt || "" }).run();
+            }
+          } else {
+            setFeaturedImage(url);
+          }
+        }}
+      />
     </div>
   );
 }

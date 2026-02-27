@@ -21,6 +21,7 @@ import HomeSettings from "@/pages/admin/home-settings";
 import ManageAuthors from "@/pages/admin/manage-authors";
 import AnalyticsPage from "@/pages/admin/analytics";
 import ContainersPage from "@/pages/admin/containers";
+import ManageMediaPage from "@/pages/admin/manage-media";
 
 function Router() {
   return (
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/admin/autores" component={ManageAuthors} />
       <Route path="/admin/metricas" component={AnalyticsPage} />
       <Route path="/admin/conteineres" component={ContainersPage} />
+      <Route path="/admin/midias" component={ManageMediaPage} />
       <Route path="/:slug" component={PostPage} />
       <Route component={NotFound} />
     </Switch>

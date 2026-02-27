@@ -155,6 +155,20 @@ export const containerRulesRelations = relations(containerRules, ({ one }) => ({
   imageGroup: one(imageGroups, { fields: [containerRules.imageGroupId], references: [imageGroups.id] }),
 }));
 
+export const mediaLibrary = pgTable("media_library", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  filename: text("filename").notNull(),
+  url: text("url").notNull(),
+  altText: text("alt_text"),
+  title: text("title"),
+  mimeType: text("mime_type"),
+  width: integer("width"),
+  height: integer("height"),
+  fileSize: integer("file_size"),
+  source: text("source").notNull().default("upload"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const siteSettings = pgTable("site_settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
@@ -170,6 +184,7 @@ export const insertCommentSchema = createInsertSchema(comments).omit({ id: true,
 export const insertImageGroupSchema = createInsertSchema(imageGroups).omit({ id: true });
 export const insertImageBankItemSchema = createInsertSchema(imageBankItems).omit({ id: true });
 export const insertContainerRuleSchema = createInsertSchema(containerRules).omit({ id: true });
+export const insertMediaSchema = createInsertSchema(mediaLibrary).omit({ id: true, createdAt: true });
 
 export type Author = typeof authors.$inferSelect;
 export type InsertAuthor = z.infer<typeof insertAuthorSchema>;
@@ -192,6 +207,8 @@ export type InsertImageBankItem = z.infer<typeof insertImageBankItemSchema>;
 export type ContainerRule = typeof containerRules.$inferSelect;
 export type InsertContainerRule = z.infer<typeof insertContainerRuleSchema>;
 export type SiteSetting = typeof siteSettings.$inferSelect;
+export type MediaItem = typeof mediaLibrary.$inferSelect;
+export type InsertMedia = z.infer<typeof insertMediaSchema>;
 
 export type ImageGroupWithItems = ImageGroup & {
   items: ImageBankItem[];
