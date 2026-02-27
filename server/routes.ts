@@ -4,6 +4,36 @@ import { storage } from "./storage";
 import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema } from "@shared/schema";
 import { crawlMultipleUrls } from "./crawler";
 import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+const uploadsDir = path.resolve(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const uploadStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadsDir),
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, uniqueSuffix + ext);
+  },
+});
+
+const upload = multer({
+  storage: uploadStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /\.(jpg|jpeg|png|gif|webp|svg)$/i;
+    if (allowed.test(path.extname(file.originalname))) {
+      cb(null, true);
+    } else {
+      cb(new Error("Tipo de arquivo não permitido"));
+    }
+  },
+});
 
 function slugify(text: string): string {
   return text
@@ -20,6 +50,16 @@ export async function registerRoutes(
 ): Promise<Server> {
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  app.use("/uploads", (await import("express")).default.static(uploadsDir));
+
+  app.post("/api/admin/upload", isAuthenticated, upload.single("file"), (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "Nenhum arquivo enviado" });
+    }
+    const fileUrl = `/uploads/${req.file.filename}`;
+    res.json({ url: fileUrl, filename: req.file.filename });
+  });
 
   // ===== PUBLIC ROUTES =====
 

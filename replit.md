@@ -34,7 +34,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 
 ## Database Schema
 - `authors` - Author profiles (name, photo, bio) - linked to posts via authorId
-- `posts` - Blog posts with title, slug, content, status, featured image, viewCount, authorId
+- `posts` - Blog posts with title, slug, content, status, featured image, viewCount, authorId, disabledContainers (JSON array of heading indices to skip container images)
 - `categories` - Post categories with slug
 - `tags` - Post tags with slug
 - `post_categories` - Many-to-many junction table
@@ -45,7 +45,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `post_views` - Individual post view events with timestamps (for analytics)
 - `image_groups` - Groups of images for container system (name, description)
 - `image_bank_items` - Individual images in groups (groupId, imageUrl, altText, title, isActive, sortOrder)
-- `container_rules` - Rules mapping image groups to containers based on criteria (containerType, criteriaType, criteriaValue, imageGroupId, maxImages, priority)
+- `container_rules` - Rules mapping image groups to containers based on criteria (containerType, criteriaType, criteriaValue, imageGroupId, maxImages, priority, linkUrl)
 - `site_settings` - Key-value store for home page configuration
 - Auth tables from Replit Auth integration
 
@@ -97,6 +97,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `GET/POST/PUT/DELETE /api/admin/image-bank` - Image bank item CRUD
 - `GET/POST/PUT/DELETE /api/admin/container-rules` - Container rule CRUD
 - `GET /api/posts/:id/container-images` - Resolved container images for a post
+- `POST /api/admin/upload` - File upload (multipart, stores in uploads/ dir, returns URL)
 
 ## User Preferences
 - Portuguese language throughout the UI

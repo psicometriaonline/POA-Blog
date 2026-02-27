@@ -50,7 +50,7 @@ hljs.registerLanguage("json", json);
 hljs.registerLanguage("yaml", yaml);
 hljs.registerLanguage("latex", latex);
 
-function injectContainerImages(html: string, images: ImageBankItem[]): string {
+function injectContainerImages(html: string, images: ImageBankItem[], linkUrl?: string | null, disabledContainers?: number[]): string {
   if (!images || images.length === 0) return html;
 
   const parser = new DOMParser();
@@ -60,21 +60,43 @@ function injectContainerImages(html: string, images: ImageBankItem[]): string {
   if (headings.length === 0) return html;
 
   const positions = Array.from(headings);
-  const imageCount = Math.min(images.length, positions.length);
+  const disabled = disabledContainers || [];
 
-  for (let i = imageCount - 1; i >= 0; i--) {
-    const heading = positions[i];
-    const img = images[i];
+  const assignments: { headingIdx: number; img: ImageBankItem }[] = [];
+  let imageIdx = 0;
+  for (let i = 0; i < positions.length; i++) {
+    if (disabled.includes(i)) continue;
+    if (imageIdx >= images.length) break;
+    assignments.push({ headingIdx: i, img: images[imageIdx] });
+    imageIdx++;
+  }
+
+  for (let a = assignments.length - 1; a >= 0; a--) {
+    const { headingIdx, img } = assignments[a];
+    const heading = positions[headingIdx];
+
     const container = doc.createElement("div");
     container.className = "container-image-block my-6 rounded-lg overflow-hidden not-prose";
     container.setAttribute("data-testid", `container-image-${img.id}`);
+
     const imgEl = doc.createElement("img");
     imgEl.src = img.imageUrl;
     imgEl.alt = img.altText || "";
     imgEl.className = "w-full h-auto rounded-lg";
     imgEl.loading = "lazy";
     if (img.title) imgEl.title = img.title;
-    container.appendChild(imgEl);
+
+    if (linkUrl) {
+      const anchor = doc.createElement("a");
+      anchor.href = linkUrl;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      anchor.appendChild(imgEl);
+      container.appendChild(anchor);
+    } else {
+      container.appendChild(imgEl);
+    }
+
     if (img.title) {
       const caption = doc.createElement("p");
       caption.className = "text-xs text-muted-foreground text-center mt-1 italic";
@@ -596,6 +618,8 @@ export default function PostPage() {
   });
 
   const containerImages = containerData && containerData.length > 0 ? containerData[0].images : [];
+  const containerLinkUrl = containerData && containerData.length > 0 ? containerData[0].rule?.linkUrl : null;
+  const disabledContainers: number[] = post?.disabledContainers ? JSON.parse(post.disabledContainers) : [];
 
   useEffect(() => {
     if (post && contentRef.current) {
@@ -708,7 +732,7 @@ export default function PostPage() {
                     data-testid="img-featured"
                   />
                 )}
-                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(injectContainerImages(post.content, containerImages), { ADD_TAGS: ["iframe", "span", "div"], ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "scrolling", "data-type", "data-latex", "class", "loading", "title"] }) }} />
+                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(injectContainerImages(post.content, containerImages, containerLinkUrl, disabledContainers), { ADD_TAGS: ["iframe", "span", "div", "a"], ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "scrolling", "data-type", "data-latex", "class", "loading", "title", "target", "rel", "href"] }) }} />
               </div>
             </Card>
 

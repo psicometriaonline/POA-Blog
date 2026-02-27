@@ -8,8 +8,10 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Code, Sigma, Plus } from "lucide-react";
+import { ArrowLeft, Save, Code, Sigma, Plus, Image } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -264,6 +266,7 @@ export default function PostEditor() {
   const [slugManual, setSlugManual] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newTagName, setNewTagName] = useState("");
+  const [disabledContainers, setDisabledContainers] = useState<number[]>([]);
 
   const { data: post, isLoading: postLoading } = useQuery<PostWithRelations>({
     queryKey: [`/api/posts/${params.id}`],
@@ -331,6 +334,9 @@ export default function PostEditor() {
       setSelectedCategories(post.categories.map(c => c.id));
       setSelectedTags(post.tags.map(t => t.id));
       setSlugManual(true);
+      try {
+        setDisabledContainers(post.disabledContainers ? JSON.parse(post.disabledContainers) : []);
+      } catch { setDisabledContainers([]); }
     }
   }, [post, isNew]);
 
@@ -355,6 +361,7 @@ export default function PostEditor() {
         publishedAt: status === "published" ? new Date().toISOString() : null,
         categoryIds: selectedCategories,
         tagIds: selectedTags,
+        disabledContainers: JSON.stringify(disabledContainers),
       };
 
       if (isNew) {
@@ -609,6 +616,49 @@ export default function PostEditor() {
               >
                 <Plus className="h-3 w-3" />
               </Button>
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <Label className="mb-2 block">
+              <Image className="h-4 w-4 inline mr-1" />
+              Contêineres (imagens antes de H2/H3)
+            </Label>
+            <p className="text-xs text-muted-foreground mb-3">Desative posições onde não deseja exibir imagens de contêiner.</p>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {(() => {
+                const editorContent = content || "";
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(editorContent, "text/html");
+                const headings = doc.querySelectorAll("h2, h3");
+                if (headings.length === 0) {
+                  return <p className="text-xs text-muted-foreground italic">Nenhum H2/H3 encontrado no conteúdo.</p>;
+                }
+                return Array.from(headings).map((h, idx) => {
+                  const text = h.textContent?.trim() || `Título ${idx + 1}`;
+                  const tag = h.tagName;
+                  const isDisabled = disabledContainers.includes(idx);
+                  return (
+                    <div key={idx} className="flex items-center justify-between gap-2 py-1">
+                      <span className={`text-xs truncate flex-1 ${tag === "H3" ? "pl-3" : ""}`} data-testid={`text-heading-${idx}`}>
+                        <Badge variant="outline" className="mr-1 text-[10px] px-1">{tag}</Badge>
+                        {text}
+                      </span>
+                      <Switch
+                        checked={!isDisabled}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setDisabledContainers(prev => prev.filter(i => i !== idx));
+                          } else {
+                            setDisabledContainers(prev => [...prev, idx]);
+                          }
+                        }}
+                        data-testid={`switch-container-${idx}`}
+                      />
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </Card>
         </div>

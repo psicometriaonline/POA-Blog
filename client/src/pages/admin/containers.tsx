@@ -14,8 +14,9 @@ import { ArrowLeft, Plus, Trash2, Image, Layers, Eye, ChevronDown, ChevronUp, Ed
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import type { ImageGroupWithItems, ContainerRuleWithGroup, Category, Tag, PostWithRelations, ImageBankItem } from "@shared/schema";
+import { Upload, Link as LinkIcon } from "lucide-react";
 
 const CONTAINER_TYPES = [
   { value: "post-image", label: "Imagem no Post" },
@@ -35,9 +36,10 @@ function ImageGroupsTab() {
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupDesc, setNewGroupDesc] = useState("");
   const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
-  const [newImageUrl, setNewImageUrl] = useState("");
   const [newImageAlt, setNewImageAlt] = useState("");
   const [newImageTitle, setNewImageTitle] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [editingGroup, setEditingGroup] = useState<number | null>(null);
   const [editGroupName, setEditGroupName] = useState("");
   const [editGroupDesc, setEditGroupDesc] = useState("");
@@ -82,24 +84,31 @@ function ImageGroupsTab() {
     onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
 
-  const addImageMutation = useMutation({
-    mutationFn: async (groupId: number) => {
+  const handleFileUpload = async (groupId: number, file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const uploadRes = await fetch("/api/admin/upload", { method: "POST", body: formData, credentials: "include" });
+      if (!uploadRes.ok) throw new Error("Falha no upload");
+      const { url } = await uploadRes.json();
       await apiRequest("POST", "/api/admin/image-bank", {
         groupId,
-        imageUrl: newImageUrl,
+        imageUrl: url,
         altText: newImageAlt || null,
         title: newImageTitle || null,
       });
-    },
-    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/image-groups"] });
-      setNewImageUrl("");
       setNewImageAlt("");
       setNewImageTitle("");
-      toast({ title: "Imagem adicionada" });
-    },
-    onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
-  });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      toast({ title: "Imagem enviada e adicionada" });
+    } catch (e: any) {
+      toast({ title: "Erro no upload", description: e.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const deleteImageMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -272,12 +281,13 @@ function ImageGroupsTab() {
                 <h4 className="text-sm font-medium mb-2">Adicionar Imagem</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <Label>URL da Imagem *</Label>
+                    <Label>Arquivo de Imagem *</Label>
                     <Input
-                      value={newImageUrl}
-                      onChange={(e) => setNewImageUrl(e.target.value)}
-                      placeholder="https://..."
-                      data-testid="input-image-url"
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      data-testid="input-image-file"
+                      className="cursor-pointer"
                     />
                   </div>
                   <div>
@@ -302,12 +312,21 @@ function ImageGroupsTab() {
                 <Button
                   className="mt-3"
                   size="sm"
-                  onClick={() => addImageMutation.mutate(group.id)}
-                  disabled={!newImageUrl.trim() || addImageMutation.isPending}
+                  onClick={() => {
+                    const file = fileInputRef.current?.files?.[0];
+                    if (file) handleFileUpload(group.id, file);
+                  }}
+                  disabled={uploading}
                   data-testid="button-add-image"
                 >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Adicionar
+                  {uploading ? (
+                    <>Enviando...</>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-1" />
+                      Enviar Imagem
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -331,6 +350,7 @@ function RulesTab() {
     maxImages: 3,
     isActive: true,
     priority: 0,
+    linkUrl: "",
   });
 
   const { data: rules, isLoading: rulesLoading } = useQuery<ContainerRuleWithGroup[]>({
@@ -354,6 +374,7 @@ function RulesTab() {
       const payload = {
         ...formData,
         criteriaValue: formData.criteriaType === "all" ? null : formData.criteriaValue,
+        linkUrl: formData.linkUrl || null,
       };
       if (editingRuleId) {
         await apiRequest("PUT", `/api/admin/container-rules/${editingRuleId}`, payload);
@@ -393,7 +414,7 @@ function RulesTab() {
   const resetForm = () => {
     setShowForm(false);
     setEditingRuleId(null);
-    setFormData({ name: "", containerType: "post-image", criteriaType: "all", criteriaValue: "", imageGroupId: 0, maxImages: 3, isActive: true, priority: 0 });
+    setFormData({ name: "", containerType: "post-image", criteriaType: "all", criteriaValue: "", imageGroupId: 0, maxImages: 3, isActive: true, priority: 0, linkUrl: "" });
   };
 
   const startEdit = (rule: ContainerRuleWithGroup) => {
@@ -407,6 +428,7 @@ function RulesTab() {
       maxImages: rule.maxImages,
       isActive: rule.isActive,
       priority: rule.priority,
+      linkUrl: rule.linkUrl || "",
     });
     setShowForm(true);
   };
@@ -522,6 +544,16 @@ function RulesTab() {
                 data-testid="input-priority"
               />
             </div>
+            <div className="md:col-span-2">
+              <Label>Link ao Clicar na Imagem (opcional)</Label>
+              <Input
+                value={formData.linkUrl}
+                onChange={(e) => setFormData({ ...formData, linkUrl: e.target.value })}
+                placeholder="https://..."
+                data-testid="input-link-url"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Se preenchido, a imagem será clicável e direcionará para este link.</p>
+            </div>
           </div>
           <div className="flex items-center gap-4 mt-4">
             <Button
@@ -561,6 +593,7 @@ function RulesTab() {
                   {" • "}Grupo: {rule.imageGroup.name}
                   {" • "}Máx: {rule.maxImages} imagens
                   {" • "}Prioridade: {rule.priority}
+                  {rule.linkUrl && <>{" • "}<LinkIcon className="h-3 w-3 inline" /> {rule.linkUrl}</>}
                 </p>
               </div>
               <div className="flex items-center gap-2">

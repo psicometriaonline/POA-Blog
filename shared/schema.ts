@@ -38,6 +38,7 @@ export const posts = pgTable("posts", {
   authorName: text("author_name"),
   sourceUrl: text("source_url"),
   viewCount: integer("view_count").notNull().default(0),
+  disabledContainers: text("disabled_containers"),
   publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -138,6 +139,7 @@ export const containerRules = pgTable("container_rules", {
   maxImages: integer("max_images").notNull().default(3),
   isActive: boolean("is_active").notNull().default(true),
   priority: integer("priority").notNull().default(0),
+  linkUrl: text("link_url"),
 });
 
 export const imageGroupsRelations = relations(imageGroups, ({ many }) => ({
