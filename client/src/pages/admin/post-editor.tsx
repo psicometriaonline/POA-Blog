@@ -300,11 +300,51 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef }: { conten
             if (editor.isActive("citationBox")) {
               (editor.commands as any).toggleCitationBox();
             } else {
-              (editor.commands as any).insertCitationBox();
+              const title = form.getValues("title") || "";
+              const authorId = form.getValues("authorId");
+              const selectedAuthor = authors?.find(a => a.id.toString() === authorId);
+              const authorName = selectedAuthor?.name || "Autor";
+              const slug = form.getValues("slug") || "";
+              
+              const now = new Date();
+              const months = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+              
+              const nameParts = authorName.trim().split(/\s+/);
+              const lastName = nameParts[nameParts.length - 1];
+              const firstInitial = nameParts[0].charAt(0);
+              
+              let fmtTitle = title.trim();
+              if (fmtTitle.includes(':')) {
+                const [m, s] = fmtTitle.split(':');
+                const fp = (str) => str.trim().charAt(0).toUpperCase() + str.trim().slice(1).toLowerCase();
+                fmtTitle = `${fp(m)}: ${fp(s)}`;
+              } else {
+                fmtTitle = fmtTitle.charAt(0).toUpperCase() + fmtTitle.slice(1).toLowerCase();
+              }
+              
+              const citation = `${lastName}, ${firstInitial}. (${now.getFullYear()}, ${now.getDate()} de ${months[now.getMonth()]}). ${fmtTitle}. <em>Blog Psicometria Online</em>. https://www.blog.psicometriaonline.com.br/${slug}`;
+              
+              editor.chain().focus().insertContent({
+                type: "citationBox",
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [
+                      { type: "text", text: citation.replace(/<[^>]*>/g, '') },
+                      { type: "text", marks: [{ type: "italic" }], text: " Blog Psicometria Online" },
+                      { type: "text", text: `. https://www.blog.psicometriaonline.com.br/${slug}` }
+                    ]
+                  }
+                ]
+              }).run();
+              
+              // Correcting the italic part since insertContent with HTML strings is safer for mixed marks
+              const htmlCitation = `<div class="citation-box"><p>${lastName}, ${firstInitial}. (${now.getFullYear()}, ${now.getDate()} de ${months[now.getMonth()]}). ${fmtTitle}. <em>Blog Psicometria Online</em>. https://www.blog.psicometriaonline.com.br/${slug}</p></div>`;
+              editor.chain().focus().insertContent(htmlCitation).run();
             }
           }}
           data-testid="button-citation-box"
-          title="Caixa de citação (Como citar)"
+          title="Gerar citação automática"
         >
           Citação
         </Button>
