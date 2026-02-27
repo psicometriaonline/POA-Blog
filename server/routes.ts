@@ -629,7 +629,9 @@ export async function registerRoutes(
         'Friedman', 'Bonferroni', 'Tukey', 'Scheffe', 'Dunn', 'Holm', 'Bayes', 'Bayesiana', 
         'Bayesiano', 'Likert', 'Guttman', 'Rasch', 'Thurstone', 'Kuder', 'Richardson', 
         'ANOVA', 'MANOVA', 'ANCOVA', 'MANCOVA', 'JASP', 'SPSS', 'RStudio', 'FACTOR', 'R', 
-        'ggplot2', 'Python', 'Excel', 'Stata', 'SAS', 'jamovi', 'APA', 'IEEE', 'McDonald', 'Mardia'
+        'ggplot2', 'Python', 'Excel', 'Stata', 'SAS', 'jamovi', 'APA', 'IEEE', 'McDonald', 'Mardia',
+        'Mauchly', 'Bartlett', 'Student', 'Glass', 'Hedges', 'Bonett', 'Satterthwaite', 'Box',
+        'Duncan', 'Dunnett', 'Kaiser', 'Meyer', 'Olkin', 'Cochran', 'Yates', 'Geisser', 'Greenhouse'
       ];
 
       for (const post of allPosts) {
