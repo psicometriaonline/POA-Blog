@@ -1,0 +1,17 @@
+vamos lá, tenho algumas considerações sobre os posts e as edições da página de posts no CMS:
+
+1. Quando eu faço uma edição no post e salvo, o post atualiza a data de postagem, o que fará, erroneamente, que aquele post pareça ter sido publicado no presente dia. Isso é inapropriado. Ao salvar, o post pode até salvar alguma informação de que a última edição é naquela data. No entanto, para fins de publicação, o que vale é a primeira data de publicação, que não deve ser modificada.
+
+2. Na página Gerenciar Posts, cada post contém um botão de editar e um de excluir. Falta um botão de ir para, que abre o post publicado diretamente. 
+
+3. Acabei de notar que as tabelas nos posts foram salvas como texto. Vou dar um exemplo. No post (o-que-sao-variaveis-dummy/), olha como ficou a Tabela 1:
+
+IDEstilo de apegoAutoestima1Ansioso222Ansioso273Evitativo294Evitativo285Seguro336Seguro34
+
+Tabela 1. Banco de dados simples.
+
+ou seja, ela perdeu a formatação e características de tabela. acredito que isso foi um problema grave na hora de ler os links do blog no wordpress, e as informações foram perdidas. tem como recriar as tabelas de maneira adequada? além disso, é importante ter uma opção de criação de tabelas nos posts (definindo número de linhas, de colunas, podendo mudar tamanho da fonte, centralizar, alinhar à esquerda ou à direita o texto nas células etc.).
+
+4. Todos os posts possuem uma seção "Como citar". Por exemplo: Lima, M. (2026, 20 de fevereiro). O que é o dilema viés-variância? Blog Psicometria Online. https://www.blog.psicometriaonline.com.br/o-que-e-o-dilema-vies-variancia. No blog original, esse texto que representa como referenciar aquele post, o texto está envolvido em uma caixa de texto azul, que provavelmente você não conseguiu visualizar no seu crawling. Tem como replicar essa feature (colocar uma cor de fundo diferente para que o usuário veja que aquilo indica como citar o post? Isso vale para todos os posts com a seção Como citar. Além de fazer isso em todos os posts, tal funcionalidade tem que estar disponível para quem for escrever novos posts.
+
+4. Em um post qualquer (o-que-e-o-dilema-vies-variancia), a seção de edição "Contêineres (imagens antes de H2/H3) Desative posições onde não deseja exibir imagens de contêiner." está com todas as posições marcadas. Agora, como faço para definir o que irá aparecer em cada contêiner?
