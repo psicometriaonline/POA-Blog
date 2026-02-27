@@ -16,7 +16,7 @@ import {
   imageGroups, imageBankItems, containerRules, mediaLibrary,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, or, desc, sql, inArray, and, asc, gte, lte, count, isNull } from "drizzle-orm";
+import { eq, ne, ilike, or, desc, sql, inArray, and, asc, gte, lte, count, isNull } from "drizzle-orm";
 
 export interface IStorage {
   getAuthors(): Promise<Author[]>;
@@ -108,7 +108,10 @@ export interface IStorage {
   findDuplicateMedia(): Promise<{ filename: string; items: MediaItem[] }[]>;
   updateMediaFileSize(id: number, fileSize: number): Promise<void>;
   updateMediaFilename(id: number, filename: string): Promise<void>;
+  getMediaByFilename(filename: string, excludeId: number): Promise<MediaItem | undefined>;
   getMediaWithNullFileSize(limit: number): Promise<MediaItem[]>;
+  updateMediaUrl(id: number, url: string, fileSize?: number): Promise<void>;
+  replaceUrlInAllPosts(oldUrl: string, newUrl: string): Promise<number>;
   unifyMediaInPosts(keepUrl: string, removeUrl: string): Promise<number>;
 
   getViewsTimeSeries(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]>;
@@ -969,8 +972,40 @@ export class DatabaseStorage implements IStorage {
     await db.update(mediaLibrary).set({ filename }).where(eq(mediaLibrary.id, id));
   }
 
+  async getMediaByFilename(filename: string, excludeId: number): Promise<MediaItem | undefined> {
+    const [item] = await db.select().from(mediaLibrary)
+      .where(and(eq(mediaLibrary.filename, filename), ne(mediaLibrary.id, excludeId)))
+      .limit(1);
+    return item;
+  }
+
   async getMediaWithNullFileSize(limit: number): Promise<MediaItem[]> {
     return db.select().from(mediaLibrary).where(isNull(mediaLibrary.fileSize)).limit(limit);
+  }
+
+  async updateMediaUrl(id: number, url: string, fileSize?: number): Promise<void> {
+    const update: any = { url };
+    if (fileSize !== undefined) update.fileSize = fileSize;
+    await db.update(mediaLibrary).set(update).where(eq(mediaLibrary.id, id));
+  }
+
+  async replaceUrlInAllPosts(oldUrl: string, newUrl: string): Promise<number> {
+    let updatedCount = 0;
+    const featuredResult = await db.update(posts)
+      .set({ featuredImage: newUrl })
+      .where(eq(posts.featuredImage, oldUrl))
+      .returning();
+    updatedCount += featuredResult.length;
+
+    const allPosts = await db.select({ id: posts.id, content: posts.content }).from(posts);
+    for (const post of allPosts) {
+      if (post.content && post.content.includes(oldUrl)) {
+        const newContent = post.content.split(oldUrl).join(newUrl);
+        await db.update(posts).set({ content: newContent }).where(eq(posts.id, post.id));
+        updatedCount++;
+      }
+    }
+    return updatedCount;
   }
 
   async unifyMediaInPosts(keepUrl: string, removeUrl: string): Promise<number> {

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Image, BookOpen, Download, Plus, Trash2, Save, ArrowLeft, Menu, GripVertical, ChevronDown } from "lucide-react";
+import { Settings, Image as ImageLucide, BookOpen, Download, Plus, Trash2, Save, ArrowLeft, Menu, GripVertical, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -74,7 +74,7 @@ export default function HomeSettings() {
             Geral
           </TabsTrigger>
           <TabsTrigger value="banners" data-testid="tab-banners">
-            <Image className="h-4 w-4 mr-1" />
+            <ImageLucide className="h-4 w-4 mr-1" />
             Banners
           </TabsTrigger>
           <TabsTrigger value="sections" data-testid="tab-sections">

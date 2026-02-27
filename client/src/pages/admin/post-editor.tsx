@@ -642,7 +642,7 @@ export default function PostEditor() {
 
           <Card className="p-4">
             <Label className="mb-2 block">
-              <Image className="h-4 w-4 inline mr-1" />
+              <ImageIcon className="h-4 w-4 inline mr-1" />
               Contêineres (imagens antes de H2/H3)
             </Label>
             <p className="text-xs text-muted-foreground mb-3">Desative posições onde não deseja exibir imagens de contêiner.</p>

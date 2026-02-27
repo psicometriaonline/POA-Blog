@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Search, Download, Trash2, ImageIcon, HardDrive, AlertTriangle, ChevronLeft, ChevronRight, ExternalLink, RefreshCw, Layers, X, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Search, Download, Trash2, ImageIcon, HardDrive, AlertTriangle, ChevronLeft, ChevronRight, ExternalLink, RefreshCw, Layers, X, CheckCircle2, Pencil, Check, CloudDownload, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -67,6 +67,9 @@ export default function ManageMediaPage() {
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MediaItem | null>(null);
   const [deleteUsages, setDeleteUsages] = useState<{ postId: number; title: string; slug: string; usage: string }[]>([]);
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+  const [migrationProgress, setMigrationProgress] = useState<{ running: boolean; processed: number; total: number; errors: number } | null>(null);
   const limit = 30;
 
   const { data: mediaData, isLoading: mediaLoading } = useQuery<{ items: MediaItem[]; total: number }>({
@@ -95,11 +98,27 @@ export default function ManageMediaPage() {
 
   const refreshSizesMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/admin/media/refresh-sizes", { method: "POST", credentials: "include" });
-      return res.json();
+      let totalUpdated = 0;
+      let remaining = 1;
+      let retries = 0;
+      while (remaining > 0 && retries < 3) {
+        const res = await fetch("/api/admin/media/refresh-sizes", { method: "POST", credentials: "include" });
+        const data = await res.json();
+        totalUpdated += data.updated;
+        remaining = data.remaining;
+        if (data.updated === 0) {
+          retries++;
+        } else {
+          retries = 0;
+        }
+      }
+      return { updated: totalUpdated, remaining };
     },
     onSuccess: (data) => {
-      toast({ title: "Tamanhos atualizados", description: `${data.updated} imagens processadas.` });
+      const desc = data.remaining > 0
+        ? `${data.updated} processadas, ${data.remaining} não puderam ser calculadas.`
+        : `${data.updated} imagens processadas.`;
+      toast({ title: "Tamanhos atualizados", description: desc });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/media/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
     },
@@ -120,12 +139,33 @@ export default function ManageMediaPage() {
 
   const renameMutation = useMutation({
     mutationFn: async ({ id, filename }: { id: number; filename: string }) => {
-      await apiRequest("PATCH", `/api/admin/media/${id}`, { filename });
+      try {
+        const res = await apiRequest("PATCH", `/api/admin/media/${id}`, { filename });
+        return res.json();
+      } catch (e: any) {
+        const msg = e.message || "";
+        if (msg.includes("409")) {
+          try {
+            const parsed = JSON.parse(msg.replace(/^\d+:\s*/, ""));
+            throw new Error(parsed.message);
+          } catch (parseErr) {
+            if (parseErr instanceof Error && parseErr.message !== msg) throw parseErr;
+          }
+        }
+        throw e;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       toast({ title: "Arquivo renomeado" });
+      setRenaming(false);
+      if (selectedMedia) {
+        setSelectedMedia({ ...selectedMedia, filename: variables.filename });
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/media/duplicates"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: error.message, variant: "destructive" });
     },
   });
 
@@ -188,6 +228,7 @@ export default function ManageMediaPage() {
     if (!mediaData) return;
     const newIndex = direction === "prev" ? selectedIndex - 1 : selectedIndex + 1;
     if (newIndex >= 0 && newIndex < mediaData.items.length) {
+      setRenaming(false);
       setSelectedMedia(mediaData.items[newIndex]);
     }
   };
@@ -209,15 +250,44 @@ export default function ManageMediaPage() {
           </Link>
           <h1 className="text-2xl font-bold" data-testid="text-page-title">Gerenciar Imagens</h1>
         </div>
-        <Button
-          onClick={() => importMutation.mutate()}
-          disabled={importMutation.isPending}
-          variant="outline"
-          data-testid="button-import-media"
-        >
-          <Download className="h-4 w-4 mr-2" />
-          {importMutation.isPending ? "Importando..." : "Importar do Blog"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={async () => {
+              setMigrationProgress({ running: true, processed: 0, total: 0, errors: 0 });
+              try {
+                const res = await fetch("/api/admin/media/migrate-images", { method: "POST", credentials: "include" });
+                const data = await res.json();
+                setMigrationProgress({ running: false, processed: data.downloaded + data.errors, total: data.total, errors: data.errors });
+                toast({
+                  title: "Migração concluída",
+                  description: `${data.downloaded} imagens baixadas, ${data.postsUpdated} posts atualizados, ${data.errors} erros`,
+                });
+                queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/admin/media/stats"] });
+              } catch (e: any) {
+                setMigrationProgress(prev => prev ? { ...prev, running: false } : null);
+                toast({ title: "Erro na migração", description: e.message, variant: "destructive" });
+              }
+            }}
+            disabled={migrationProgress?.running}
+            variant="default"
+            size="sm"
+            data-testid="button-migrate-images"
+          >
+            <CloudDownload className="h-4 w-4 mr-2" />
+            {migrationProgress?.running ? "Migrando..." : "Migrar Imagens do WordPress"}
+          </Button>
+          <Button
+            onClick={() => importMutation.mutate()}
+            disabled={importMutation.isPending}
+            variant="outline"
+            size="sm"
+            data-testid="button-import-media"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {importMutation.isPending ? "Importando..." : "Importar do Blog"}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
@@ -287,6 +357,29 @@ export default function ManageMediaPage() {
           </Card>
         ))}
       </div>
+
+      {migrationProgress && (
+        <Card className="p-4 mb-6 border-blue-300 bg-blue-50/30" data-testid="card-migration-progress">
+          <div className="flex items-center gap-3 mb-2">
+            <Loader2 className={`h-5 w-5 text-blue-600 ${migrationProgress.running ? "animate-spin" : ""}`} />
+            <h3 className="font-semibold text-sm">
+              {migrationProgress.running ? "Migrando imagens do WordPress..." : "Migração concluída"}
+            </h3>
+          </div>
+          <div className="space-y-2">
+            <div className="w-full bg-blue-200 rounded-full h-2">
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all"
+                style={{ width: `${migrationProgress.total > 0 ? (migrationProgress.processed / migrationProgress.total) * 100 : 0}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {migrationProgress.processed} / {migrationProgress.total} imagens processadas
+              {migrationProgress.errors > 0 && ` (${migrationProgress.errors} erros)`}
+            </p>
+          </div>
+        </Card>
+      )}
 
       {showDuplicates && duplicates && duplicates.length > 0 && (
         <Card className="p-6 mb-8 border-amber-300 bg-amber-50/30">
@@ -448,7 +541,7 @@ export default function ManageMediaPage() {
       )}
 
       <Dialog open={!!selectedMedia} onOpenChange={(o) => { if (!o) setSelectedMedia(null); }}>
-        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] p-0 gap-0 overflow-hidden" data-testid="dialog-media-detail">
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] p-0 gap-0 overflow-hidden [&>button.absolute]:hidden" data-testid="dialog-media-detail">
           <div className="flex items-center justify-between px-5 py-3 border-b bg-muted/30">
             <DialogTitle className="text-base font-semibold">Detalhes do anexo</DialogTitle>
             <div className="flex items-center gap-1">
@@ -509,7 +602,59 @@ export default function ManageMediaPage() {
                   </div>
                   <div>
                     <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-0.5">Nome do arquivo</p>
-                    <p className="text-sm break-all" data-testid="text-detail-filename">{selectedMedia.filename}</p>
+                    {renaming ? (
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          className="h-7 text-sm"
+                          autoFocus
+                          data-testid="input-rename-media"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && renameValue.trim() && renameValue !== selectedMedia.filename) {
+                              renameMutation.mutate({ id: selectedMedia.id, filename: renameValue.trim() });
+                            }
+                            if (e.key === "Escape") setRenaming(false);
+                          }}
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 shrink-0"
+                          onClick={() => {
+                            if (renameValue.trim() && renameValue !== selectedMedia.filename) {
+                              renameMutation.mutate({ id: selectedMedia.id, filename: renameValue.trim() });
+                            }
+                          }}
+                          disabled={renameMutation.isPending || !renameValue.trim() || renameValue === selectedMedia.filename}
+                          data-testid="button-confirm-rename"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 shrink-0"
+                          onClick={() => setRenaming(false)}
+                          data-testid="button-cancel-rename"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm break-all flex-1" data-testid="text-detail-filename">{selectedMedia.filename}</p>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 shrink-0"
+                          onClick={() => { setRenaming(true); setRenameValue(selectedMedia.filename); }}
+                          data-testid="button-start-rename"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-0.5">Tipo do arquivo</p>

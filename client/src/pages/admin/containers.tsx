@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Image, Layers, Eye, ChevronDown, ChevronUp, Edit } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Image as ImageLucide, Layers, Eye, ChevronDown, ChevronUp, Edit } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -185,7 +185,7 @@ function ImageGroupsTab() {
             data-testid={`button-expand-group-${group.id}`}
           >
             <div className="flex items-center gap-3">
-              <Image className="h-5 w-5 text-primary" />
+              <ImageLucide className="h-5 w-5 text-primary" />
               <div>
                 {editingGroup === group.id ? (
                   <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
@@ -760,7 +760,7 @@ export default function ContainersPage() {
       <Tabs defaultValue="groups">
         <TabsList className="mb-6" data-testid="tabs-containers">
           <TabsTrigger value="groups" data-testid="tab-groups">
-            <Image className="h-4 w-4 mr-1" />
+            <ImageLucide className="h-4 w-4 mr-1" />
             Banco de Imagens
           </TabsTrigger>
           <TabsTrigger value="rules" data-testid="tab-rules">

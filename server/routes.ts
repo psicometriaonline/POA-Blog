@@ -136,21 +136,31 @@ export async function registerRoutes(
 
   app.post("/api/admin/media/refresh-sizes", isAuthenticated, async (req, res) => {
     try {
-      const items = await storage.getMediaWithNullFileSize(100);
+      const items = await storage.getMediaWithNullFileSize(200);
       let updated = 0;
       for (const item of items) {
         try {
-          const response = await fetch(item.url, { method: "HEAD", signal: (AbortSignal as any).timeout(5000) });
-          const size = response.headers.get("content-length");
-          if (size) {
-            await storage.updateMediaFileSize(item.id, parseInt(size));
-            updated++;
+          if (item.url.startsWith("/uploads/")) {
+            const filePath = path.join(uploadsDir, path.basename(item.url));
+            if (fs.existsSync(filePath)) {
+              const stat = fs.statSync(filePath);
+              await storage.updateMediaFileSize(item.id, stat.size);
+              updated++;
+            }
+          } else {
+            const response = await fetch(item.url, { method: "HEAD", signal: (AbortSignal as any).timeout(5000) });
+            const size = response.headers.get("content-length");
+            if (size) {
+              await storage.updateMediaFileSize(item.id, parseInt(size));
+              updated++;
+            }
           }
         } catch (e) {
           console.error(`Failed to get size for ${item.url}:`, e);
         }
       }
-      res.json({ updated, remaining: items.length - updated });
+      const remainingItems = await storage.getMediaWithNullFileSize(1);
+      res.json({ updated, remaining: remainingItems.length });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -187,8 +197,16 @@ export async function registerRoutes(
     try {
       const id = parseInt(req.params.id);
       const { filename } = req.body;
-      if (filename) {
-        await storage.updateMediaFilename(id, filename);
+      if (filename !== undefined) {
+        const trimmed = (filename || "").trim();
+        if (!trimmed) {
+          return res.status(400).json({ message: "Nome do arquivo não pode ser vazio" });
+        }
+        const existing = await storage.getMediaByFilename(trimmed, id);
+        if (existing) {
+          return res.status(409).json({ message: `A imagem "${trimmed}" já existe` });
+        }
+        await storage.updateMediaFilename(id, trimmed);
       }
       res.json({ success: true });
     } catch (error: any) {
@@ -253,6 +271,132 @@ export async function registerRoutes(
 
       res.json({ imported, total: toInsert.length, alreadyExisted: toInsert.length - imported });
     } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/media/migrate-images", isAuthenticated, async (_req, res) => {
+    try {
+      const WP_PREFIX = "https://www.blog.psicometriaonline.com.br/wp-content/uploads/";
+
+      const allPosts = await storage.getPosts({ limit: 10000 });
+      const allDistinctUrls = new Set<string>();
+
+      for (const post of allPosts) {
+        if (post.featuredImage && post.featuredImage.startsWith(WP_PREFIX)) {
+          allDistinctUrls.add(post.featuredImage);
+        }
+        if (post.content) {
+          const urlRegex = new RegExp(WP_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^"\'<>\\s,]+', 'g');
+          let match;
+          while ((match = urlRegex.exec(post.content)) !== null) {
+            allDistinctUrls.add(match[0]);
+          }
+        }
+      }
+
+      const urlList = Array.from(allDistinctUrls);
+      const total = urlList.length;
+      let processed = 0;
+      let errors = 0;
+      const urlMapping: Record<string, string> = {};
+
+      const BATCH_SIZE = 20;
+      for (let i = 0; i < urlList.length; i += BATCH_SIZE) {
+        const batch = urlList.slice(i, i + BATCH_SIZE);
+
+        await Promise.all(batch.map(async (remoteUrl) => {
+          try {
+            const urlPath = remoteUrl.replace(WP_PREFIX, "");
+            const originalFilename = decodeURIComponent(urlPath.split("/").pop() || "unknown");
+            const dateFolder = urlPath.split("/").slice(0, 2).join("-");
+            const localFilename = `${dateFolder}_${originalFilename}`;
+            const localPath = path.join(uploadsDir, localFilename);
+
+            if (fs.existsSync(localPath)) {
+              const stat = fs.statSync(localPath);
+              urlMapping[remoteUrl] = `/uploads/${localFilename}`;
+              processed++;
+              return;
+            }
+
+            const response = await fetch(remoteUrl, {
+              signal: (AbortSignal as any).timeout(30000),
+            });
+
+            if (!response.ok) {
+              console.error(`Migration: HTTP ${response.status} for ${remoteUrl}`);
+              errors++;
+              processed++;
+              return;
+            }
+
+            const buffer = Buffer.from(await response.arrayBuffer());
+            fs.writeFileSync(localPath, buffer);
+            urlMapping[remoteUrl] = `/uploads/${localFilename}`;
+            processed++;
+          } catch (e: any) {
+            console.error(`Migration: Failed to download ${remoteUrl}:`, e.message);
+            errors++;
+            processed++;
+          }
+        }));
+
+        if (i + BATCH_SIZE < urlList.length) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      let postsUpdated = 0;
+      for (const post of allPosts) {
+        let newFeatured = post.featuredImage;
+        let newContent = post.content;
+        let changed = false;
+
+        if (newFeatured && urlMapping[newFeatured]) {
+          newFeatured = urlMapping[newFeatured];
+          changed = true;
+        }
+
+        if (newContent) {
+          for (const [oldUrl, newUrl] of Object.entries(urlMapping)) {
+            if (newContent.includes(oldUrl)) {
+              newContent = newContent.split(oldUrl).join(newUrl);
+              changed = true;
+            }
+          }
+        }
+
+        if (changed) {
+          await storage.updatePost(post.id, {
+            featuredImage: newFeatured,
+            content: newContent,
+          });
+          postsUpdated++;
+        }
+      }
+
+      const mediaItems = await storage.listMedia({ limit: 100000 });
+      let mediaUpdated = 0;
+      for (const item of mediaItems.items) {
+        if (item.url.startsWith(WP_PREFIX) && urlMapping[item.url]) {
+          const localPath = path.join(uploadsDir, urlMapping[item.url].replace("/uploads/", ""));
+          const fileSize = fs.existsSync(localPath) ? fs.statSync(localPath).size : undefined;
+          await storage.updateMediaUrl(item.id, urlMapping[item.url], fileSize);
+          mediaUpdated++;
+        }
+      }
+
+      res.json({
+        total,
+        downloaded: total - errors,
+        errors,
+        postsUpdated,
+        mediaUpdated,
+        urlsMapped: Object.keys(urlMapping).length,
+      });
+    } catch (error: any) {
+      console.error("Migration error:", error);
       res.status(500).json({ message: error.message });
     }
   });
