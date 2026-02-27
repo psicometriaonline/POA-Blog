@@ -98,6 +98,7 @@ export interface IStorage {
   deleteContainerRule(id: number): Promise<boolean>;
 
   getContainerImagesForPost(postId: number): Promise<{ images: ImageBankItem[]; rule: ContainerRule }[]>;
+  getMatchingPostsForRule(ruleId: number): Promise<{ count: number; posts: { id: number; title: string; slug: string }[] }>;
 
   listMedia(options: { search?: string; page?: number; limit?: number; sort?: string }): Promise<{ items: MediaItem[]; total: number }>;
   getMedia(id: number): Promise<MediaItem | undefined>;
@@ -801,6 +802,43 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
+  async getMatchingPostsForRule(ruleId: number): Promise<{ count: number; posts: { id: number; title: string; slug: string }[] }> {
+    const [rule] = await db.select().from(containerRules).where(eq(containerRules.id, ruleId));
+    if (!rule) return { count: 0, posts: [] };
+
+    let matchingPosts: { id: number; title: string; slug: string }[];
+
+    if (rule.criteriaType === "all") {
+      const rows = await db.select({ id: posts.id, title: posts.title, slug: posts.slug })
+        .from(posts)
+        .where(eq(posts.status, "published"))
+        .orderBy(desc(posts.publishedAt));
+      matchingPosts = rows;
+    } else if (rule.criteriaType === "category" && rule.criteriaValue) {
+      const [cat] = await db.select().from(categories).where(eq(categories.slug, rule.criteriaValue));
+      if (!cat) return { count: 0, posts: [] };
+      const rows = await db.select({ id: posts.id, title: posts.title, slug: posts.slug })
+        .from(posts)
+        .innerJoin(postCategories, eq(posts.id, postCategories.postId))
+        .where(and(eq(postCategories.categoryId, cat.id), eq(posts.status, "published")))
+        .orderBy(desc(posts.publishedAt));
+      matchingPosts = rows;
+    } else if (rule.criteriaType === "tag" && rule.criteriaValue) {
+      const [tag] = await db.select().from(tags).where(eq(tags.slug, rule.criteriaValue));
+      if (!tag) return { count: 0, posts: [] };
+      const rows = await db.select({ id: posts.id, title: posts.title, slug: posts.slug })
+        .from(posts)
+        .innerJoin(postTags, eq(posts.id, postTags.postId))
+        .where(and(eq(postTags.tagId, tag.id), eq(posts.status, "published")))
+        .orderBy(desc(posts.publishedAt));
+      matchingPosts = rows;
+    } else {
+      return { count: 0, posts: [] };
+    }
+
+    return { count: matchingPosts.length, posts: matchingPosts };
+  }
+
   async getContainerImagesForPost(postId: number): Promise<{ images: ImageBankItem[]; rule: ContainerRule }[]> {
     const post = await this.getPost(postId);
     if (!post) return [];
@@ -809,10 +847,7 @@ export class DatabaseStorage implements IStorage {
     const tagSlugs = post.tags.map(t => t.slug);
 
     const allRules = await db.select().from(containerRules)
-      .where(and(
-        eq(containerRules.containerType, "post-image"),
-        eq(containerRules.isActive, true),
-      ))
+      .where(eq(containerRules.isActive, true))
       .orderBy(desc(containerRules.priority));
 
     const matchingRules = allRules.filter(rule => {

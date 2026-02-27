@@ -10,12 +10,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Image as ImageLucide, Layers, Eye, ChevronDown, ChevronUp, Edit } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Image as ImageLucide, Layers, ChevronDown, ChevronUp, Edit, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useRef } from "react";
-import type { ImageGroupWithItems, ContainerRuleWithGroup, Category, Tag, PostWithRelations, ImageBankItem } from "@shared/schema";
+import type { ImageGroupWithItems, ContainerRuleWithGroup, Category, Tag, ImageBankItem } from "@shared/schema";
 import { Upload, Link as LinkIcon, ImageIcon } from "lucide-react";
 import { MediaLibraryModal } from "@/components/media-library-modal";
 
@@ -628,115 +628,99 @@ function RulesTab() {
 
       <div className="space-y-3">
         {rules?.map((rule) => (
-          <Card key={rule.id} className={`p-4 ${!rule.isActive ? 'opacity-60' : ''}`} data-testid={`card-rule-${rule.id}`}>
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-medium" data-testid={`text-rule-name-${rule.id}`}>{rule.name}</h4>
-                  <Badge variant="outline">{CONTAINER_TYPES.find(t => t.value === rule.containerType)?.label}</Badge>
-                  {!rule.isActive && <Badge variant="secondary">Inativa</Badge>}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {rule.criteriaType === "all" && "Aplica a todos os posts"}
-                  {rule.criteriaType === "category" && `Categoria: ${rule.criteriaValue}`}
-                  {rule.criteriaType === "tag" && `Tag: ${rule.criteriaValue}`}
-                  {" • "}Grupo: {rule.imageGroup.name}
-                  {" • "}Máx: {rule.maxImages} imagens
-                  {" • "}Prioridade: {rule.priority}
-                  {rule.linkUrl && <>{" • "}<LinkIcon className="h-3 w-3 inline" /> {rule.linkUrl}</>}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={rule.isActive}
-                  onCheckedChange={(checked) => toggleRuleMutation.mutate({ id: rule.id, isActive: checked })}
-                  data-testid={`switch-rule-${rule.id}`}
-                />
-                <Button variant="ghost" size="sm" onClick={() => startEdit(rule)} data-testid={`button-edit-rule-${rule.id}`}>
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => { if (confirm("Excluir esta regra?")) deleteRuleMutation.mutate(rule.id); }}
-                  data-testid={`button-delete-rule-${rule.id}`}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            </div>
-          </Card>
+          <RuleCard key={rule.id} rule={rule} onEdit={startEdit} onDelete={(id) => deleteRuleMutation.mutate(id)} onToggle={(id, isActive) => toggleRuleMutation.mutate({ id, isActive })} />
         ))}
       </div>
     </div>
   );
 }
 
-function PreviewTab() {
-  const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
+function RuleCard({ rule, onEdit, onDelete, onToggle }: {
+  rule: ContainerRuleWithGroup;
+  onEdit: (rule: ContainerRuleWithGroup) => void;
+  onDelete: (id: number) => void;
+  onToggle: (id: number, isActive: boolean) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
 
-  const { data: postsData } = useQuery<{ posts: PostWithRelations[]; total: number }>({
-    queryKey: ["/api/admin/posts?limit=50&offset=0"],
-  });
-
-  const { data: containerImages, isLoading: previewLoading } = useQuery<{ images: ImageBankItem[]; rule: { name: string; maxImages: number } }[]>({
-    queryKey: ["/api/posts", selectedPostId, "container-images"],
+  const { data: matchingData, isLoading } = useQuery<{ count: number; posts: { id: number; title: string; slug: string }[] }>({
+    queryKey: ["/api/admin/container-rules", rule.id, "matching-posts"],
     queryFn: async () => {
-      const res = await fetch(`/api/posts/${selectedPostId}/container-images`);
+      const res = await fetch(`/api/admin/container-rules/${rule.id}/matching-posts`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
-    enabled: !!selectedPostId,
+    staleTime: 60000,
   });
 
   return (
-    <div className="space-y-6">
-      <Card className="p-5">
-        <Label>Selecione um post para pré-visualizar</Label>
-        <Select value={selectedPostId ? String(selectedPostId) : ""} onValueChange={(v) => setSelectedPostId(parseInt(v))}>
-          <SelectTrigger className="mt-2" data-testid="select-preview-post">
-            <SelectValue placeholder="Escolha um post..." />
-          </SelectTrigger>
-          <SelectContent>
-            {postsData?.posts.map((p) => (
-              <SelectItem key={p.id} value={String(p.id)}>{p.title}</SelectItem>
+    <Card className={`p-4 ${!rule.isActive ? 'opacity-60' : ''}`} data-testid={`card-rule-${rule.id}`}>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <h4 className="font-medium" data-testid={`text-rule-name-${rule.id}`}>{rule.name}</h4>
+            <Badge variant="outline">{CONTAINER_TYPES.find(t => t.value === rule.containerType)?.label}</Badge>
+            {!rule.isActive && <Badge variant="secondary">Inativa</Badge>}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {rule.criteriaType === "all" && "Aplica a todos os posts"}
+            {rule.criteriaType === "category" && `Categoria: ${rule.criteriaValue}`}
+            {rule.criteriaType === "tag" && `Tag: ${rule.criteriaValue}`}
+            {" • "}Grupo: {rule.imageGroup.name}
+            {" • "}Máx: {rule.maxImages} imagens
+            {" • "}Prioridade: {rule.priority}
+            {rule.linkUrl && <>{" • "}<LinkIcon className="h-3 w-3 inline" /> {rule.linkUrl}</>}
+          </p>
+          <div className="mt-2">
+            {isLoading ? (
+              <span className="text-xs text-muted-foreground">Carregando posts...</span>
+            ) : matchingData ? (
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="flex items-center gap-1 text-xs text-primary hover:underline"
+                data-testid={`button-matching-posts-${rule.id}`}
+              >
+                <FileText className="h-3 w-3" />
+                Aplica-se a {matchingData.count} post{matchingData.count !== 1 ? "s" : ""}
+                {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </button>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={rule.isActive}
+            onCheckedChange={(checked) => onToggle(rule.id, checked)}
+            data-testid={`switch-rule-${rule.id}`}
+          />
+          <Button variant="ghost" size="sm" onClick={() => onEdit(rule)} data-testid={`button-edit-rule-${rule.id}`}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { if (confirm("Excluir esta regra?")) onDelete(rule.id); }}
+            data-testid={`button-delete-rule-${rule.id}`}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      </div>
+      {expanded && matchingData && matchingData.posts.length > 0 && (
+        <div className="mt-3 pt-3 border-t">
+          <div className="max-h-60 overflow-y-auto space-y-1">
+            {matchingData.posts.map((p) => (
+              <div key={p.id} className="flex items-center gap-2 text-sm py-1" data-testid={`matching-post-${p.id}`}>
+                <FileText className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                <a href={`/${p.slug}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate" data-testid={`link-matching-post-${p.id}`}>
+                  {p.title}
+                </a>
+              </div>
             ))}
-          </SelectContent>
-        </Select>
-      </Card>
-
-      {selectedPostId && previewLoading && (
-        <div className="space-y-3">
-          <Skeleton className="h-32 w-full" />
+          </div>
         </div>
       )}
-
-      {selectedPostId && !previewLoading && containerImages && (
-        <Card className="p-5">
-          {containerImages.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">
-              Nenhuma regra correspondente para este post. Verifique as categorias/tags do post e as regras cadastradas.
-            </p>
-          ) : (
-            containerImages.map((result, idx) => (
-              <div key={idx}>
-                <h4 className="font-medium mb-2">
-                  Regra: {result.rule.name} — {result.images.length} imagem(ns) selecionada(s)
-                </h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {result.images.map((img) => (
-                    <div key={img.id} className="rounded-md overflow-hidden border" data-testid={`preview-image-${img.id}`}>
-                      <img src={img.imageUrl} alt={img.altText || ""} className="w-full h-32 object-cover" />
-                      {img.title && <p className="text-xs p-1 truncate">{img.title}</p>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
-        </Card>
-      )}
-    </div>
+    </Card>
   );
 }
 
@@ -787,10 +771,6 @@ export default function ContainersPage() {
             <Layers className="h-4 w-4 mr-1" />
             Regras
           </TabsTrigger>
-          <TabsTrigger value="preview" data-testid="tab-preview">
-            <Eye className="h-4 w-4 mr-1" />
-            Pré-visualização
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="groups">
@@ -799,10 +779,6 @@ export default function ContainersPage() {
 
         <TabsContent value="rules">
           <RulesTab />
-        </TabsContent>
-
-        <TabsContent value="preview">
-          <PreviewTab />
         </TabsContent>
       </Tabs>
     </div>

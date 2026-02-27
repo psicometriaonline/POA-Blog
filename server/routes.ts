@@ -998,6 +998,15 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/container-rules/:id/matching-posts", isAuthenticated, async (req, res) => {
+    try {
+      const result = await storage.getMatchingPostsForRule(parseInt(req.params.id));
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/posts/:id/container-images", async (req, res) => {
     try {
       const results = await storage.getContainerImagesForPost(parseInt(req.params.id));

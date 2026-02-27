@@ -81,7 +81,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `/admin/home` - Home page section configuration
 - `/admin/autores` - Author management
 - `/admin/metricas` - Post views analytics dashboard
-- `/admin/conteineres` - Container management (image groups, rules, preview)
+- `/admin/conteineres` - Container management (image groups, rules with matching posts display)
 - `/admin/midias` - Media library management (stats, search, usage, duplicates)
 
 ### API
@@ -100,7 +100,8 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `GET/POST/PUT/DELETE /api/admin/image-groups` - Image group CRUD
 - `GET/POST/PUT/DELETE /api/admin/image-bank` - Image bank item CRUD
 - `GET/POST/PUT/DELETE /api/admin/container-rules` - Container rule CRUD
-- `GET /api/posts/:id/container-images` - Resolved container images for a post
+- `GET /api/admin/container-rules/:id/matching-posts` - Posts matching a rule's criteria
+- `GET /api/posts/:id/container-images` - Resolved container images for a post (matches ALL active rules, not just post-image type)
 - `GET/POST/PUT/DELETE /api/admin/media` - Media library CRUD
 - `GET /api/admin/media/stats` - Media storage overview
 - `GET /api/admin/media/duplicates` - Duplicate media detection
