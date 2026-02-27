@@ -622,21 +622,77 @@ export async function registerRoutes(
     try {
       const allPosts = await storage.getPosts({ limit: 10000 });
       let updated = 0;
+      
+      const properNouns = [
+        'Pearson', 'Spearman', 'Kendall', 'Fisher', 'Cronbach', 'Cohen', 'Shapiro', 'Wilk', 
+        'Levene', 'Kolmogorov', 'Smirnov', 'Kruskal', 'Wallis', 'Mann', 'Whitney', 'Welch', 
+        'Friedman', 'Bonferroni', 'Tukey', 'Scheffe', 'Dunn', 'Holm', 'Bayes', 'Bayesiana', 
+        'Bayesiano', 'Likert', 'Guttman', 'Rasch', 'Thurstone', 'Kuder', 'Richardson', 
+        'ANOVA', 'MANOVA', 'ANCOVA', 'MANCOVA', 'JASP', 'SPSS', 'RStudio', 'FACTOR', 'R', 
+        'ggplot2', 'Python', 'Excel', 'Stata', 'SAS', 'jamovi', 'APA', 'IEEE', 'McDonald', 'Mardia'
+      ];
+
       for (const post of allPosts) {
         if (!post.content) continue;
         let content = post.content;
+        let postUpdated = false;
 
-        if (content.includes('class="citation-box"')) continue;
+        // Pattern 1: Convert raw "Como citar" to citation-box if not already converted
+        if (!content.includes('class="citation-box"')) {
+          const citationRegex = /(<h2[^>]*>(?:\s*<[^>]+>)*\s*Como\s+citar\s*(?:<\/[^>]+>\s*)*<\/h2>\s*)(<p[^>]*>)([\s\S]*?)(<\/p>)/i;
+          const match = content.match(citationRegex);
+          if (match) {
+            const heading = match[1];
+            const pOpen = match[2];
+            const pContent = match[3];
+            const pClose = match[4];
+            const replacement = `${heading}<div class="citation-box">${pOpen}${pContent}${pClose}</div>`;
+            content = content.replace(match[0], replacement);
+            postUpdated = true;
+          }
+        }
 
-        const citationRegex = /(<h2[^>]*>(?:\s*<[^>]+>)*\s*Como\s+citar\s*(?:<\/[^>]+>\s*)*<\/h2>\s*)(<p[^>]*>)([\s\S]*?)(<\/p>)/i;
-        const match = content.match(citationRegex);
-        if (match) {
-          const heading = match[1];
-          const pOpen = match[2];
-          const pContent = match[3];
-          const pClose = match[4];
-          const replacement = `${heading}<div class="citation-box">${pOpen}${pContent}${pClose}</div>`;
-          content = content.replace(match[0], replacement);
+        // Pattern 2: Fix capitalization inside citation-box
+        const citationBoxRegex = /<div class="citation-box">([\s\S]*?)<\/div>/g;
+        content = content.replace(citationBoxRegex, (match, citationInner) => {
+          let fixedInner = citationInner;
+          
+          // Try to use the post title as a reference for the title part of the citation
+          // Citations usually follow: Author (Year). Title. Blog Name. URL
+          const titleMatch = fixedInner.match(/\)\.\s+(.*?)\s+<em>/i);
+          if (titleMatch && post.title) {
+            const citationTitle = titleMatch[1];
+            // If the citation title is just a lowercased version of the DB title (ignoring trailing punctuation)
+            const dbTitleClean = post.title.trim().replace(/\?$/, '');
+            const citTitleClean = citationTitle.trim().replace(/\.$/, '').replace(/\?$/, '');
+            
+            if (dbTitleClean.toLowerCase() === citTitleClean.toLowerCase()) {
+              // Replace the lowercased title with the properly capitalized one from the DB
+              // We keep the original punctuation from the citation title
+              const suffix = citationTitle.endsWith('?') ? '?' : '.';
+              fixedInner = fixedInner.replace(citationTitle, dbTitleClean + suffix);
+            }
+          }
+
+          // Fallback/Safety: Fix known proper nouns regardless of title match
+          for (const noun of properNouns) {
+            // Case-insensitive boundary match for the noun
+            // Special handling for "R" to avoid matching inside words
+            const regex = new RegExp(`\\b${noun}\\b`, 'gi');
+            fixedInner = fixedInner.replace(regex, (matched) => {
+              // Only replace if it was actually lowercase or differently capitalized
+              return noun;
+            });
+          }
+          
+          if (fixedInner !== citationInner) {
+            postUpdated = true;
+            return `<div class="citation-box">${fixedInner}</div>`;
+          }
+          return match;
+        });
+
+        if (postUpdated) {
           await storage.updatePost(post.id, { content });
           updated++;
         }
