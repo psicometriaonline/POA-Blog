@@ -79,66 +79,73 @@ export async function registerRoutes(
     res.json(result);
   });
 
-  app.get("/api/admin/media/stats", isAuthenticated, async (_req, res) => {
-    const stats = await storage.getMediaStats();
-    res.json(stats);
-  });
-
-  app.get("/api/admin/media/duplicates", isAuthenticated, async (_req, res) => {
-    const duplicates = await storage.findDuplicateMedia();
-    res.json(duplicates);
-  });
-
-  app.get("/api/admin/media/:id/usage", isAuthenticated, async (req, res) => {
-    const usages = await storage.getMediaUsage(parseInt(req.params.id));
-    res.json(usages);
-  });
-
-  app.post("/api/admin/media", isAuthenticated, upload.single("file"), async (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ message: "Nenhum arquivo enviado" });
-    }
-    const fileUrl = `/uploads/${req.file.filename}`;
-    const mediaItem = await storage.createMedia({
-      filename: req.file.originalname,
-      url: fileUrl,
-      altText: req.body.altText || null,
-      title: req.body.title || null,
-      mimeType: req.file.mimetype,
-      fileSize: req.file.size,
-      source: "upload",
-    });
-    res.json(mediaItem);
-  });
-
-  app.delete("/api/admin/media/:id", isAuthenticated, async (req, res) => {
-    const id = parseInt(req.params.id);
-    const force = req.query.force === "true";
-
-    if (!force) {
-      const usages = await storage.getMediaUsage(id);
-      if (usages.length > 0) {
-        return res.json({ requiresConfirmation: true, usages });
+  app.post("/api/admin/media/refresh-sizes", isAuthenticated, async (req, res) => {
+    try {
+      const items = await storage.getMediaWithNullFileSize(100);
+      let updated = 0;
+      for (const item of items) {
+        try {
+          const response = await fetch(item.url, { method: "HEAD", signal: (AbortSignal as any).timeout(5000) });
+          const size = response.headers.get("content-length");
+          if (size) {
+            await storage.updateMediaFileSize(item.id, parseInt(size));
+            updated++;
+          }
+        } catch (e) {
+          console.error(`Failed to get size for ${item.url}:`, e);
+        }
       }
+      res.json({ updated, remaining: items.length - updated });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
+  });
 
-    const media = await storage.getMedia(id);
-    if (media && media.url.startsWith("/uploads/")) {
-      const filePath = path.join(uploadsDir, path.basename(media.url));
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+  app.post("/api/admin/media/unify", isAuthenticated, async (req, res) => {
+    try {
+      const { keepId, removeId } = req.body;
+      const keepMedia = await storage.getMedia(keepId);
+      const removeMedia = await storage.getMedia(removeId);
+
+      if (!keepMedia || !removeMedia) {
+        return res.status(404).json({ message: "Mídia não encontrada" });
       }
-    }
 
-    const deleted = await storage.deleteMedia(id);
-    res.json({ deleted });
+      const updatedCount = await storage.unifyMediaInPosts(keepMedia.url, removeMedia.url);
+      
+      // If it was an upload, delete the file
+      if (removeMedia.url.startsWith("/uploads/")) {
+        const filePath = path.join(uploadsDir, path.basename(removeMedia.url));
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+
+      await storage.deleteMedia(removeId);
+      res.json({ success: true, updatedPosts: updatedCount });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/admin/media/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { filename } = req.body;
+      if (filename) {
+        await storage.updateMediaFilename(id, filename);
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
   });
 
   app.post("/api/admin/media/import-from-posts", isAuthenticated, async (_req, res) => {
     try {
       const allPosts = await storage.getPosts(1000, 0);
       const seenUrls = new Set<string>();
-      const toInsert: { url: string; filename: string; altText?: string; source: string }[] = [];
+      const toInsert: { url: string; filename: string; altText?: string; source: string; fileSize?: number }[] = [];
 
       for (const post of allPosts) {
         if (post.featuredImage && !seenUrls.has(post.featuredImage)) {
@@ -170,11 +177,21 @@ export async function registerRoutes(
 
       let imported = 0;
       for (const item of newItems) {
+        let fileSize: number | undefined;
+        try {
+          const response = await fetch(item.url, { method: "HEAD", timeout: 2000 } as any);
+          const size = response.headers.get("content-length");
+          if (size) fileSize = parseInt(size);
+        } catch (e) {
+          // ignore size fetch error
+        }
+
         await storage.createMedia({
           filename: item.filename,
           url: item.url,
           altText: item.altText || null,
           source: item.source,
+          fileSize: fileSize || null,
         });
         imported++;
       }

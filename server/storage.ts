@@ -16,7 +16,7 @@ import {
   imageGroups, imageBankItems, containerRules, mediaLibrary,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, or, desc, sql, inArray, and, asc, gte, lte, count } from "drizzle-orm";
+import { eq, ilike, or, desc, sql, inArray, and, asc, gte, lte, count, isNull } from "drizzle-orm";
 
 export interface IStorage {
   getAuthors(): Promise<Author[]>;
@@ -106,6 +106,10 @@ export interface IStorage {
   getMediaUsage(id: number): Promise<{ postId: number; title: string; slug: string; usage: string }[]>;
   getMediaStats(): Promise<{ total: number; totalSize: number; bySource: { source: string; count: number }[] }>;
   findDuplicateMedia(): Promise<{ filename: string; items: MediaItem[] }[]>;
+  updateMediaFileSize(id: number, fileSize: number): Promise<void>;
+  updateMediaFilename(id: number, filename: string): Promise<void>;
+  getMediaWithNullFileSize(limit: number): Promise<MediaItem[]>;
+  unifyMediaInPosts(keepUrl: string, removeUrl: string): Promise<number>;
 
   getViewsTimeSeries(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]>;
   getViewsTimeSeriesMonthly(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]>;
@@ -855,10 +859,22 @@ export class DatabaseStorage implements IStorage {
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
+    let orderByClause: any = desc(mediaLibrary.createdAt);
+    if (options.sort) {
+      switch (options.sort) {
+        case "date_asc": orderByClause = asc(mediaLibrary.createdAt); break;
+        case "name_asc": orderByClause = asc(mediaLibrary.filename); break;
+        case "name_desc": orderByClause = desc(mediaLibrary.filename); break;
+        case "size_desc": orderByClause = desc(mediaLibrary.fileSize); break;
+        case "size_asc": orderByClause = asc(mediaLibrary.fileSize); break;
+        case "date_desc": default: orderByClause = desc(mediaLibrary.createdAt); break;
+      }
+    }
+
     const [totalResult, items] = await Promise.all([
       db.select({ cnt: count() }).from(mediaLibrary).where(where),
       db.select().from(mediaLibrary).where(where)
-        .orderBy(desc(mediaLibrary.createdAt))
+        .orderBy(orderByClause)
         .limit(limit).offset(offset),
     ]);
 
@@ -943,6 +959,41 @@ export class DatabaseStorage implements IStorage {
       results.push({ filename: dupe.filename, items });
     }
     return results;
+  }
+
+  async updateMediaFileSize(id: number, fileSize: number): Promise<void> {
+    await db.update(mediaLibrary).set({ fileSize }).where(eq(mediaLibrary.id, id));
+  }
+
+  async updateMediaFilename(id: number, filename: string): Promise<void> {
+    await db.update(mediaLibrary).set({ filename }).where(eq(mediaLibrary.id, id));
+  }
+
+  async getMediaWithNullFileSize(limit: number): Promise<MediaItem[]> {
+    return db.select().from(mediaLibrary).where(isNull(mediaLibrary.fileSize)).limit(limit);
+  }
+
+  async unifyMediaInPosts(keepUrl: string, removeUrl: string): Promise<number> {
+    let updatedCount = 0;
+    
+    // Update featured images
+    const featuredResult = await db.update(posts)
+      .set({ featuredImage: keepUrl })
+      .where(eq(posts.featuredImage, removeUrl))
+      .returning();
+    updatedCount += featuredResult.length;
+
+    // Update content HTML
+    const allPosts = await db.select().from(posts);
+    for (const post of allPosts) {
+      if (post.content && post.content.includes(removeUrl)) {
+        const newContent = post.content.split(removeUrl).join(keepUrl);
+        await db.update(posts).set({ content: newContent }).where(eq(posts.id, post.id));
+        updatedCount++;
+      }
+    }
+    
+    return updatedCount;
   }
 }
 
