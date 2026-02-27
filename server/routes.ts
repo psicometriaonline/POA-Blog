@@ -641,6 +641,9 @@ export async function registerRoutes(
         'Markov', 'Matthews', 'XGBoost', 'Wald-Wolfowitz', 'Psicometria Online Academy'
       ];
 
+      // Sort nouns by length descending to match longer phrases first
+      properNouns.sort((a, b) => b.length - a.length);
+
       for (const post of allPosts) {
         if (!post.content) continue;
         let content = post.content;
