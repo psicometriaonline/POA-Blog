@@ -136,10 +136,28 @@ function renderMathAndCode(contentRef: React.RefObject<HTMLDivElement | null>) {
   el.querySelectorAll("pre").forEach((pre) => {
     if (pre.querySelector(".copy-code-btn")) return;
 
+    const code = pre.querySelector("code");
+    if (!code) return;
+
     const wrapper = document.createElement("div");
     wrapper.style.position = "relative";
     pre.parentNode?.insertBefore(wrapper, pre);
     wrapper.appendChild(pre);
+
+    // Add line numbers if applicable
+    const lines = code.textContent?.split("\n") || [];
+    if (lines.length > 0) {
+      const lineNumbers = document.createElement("div");
+      lineNumbers.className = "line-numbers";
+      const startLine = parseInt(pre.getAttribute("data-start") || "1");
+      for (let i = 0; i < lines.length; i++) {
+        const span = document.createElement("span");
+        span.textContent = String(startLine + i);
+        lineNumbers.appendChild(span);
+      }
+      pre.insertBefore(lineNumbers, code);
+      pre.classList.add("has-line-numbers");
+    }
 
     const btn = document.createElement("button");
     btn.className = "copy-code-btn";

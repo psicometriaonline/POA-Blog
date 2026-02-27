@@ -77,7 +77,7 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef }: { conten
       Placeholder.configure({ placeholder: "Escreva o conteudo do post aqui..." }),
       CodeBlockLowlight.configure({
         lowlight,
-        defaultLanguage: null,
+        defaultLanguage: "r",
       }),
       Table.configure({ resizable: true }),
       TableRow,
