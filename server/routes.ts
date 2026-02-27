@@ -79,6 +79,61 @@ export async function registerRoutes(
     res.json(result);
   });
 
+  app.get("/api/admin/media/stats", isAuthenticated, async (_req, res) => {
+    const stats = await storage.getMediaStats();
+    res.json(stats);
+  });
+
+  app.get("/api/admin/media/duplicates", isAuthenticated, async (_req, res) => {
+    const duplicates = await storage.findDuplicateMedia();
+    res.json(duplicates);
+  });
+
+  app.get("/api/admin/media/:id/usage", isAuthenticated, async (req, res) => {
+    const usages = await storage.getMediaUsage(parseInt(req.params.id));
+    res.json(usages);
+  });
+
+  app.post("/api/admin/media", isAuthenticated, upload.single("file"), async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "Nenhum arquivo enviado" });
+    }
+    const fileUrl = `/uploads/${req.file.filename}`;
+    const mediaItem = await storage.createMedia({
+      filename: req.file.originalname,
+      url: fileUrl,
+      altText: req.body.altText || null,
+      title: req.body.title || null,
+      mimeType: req.file.mimetype,
+      fileSize: req.file.size,
+      source: "upload",
+    });
+    res.json(mediaItem);
+  });
+
+  app.delete("/api/admin/media/:id", isAuthenticated, async (req, res) => {
+    const id = parseInt(req.params.id);
+    const force = req.query.force === "true";
+
+    if (!force) {
+      const usages = await storage.getMediaUsage(id);
+      if (usages.length > 0) {
+        return res.json({ requiresConfirmation: true, usages });
+      }
+    }
+
+    const media = await storage.getMedia(id);
+    if (media && media.url.startsWith("/uploads/")) {
+      const filePath = path.join(uploadsDir, path.basename(media.url));
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    const deleted = await storage.deleteMedia(id);
+    res.json({ deleted });
+  });
+
   app.post("/api/admin/media/refresh-sizes", isAuthenticated, async (req, res) => {
     try {
       const items = await storage.getMediaWithNullFileSize(100);

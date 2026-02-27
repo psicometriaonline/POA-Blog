@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Search, Download, Trash2, ImageIcon, HardDrive, AlertTriangle, ChevronLeft, ChevronRight, Copy, ExternalLink, RefreshCw, Layers } from "lucide-react";
+import { ArrowLeft, Search, Download, Trash2, ImageIcon, HardDrive, AlertTriangle, ChevronLeft, ChevronRight, ExternalLink, RefreshCw, Layers, X, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -26,12 +26,35 @@ const SOURCE_COLORS: Record<string, string> = {
   "post-content": "bg-purple-100 text-purple-800",
 };
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
+function formatBytes(bytes: number | null | undefined): string {
+  if (!bytes || bytes === 0) return "—";
   const k = 1024;
   const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+}
+
+function formatDateShort(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  const months = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function formatDateLong(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  const months = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+  return `${d.getDate()} de ${months[d.getMonth()]} de ${d.getFullYear()}`;
+}
+
+function getMimeFromFilename(filename: string): string {
+  const ext = filename.split(".").pop()?.toLowerCase();
+  const map: Record<string, string> = {
+    jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
+    gif: "image/gif", webp: "image/webp", svg: "image/svg+xml",
+  };
+  return map[ext || ""] || "image/jpeg";
 }
 
 export default function ManageMediaPage() {
@@ -78,6 +101,7 @@ export default function ManageMediaPage() {
     onSuccess: (data) => {
       toast({ title: "Tamanhos atualizados", description: `${data.updated} imagens processadas.` });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/media/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
     },
   });
 
@@ -90,6 +114,7 @@ export default function ManageMediaPage() {
       toast({ title: "Unificação concluída", description: `${data.updatedPosts} posts atualizados.` });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/media/duplicates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/media/stats"] });
     },
   });
 
@@ -119,8 +144,9 @@ export default function ManageMediaPage() {
       return res.json();
     },
     onSuccess: (data) => {
-      toast({ title: `Importação concluída`, description: `${data.imported} novas imagens importadas` });
+      toast({ title: "Importação concluída", description: `${data.imported} novas imagens importadas` });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/media/stats"] });
     },
   });
 
@@ -135,6 +161,7 @@ export default function ManageMediaPage() {
       setDeleteUsages([]);
       setSelectedMedia(null);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/media/stats"] });
     },
   });
 
@@ -148,6 +175,20 @@ export default function ManageMediaPage() {
       toast({ title: "Imagem removida" });
       setSelectedMedia(null);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/media/stats"] });
+    }
+  };
+
+  const selectedIndex = useMemo(() => {
+    if (!selectedMedia || !mediaData) return -1;
+    return mediaData.items.findIndex(i => i.id === selectedMedia.id);
+  }, [selectedMedia, mediaData]);
+
+  const navigateMedia = (direction: "prev" | "next") => {
+    if (!mediaData) return;
+    const newIndex = direction === "prev" ? selectedIndex - 1 : selectedIndex + 1;
+    if (newIndex >= 0 && newIndex < mediaData.items.length) {
+      setSelectedMedia(mediaData.items[newIndex]);
     }
   };
 
@@ -155,6 +196,7 @@ export default function ManageMediaPage() {
   if (!user) return <div className="max-w-6xl mx-auto px-4 py-8 text-center">Faça login para acessar o admin.</div>;
 
   const totalPages = mediaData ? Math.ceil(mediaData.total / limit) : 0;
+  const dupeCount = duplicates?.length || 0;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -178,64 +220,75 @@ export default function ManageMediaPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card className="p-4 flex items-center gap-3" data-testid="card-stat-total">
-          <ImageIcon className="h-8 w-8 text-primary" />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <Card className="p-3 flex items-center gap-3" data-testid="card-stat-total">
+          <ImageIcon className="h-7 w-7 text-primary shrink-0" />
           <div>
-            <p className="text-2xl font-bold">{stats?.total || 0}</p>
-            <p className="text-xs text-muted-foreground">Total de Imagens</p>
+            <p className="text-xl font-bold">{stats?.total || 0}</p>
+            <p className="text-[10px] text-muted-foreground leading-tight">Total de Imagens</p>
           </div>
         </Card>
-        <Card className="p-4 flex items-center gap-3 relative overflow-hidden" data-testid="card-stat-storage">
-          <HardDrive className="h-8 w-8 text-primary" />
-          <div className="flex-1">
-            <p className="text-2xl font-bold">{formatBytes(stats?.totalSize || 0)}</p>
-            <p className="text-xs text-muted-foreground">Espaço Estimado</p>
+
+        <Card className="p-3 flex items-center gap-3 relative overflow-hidden" data-testid="card-stat-storage">
+          <HardDrive className="h-7 w-7 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xl font-bold">{formatBytes(stats?.totalSize)}</p>
+            <p className="text-[10px] text-muted-foreground leading-tight">Espaço Estimado</p>
           </div>
-          {stats?.totalSize === 0 && stats?.total > 0 && (
-            <Button 
-              size="icon" 
-              variant="ghost" 
-              className="absolute right-2 top-2 h-8 w-8"
+          {stats && stats.totalSize === 0 && stats.total > 0 && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="absolute right-1 top-1 h-7 w-7"
               onClick={() => refreshSizesMutation.mutate()}
               disabled={refreshSizesMutation.isPending}
               title="Calcular tamanhos"
+              data-testid="button-refresh-sizes"
             >
-              <RefreshCw className={`h-4 w-4 ${refreshSizesMutation.isPending ? "animate-spin" : ""}`} />
+              <RefreshCw className={`h-3.5 w-3.5 ${refreshSizesMutation.isPending ? "animate-spin" : ""}`} />
             </Button>
           )}
         </Card>
-        
-        {duplicates && duplicates.length > 0 && (
-          <button 
+
+        {dupeCount > 0 ? (
+          <button
             onClick={() => setShowDuplicates(!showDuplicates)}
-            className={`p-4 flex items-center gap-3 border-2 rounded-lg transition-all text-left ${
+            className={`p-3 flex items-center gap-3 border-2 rounded-lg transition-all text-left cursor-pointer ${
               showDuplicates ? "border-amber-500 bg-amber-50" : "border-amber-300 bg-amber-50/50 hover:bg-amber-50"
             }`}
+            data-testid="card-stat-duplicates"
           >
-            <AlertTriangle className="h-8 w-8 text-amber-600" />
+            <AlertTriangle className="h-7 w-7 text-amber-600 shrink-0" />
             <div>
-              <p className="text-2xl font-bold">{duplicates.length}</p>
-              <p className="text-xs text-muted-foreground">Duplicatas Encontradas</p>
+              <p className="text-xl font-bold">{dupeCount}</p>
+              <p className="text-[10px] text-muted-foreground leading-tight">Duplicatas</p>
             </div>
           </button>
+        ) : (
+          <Card className="p-3 flex items-center gap-3" data-testid="card-stat-duplicates">
+            <CheckCircle2 className="h-7 w-7 text-green-500 shrink-0" />
+            <div>
+              <p className="text-xl font-bold">0</p>
+              <p className="text-[10px] text-muted-foreground leading-tight">Duplicatas</p>
+            </div>
+          </Card>
         )}
 
         {stats?.bySource.map(s => (
-          <Card key={s.source} className="p-4 flex items-center gap-3" data-testid={`card-stat-${s.source}`}>
-            <div className={`rounded-full p-2 ${SOURCE_COLORS[s.source] || "bg-gray-100"}`}>
-              <ImageIcon className="h-4 w-4" />
+          <Card key={s.source} className="p-3 flex items-center gap-3" data-testid={`card-stat-${s.source}`}>
+            <div className={`rounded-full p-1.5 ${SOURCE_COLORS[s.source] || "bg-gray-100"} shrink-0`}>
+              <ImageIcon className="h-3.5 w-3.5" />
             </div>
-            <div>
-              <p className="text-2xl font-bold">{s.count}</p>
-              <p className="text-[10px] font-medium leading-tight">{SOURCE_LABELS[s.source]?.label || s.source}</p>
-              <p className="text-[9px] text-muted-foreground leading-tight">{SOURCE_LABELS[s.source]?.sub}</p>
+            <div className="min-w-0">
+              <p className="text-xl font-bold">{s.count}</p>
+              <p className="text-[10px] font-medium leading-tight truncate">{SOURCE_LABELS[s.source]?.label || s.source}</p>
+              <p className="text-[9px] text-muted-foreground leading-tight truncate">{SOURCE_LABELS[s.source]?.sub}</p>
             </div>
           </Card>
         ))}
       </div>
 
-      {showDuplicates && duplicates && (
+      {showDuplicates && duplicates && duplicates.length > 0 && (
         <Card className="p-6 mb-8 border-amber-300 bg-amber-50/30">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold flex items-center gap-2">
@@ -260,29 +313,32 @@ export default function ManageMediaPage() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 justify-center shrink-0 w-full md:w-48">
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
+                  <Button
+                    size="sm"
+                    variant="outline"
                     className="text-xs"
                     onClick={() => unifyMutation.mutate({ keepId: group.items[0].id, removeId: group.items[1].id })}
                     disabled={unifyMutation.isPending}
+                    data-testid={`button-unify-keep-first-${idx}`}
                   >
                     Unificar (Manter 1ª)
                   </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
+                  <Button
+                    size="sm"
+                    variant="outline"
                     className="text-xs"
                     onClick={() => unifyMutation.mutate({ keepId: group.items[1].id, removeId: group.items[0].id })}
                     disabled={unifyMutation.isPending}
+                    data-testid={`button-unify-keep-second-${idx}`}
                   >
                     Unificar (Manter 2ª)
                   </Button>
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
+                  <Button
+                    size="sm"
+                    variant="ghost"
                     className="text-xs"
                     onClick={() => renameMutation.mutate({ id: group.items[1].id, filename: group.items[1].filename + "-2" })}
+                    data-testid={`button-not-duplicate-${idx}`}
                   >
                     Não são duplicatas
                   </Button>
@@ -301,10 +357,11 @@ export default function ManageMediaPage() {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="pl-9"
+            data-testid="input-search-media"
           />
         </div>
         <Select value={sort} onValueChange={(v) => { setSort(v); setPage(1); }}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-52" data-testid="select-sort-media">
             <SelectValue placeholder="Ordenar por" />
           </SelectTrigger>
           <SelectContent>
@@ -318,104 +375,175 @@ export default function ManageMediaPage() {
         </Select>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          {mediaLoading ? (
-            <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-              {Array.from({ length: 15 }).map((_, i) => <Skeleton key={i} className="aspect-square rounded" />)}
+      {mediaLoading ? (
+        <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3">
+          {Array.from({ length: 18 }).map((_, i) => (
+            <div key={i}>
+              <Skeleton className="aspect-square rounded" />
+              <Skeleton className="h-3 w-3/4 mt-1.5" />
+              <Skeleton className="h-2.5 w-1/2 mt-1" />
             </div>
-          ) : mediaData?.items.length === 0 ? (
-            <Card className="p-12 text-center">
-              <ImageIcon className="h-12 w-12 mx-auto mb-3 opacity-30" />
-              <p className="text-muted-foreground">Nenhuma imagem encontrada.</p>
-            </Card>
-          ) : (
-            <>
-              <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-                {mediaData?.items.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setSelectedMedia(item)}
-                    className={`group relative aspect-square rounded border-2 overflow-hidden transition-all ${
-                      selectedMedia?.id === item.id
-                        ? "border-primary ring-2 ring-primary/30"
-                        : "border-muted hover:border-muted-foreground/30"
-                    }`}
-                  >
-                    <img
-                      src={item.url}
-                      alt={item.altText || item.filename}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] px-1 py-0.5 truncate opacity-0 group-hover:opacity-100 transition-opacity">
-                      {item.filename}
-                    </div>
-                    <Badge className={`absolute top-1 right-1 text-[8px] px-1 py-0 ${SOURCE_COLORS[item.source] || ""}`}>
-                      {item.source === "wordpress" ? "WP" : item.source === "post-content" ? "CNT" : "UP"}
-                    </Badge>
-                  </button>
-                ))}
-              </div>
-
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <span className="text-sm text-muted-foreground">
-                    {mediaData?.total} imagens • Página {page} de {totalPages}
-                  </span>
-                  <div className="flex gap-1">
-                    <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+          ))}
         </div>
-
-        <div>
-          {selectedMedia ? (
-            <Card className="p-4 sticky top-4">
-              <img
-                src={selectedMedia.url}
-                alt={selectedMedia.altText || selectedMedia.filename}
-                className="w-full h-auto rounded mb-3 max-h-60 object-contain bg-muted"
-              />
-              <div className="space-y-2">
-                <div>
-                  <p className="text-xs text-muted-foreground">Nome do arquivo</p>
-                  <p className="text-sm font-medium break-all">{selectedMedia.filename}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Fonte</p>
-                  <Badge className={SOURCE_COLORS[selectedMedia.source]}>
-                    {SOURCE_LABELS[selectedMedia.source]?.label || selectedMedia.source}
+      ) : mediaData?.items.length === 0 ? (
+        <Card className="p-12 text-center">
+          <ImageIcon className="h-12 w-12 mx-auto mb-3 opacity-30" />
+          <p className="text-muted-foreground">Nenhuma imagem encontrada.</p>
+        </Card>
+      ) : (
+        <>
+          <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3">
+            {mediaData?.items.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setSelectedMedia(item)}
+                className="group text-left transition-all"
+                data-testid={`media-grid-item-${item.id}`}
+              >
+                <div className={`relative aspect-square rounded border-2 overflow-hidden transition-all ${
+                  selectedMedia?.id === item.id
+                    ? "border-primary ring-2 ring-primary/30"
+                    : "border-muted hover:border-muted-foreground/30"
+                }`}>
+                  <img
+                    src={item.url}
+                    alt={item.altText || item.filename}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <Badge className={`absolute top-1 right-1 text-[8px] px-1 py-0 ${SOURCE_COLORS[item.source] || ""}`}>
+                    {item.source === "wordpress" ? "WP" : item.source === "post-content" ? "CNT" : "UP"}
                   </Badge>
                 </div>
-                {selectedMedia.fileSize && (
-                  <div>
-                    <p className="text-xs text-muted-foreground">Tamanho</p>
-                    <p className="text-sm">{formatBytes(selectedMedia.fileSize)}</p>
+                <div className="mt-1 px-0.5">
+                  <p className="text-[11px] font-medium truncate text-foreground leading-tight" title={item.filename}>
+                    {item.filename}
+                  </p>
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground leading-tight mt-0.5">
+                    <span>{formatBytes(item.fileSize)}</span>
+                    <span className="opacity-40">·</span>
+                    <span>{formatDateShort(item.createdAt)}</span>
                   </div>
-                )}
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground mb-1">Aparece em</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6">
+              <span className="text-sm text-muted-foreground">
+                {mediaData?.total} imagens · Página {page} de {totalPages}
+              </span>
+              <div className="flex gap-1">
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} data-testid="button-media-prev">
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} data-testid="button-media-next">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      <Dialog open={!!selectedMedia} onOpenChange={(o) => { if (!o) setSelectedMedia(null); }}>
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] p-0 gap-0 overflow-hidden" data-testid="dialog-media-detail">
+          <div className="flex items-center justify-between px-5 py-3 border-b bg-muted/30">
+            <DialogTitle className="text-base font-semibold">Detalhes do anexo</DialogTitle>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                disabled={selectedIndex <= 0}
+                onClick={() => navigateMedia("prev")}
+                data-testid="button-detail-prev"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                disabled={!mediaData || selectedIndex >= mediaData.items.length - 1}
+                onClick={() => navigateMedia("next")}
+                data-testid="button-detail-next"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setSelectedMedia(null)}
+                data-testid="button-detail-close"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {selectedMedia && (
+            <div className="flex flex-col md:flex-row overflow-hidden" style={{ maxHeight: "calc(90vh - 56px)" }}>
+              <div className="md:w-1/2 bg-muted/20 flex items-center justify-center p-6 min-h-[300px]">
+                <img
+                  src={selectedMedia.url}
+                  alt={selectedMedia.altText || selectedMedia.filename}
+                  className="max-w-full max-h-[60vh] object-contain rounded"
+                  data-testid="img-detail-preview"
+                />
+              </div>
+
+              <div className="md:w-1/2 overflow-y-auto p-5 space-y-4 border-l">
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-0.5">Upload feito em</p>
+                    <p className="text-sm" data-testid="text-detail-date">{formatDateLong(selectedMedia.createdAt)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-0.5">Fonte</p>
+                    <Badge className={SOURCE_COLORS[selectedMedia.source]} data-testid="badge-detail-source">
+                      {SOURCE_LABELS[selectedMedia.source]?.label || selectedMedia.source}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-0.5">Nome do arquivo</p>
+                    <p className="text-sm break-all" data-testid="text-detail-filename">{selectedMedia.filename}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-0.5">Tipo do arquivo</p>
+                    <p className="text-sm" data-testid="text-detail-mimetype">{selectedMedia.mimeType || getMimeFromFilename(selectedMedia.filename)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-0.5">Tamanho do arquivo</p>
+                    <p className="text-sm" data-testid="text-detail-filesize">{formatBytes(selectedMedia.fileSize)}</p>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-2">
+                    Aparece em {usageData ? usageData.length : "..."} {usageData?.length === 1 ? "lugar" : "lugares"}
+                  </p>
                   {usageData === undefined ? (
-                    <Skeleton className="h-4 w-full" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-3/4" />
+                    </div>
                   ) : usageData.length === 0 ? (
                     <p className="text-xs text-muted-foreground italic">Nenhum post usa esta imagem.</p>
                   ) : (
-                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                    <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1">
                       {usageData.map((u) => (
-                        <div key={u.postId} className="flex items-center justify-between gap-2 text-xs">
-                          <span className="truncate flex-1">{u.title}</span>
+                        <div key={u.postId} className="flex items-center gap-2 text-xs p-1.5 rounded hover:bg-muted/50 transition-colors">
+                          <Link href={`/${u.slug}`} className="flex-1 min-w-0">
+                            <span className="text-primary hover:underline cursor-pointer truncate block" data-testid={`link-usage-${u.postId}`}>
+                              {u.title}
+                            </span>
+                          </Link>
                           <Badge variant="outline" className="text-[9px] shrink-0">{u.usage}</Badge>
                           <Link href={`/admin/post/${u.postId}`}>
-                            <Button variant="ghost" size="sm" className="h-5 w-5 p-0 shrink-0">
+                            <Button variant="ghost" size="sm" className="h-5 w-5 p-0 shrink-0" data-testid={`button-edit-post-${u.postId}`}>
                               <ExternalLink className="h-3 w-3" />
                             </Button>
                           </Link>
@@ -424,30 +552,26 @@ export default function ManageMediaPage() {
                     </div>
                   )}
                 </div>
-                <div className="flex gap-2 pt-2">
+
+                <div className="border-t pt-4">
                   <Button
                     variant="destructive"
                     size="sm"
-                    className="flex-1"
                     onClick={() => handleDeleteClick(selectedMedia)}
+                    data-testid="button-delete-media"
                   >
-                    <Trash2 className="h-3 w-3 mr-1" />
-                    Excluir
+                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                    Excluir imagem
                   </Button>
                 </div>
               </div>
-            </Card>
-          ) : (
-            <Card className="p-8 text-center text-muted-foreground">
-              <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">Selecione uma imagem para ver detalhes</p>
-            </Card>
+            </div>
           )}
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) { setDeleteTarget(null); setDeleteUsages([]); } }}>
-        <DialogContent>
+        <DialogContent data-testid="dialog-delete-confirm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-600">
               <AlertTriangle className="h-5 w-5" />
@@ -467,8 +591,8 @@ export default function ManageMediaPage() {
             <p className="text-amber-600">Ao excluir esta imagem do banco de dados, ela poderá não carregar corretamente nos posts acima.</p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setDeleteTarget(null); setDeleteUsages([]); }}>Cancelar</Button>
-            <Button variant="destructive" onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)} disabled={deleteMutation.isPending}>
+            <Button variant="outline" onClick={() => { setDeleteTarget(null); setDeleteUsages([]); }} data-testid="button-cancel-delete">Cancelar</Button>
+            <Button variant="destructive" onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)} disabled={deleteMutation.isPending} data-testid="button-confirm-delete">
               {deleteMutation.isPending ? "Excluindo..." : "Excluir mesmo assim"}
             </Button>
           </DialogFooter>
