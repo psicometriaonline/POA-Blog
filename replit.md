@@ -106,7 +106,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `GET /api/admin/media/duplicates` - Duplicate media detection
 - `GET /api/admin/media/:id/usage` - Posts using a media item
 - `POST /api/admin/media/import-from-posts` - Import images from existing posts
-- `POST /api/admin/media/migrate-images` - Download all WordPress images to local storage + replace URLs in all posts
+- `POST /api/admin/media/migrate-images` - Download original WordPress images only (skips size variants), replace all WP URLs with local paths, strip srcset/sizes attributes from HTML
 - `POST /api/admin/media/refresh-sizes` - Populate file sizes (local fs.stat or remote HEAD), loops until all done
 - `PATCH /api/admin/media/:id` - Rename media item (with duplicate filename validation, returns 409 on conflict)
 - `POST /api/admin/upload` - File upload (multipart, stores in uploads/ dir, returns URL)

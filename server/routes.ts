@@ -275,35 +275,54 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/admin/media/migrate-images", isAuthenticated, async (_req, res) => {
+  app.post("/api/admin/media/migrate-images", isAuthenticated, async (req, res) => {
+    req.setTimeout(600000);
+    res.setTimeout(600000);
     try {
       const WP_PREFIX = "https://www.blog.psicometriaonline.com.br/wp-content/uploads/";
+      const WP_REGEX = new RegExp(WP_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^"\'<>\\s,]+', 'g');
+      const SIZE_VARIANT_RE = /(-\d+x\d+)(\.\w+)$/;
 
       const allPosts = await storage.getPosts({ limit: 10000 });
-      const allDistinctUrls = new Set<string>();
 
+      const allWpUrls = new Set<string>();
       for (const post of allPosts) {
         if (post.featuredImage && post.featuredImage.startsWith(WP_PREFIX)) {
-          allDistinctUrls.add(post.featuredImage);
+          allWpUrls.add(post.featuredImage);
         }
         if (post.content) {
-          const urlRegex = new RegExp(WP_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^"\'<>\\s,]+', 'g');
           let match;
-          while ((match = urlRegex.exec(post.content)) !== null) {
-            allDistinctUrls.add(match[0]);
+          WP_REGEX.lastIndex = 0;
+          while ((match = WP_REGEX.exec(post.content)) !== null) {
+            allWpUrls.add(match[0]);
           }
         }
       }
 
-      const urlList = Array.from(allDistinctUrls);
-      const total = urlList.length;
-      let processed = 0;
+      const originalUrls = new Set<string>();
+      const variantToOriginal: Record<string, string> = {};
+
+      for (const url of allWpUrls) {
+        const sizeMatch = url.match(SIZE_VARIANT_RE);
+        if (sizeMatch) {
+          const originalUrl = url.replace(SIZE_VARIANT_RE, '$2');
+          variantToOriginal[url] = originalUrl;
+          originalUrls.add(originalUrl);
+        } else {
+          originalUrls.add(url);
+        }
+      }
+
+      const originalsToDownload = Array.from(originalUrls);
+      const totalOriginals = originalsToDownload.length;
+      const totalAllUrls = allWpUrls.size;
+      let downloaded = 0;
       let errors = 0;
-      const urlMapping: Record<string, string> = {};
+      const originalToLocal: Record<string, string> = {};
 
       const BATCH_SIZE = 20;
-      for (let i = 0; i < urlList.length; i += BATCH_SIZE) {
-        const batch = urlList.slice(i, i + BATCH_SIZE);
+      for (let i = 0; i < originalsToDownload.length; i += BATCH_SIZE) {
+        const batch = originalsToDownload.slice(i, i + BATCH_SIZE);
 
         await Promise.all(batch.map(async (remoteUrl) => {
           try {
@@ -314,9 +333,8 @@ export async function registerRoutes(
             const localPath = path.join(uploadsDir, localFilename);
 
             if (fs.existsSync(localPath)) {
-              const stat = fs.statSync(localPath);
-              urlMapping[remoteUrl] = `/uploads/${localFilename}`;
-              processed++;
+              originalToLocal[remoteUrl] = `/uploads/${localFilename}`;
+              downloaded++;
               return;
             }
 
@@ -327,43 +345,60 @@ export async function registerRoutes(
             if (!response.ok) {
               console.error(`Migration: HTTP ${response.status} for ${remoteUrl}`);
               errors++;
-              processed++;
               return;
             }
 
             const buffer = Buffer.from(await response.arrayBuffer());
             fs.writeFileSync(localPath, buffer);
-            urlMapping[remoteUrl] = `/uploads/${localFilename}`;
-            processed++;
+            originalToLocal[remoteUrl] = `/uploads/${localFilename}`;
+            downloaded++;
           } catch (e: any) {
             console.error(`Migration: Failed to download ${remoteUrl}:`, e.message);
             errors++;
-            processed++;
           }
         }));
 
-        if (i + BATCH_SIZE < urlList.length) {
+        if (i + BATCH_SIZE < originalsToDownload.length) {
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
 
+      const fullMapping: Record<string, string> = {};
+      for (const [url, localPath] of Object.entries(originalToLocal)) {
+        fullMapping[url] = localPath;
+      }
+      for (const [variantUrl, originalUrl] of Object.entries(variantToOriginal)) {
+        if (originalToLocal[originalUrl]) {
+          fullMapping[variantUrl] = originalToLocal[originalUrl];
+        }
+      }
+
       let postsUpdated = 0;
+      let srcsetsStripped = 0;
       for (const post of allPosts) {
         let newFeatured = post.featuredImage;
         let newContent = post.content;
         let changed = false;
 
-        if (newFeatured && urlMapping[newFeatured]) {
-          newFeatured = urlMapping[newFeatured];
+        if (newFeatured && fullMapping[newFeatured]) {
+          newFeatured = fullMapping[newFeatured];
           changed = true;
         }
 
         if (newContent) {
-          for (const [oldUrl, newUrl] of Object.entries(urlMapping)) {
+          for (const [oldUrl, newUrl] of Object.entries(fullMapping)) {
             if (newContent.includes(oldUrl)) {
               newContent = newContent.split(oldUrl).join(newUrl);
               changed = true;
             }
+          }
+
+          const beforeSrcset = newContent;
+          newContent = newContent.replace(/\s*srcset="[^"]*"/gi, "");
+          newContent = newContent.replace(/\s*sizes="[^"]*"/gi, "");
+          if (newContent !== beforeSrcset) {
+            changed = true;
+            srcsetsStripped++;
           }
         }
 
@@ -379,21 +414,25 @@ export async function registerRoutes(
       const mediaItems = await storage.listMedia({ limit: 100000 });
       let mediaUpdated = 0;
       for (const item of mediaItems.items) {
-        if (item.url.startsWith(WP_PREFIX) && urlMapping[item.url]) {
-          const localPath = path.join(uploadsDir, urlMapping[item.url].replace("/uploads/", ""));
-          const fileSize = fs.existsSync(localPath) ? fs.statSync(localPath).size : undefined;
-          await storage.updateMediaUrl(item.id, urlMapping[item.url], fileSize);
-          mediaUpdated++;
+        if (item.url.startsWith(WP_PREFIX)) {
+          const localUrl = fullMapping[item.url];
+          if (localUrl) {
+            const filePath = path.join(uploadsDir, localUrl.replace("/uploads/", ""));
+            const fileSize = fs.existsSync(filePath) ? fs.statSync(filePath).size : undefined;
+            await storage.updateMediaUrl(item.id, localUrl, fileSize);
+            mediaUpdated++;
+          }
         }
       }
 
       res.json({
-        total,
-        downloaded: total - errors,
+        totalUrls: totalAllUrls,
+        totalOriginals,
+        downloaded,
         errors,
         postsUpdated,
+        srcsetsStripped,
         mediaUpdated,
-        urlsMapped: Object.keys(urlMapping).length,
       });
     } catch (error: any) {
       console.error("Migration error:", error);

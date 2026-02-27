@@ -257,13 +257,15 @@ export default function ManageMediaPage() {
               try {
                 const res = await fetch("/api/admin/media/migrate-images", { method: "POST", credentials: "include" });
                 const data = await res.json();
-                setMigrationProgress({ running: false, processed: data.downloaded + data.errors, total: data.total, errors: data.errors });
+                if (!res.ok) throw new Error(data.message || "Erro na migração");
+                setMigrationProgress({ running: false, processed: data.downloaded, total: data.totalOriginals, errors: data.errors });
                 toast({
                   title: "Migração concluída",
-                  description: `${data.downloaded} imagens baixadas, ${data.postsUpdated} posts atualizados, ${data.errors} erros`,
+                  description: `${data.downloaded} imagens baixadas (de ${data.totalOriginals} originais), ${data.postsUpdated} posts atualizados, ${data.srcsetsStripped} srcsets removidos, ${data.errors} erros`,
                 });
                 queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/admin/media/stats"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/admin/media/duplicates"] });
               } catch (e: any) {
                 setMigrationProgress(prev => prev ? { ...prev, running: false } : null);
                 toast({ title: "Erro na migração", description: e.message, variant: "destructive" });
