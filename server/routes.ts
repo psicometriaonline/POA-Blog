@@ -686,15 +686,10 @@ export async function registerRoutes(
             }
           }
 
-          // Fallback/Safety: Fix known proper nouns regardless of title match
           for (const noun of properNouns) {
-            // Case-insensitive boundary match for the noun
-            // Special handling for "R" to avoid matching inside words
-            const regex = new RegExp(`\\b${noun}\\b`, 'gi');
-            fixedInner = fixedInner.replace(regex, (matched) => {
-              // Only replace if it was actually lowercase or differently capitalized
-              return noun;
-            });
+            const escaped = noun.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+            const regex = new RegExp(`\\b${escaped}\\b`, 'gi');
+            fixedInner = fixedInner.replace(regex, () => noun);
           }
           
           if (fixedInner !== citationInner) {
