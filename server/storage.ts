@@ -39,8 +39,8 @@ export interface IStorage {
   updateTag(id: number, data: Partial<InsertTag>): Promise<Tag | undefined>;
   deleteTag(id: number): Promise<boolean>;
 
-  getPosts(options?: { status?: string; limit?: number; offset?: number }): Promise<PostWithRelations[]>;
-  getPostCount(status?: string): Promise<number>;
+  getPosts(options?: { status?: string; limit?: number; offset?: number; search?: string }): Promise<PostWithRelations[]>;
+  getPostCount(status?: string, search?: string): Promise<number>;
   getPost(id: number): Promise<PostWithRelations | undefined>;
   getPostBySlug(slug: string): Promise<PostWithRelations | undefined>;
   getPostsByCategory(categorySlug: string, options?: { limit?: number; offset?: number }): Promise<PostWithRelations[]>;
@@ -247,28 +247,27 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
-  async getPosts(options?: { status?: string; limit?: number; offset?: number }): Promise<PostWithRelations[]> {
+  async getPosts(options?: { status?: string; limit?: number; offset?: number; search?: string }): Promise<PostWithRelations[]> {
     let query = db.select().from(posts).orderBy(desc(posts.publishedAt), desc(posts.createdAt)).$dynamic();
 
-    if (options?.status) {
-      query = query.where(eq(posts.status, options.status));
-    }
-    if (options?.limit) {
-      query = query.limit(options.limit);
-    }
-    if (options?.offset) {
-      query = query.offset(options.offset);
-    }
+    const conditions = [];
+    if (options?.status) conditions.push(eq(posts.status, options.status));
+    if (options?.search) conditions.push(ilike(posts.title, `%${options.search}%`));
+    if (conditions.length > 0) query = query.where(and(...conditions));
+
+    if (options?.limit) query = query.limit(options.limit);
+    if (options?.offset) query = query.offset(options.offset);
 
     const rawPosts = await query;
     return enrichPostsWithRelations(rawPosts);
   }
 
-  async getPostCount(status?: string): Promise<number> {
+  async getPostCount(status?: string, search?: string): Promise<number> {
     let query = db.select({ count: sql<number>`count(*)::int` }).from(posts).$dynamic();
-    if (status) {
-      query = query.where(eq(posts.status, status));
-    }
+    const conditions = [];
+    if (status) conditions.push(eq(posts.status, status));
+    if (search) conditions.push(ilike(posts.title, `%${search}%`));
+    if (conditions.length > 0) query = query.where(and(...conditions));
     const [result] = await query;
     return result.count;
   }

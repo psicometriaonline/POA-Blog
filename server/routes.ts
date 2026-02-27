@@ -216,7 +216,7 @@ export async function registerRoutes(
 
   app.post("/api/admin/media/import-from-posts", isAuthenticated, async (_req, res) => {
     try {
-      const allPosts = await storage.getPosts(1000, 0);
+      const allPosts = await storage.getPosts({ limit: 1000 });
       const seenUrls = new Set<string>();
       const toInsert: { url: string; filename: string; altText?: string; source: string; fileSize?: number }[] = [];
 
@@ -625,8 +625,9 @@ export async function registerRoutes(
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
       const status = req.query.status as string | undefined;
-      const posts = await storage.getPosts({ status, limit, offset });
-      const total = await storage.getPostCount(status);
+      const search = req.query.search as string | undefined;
+      const posts = await storage.getPosts({ status, limit, offset, search });
+      const total = await storage.getPostCount(status, search);
       res.json({ posts, total, limit, offset });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
