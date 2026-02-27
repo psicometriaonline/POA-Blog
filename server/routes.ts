@@ -618,6 +618,35 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/media/fix-citations", isAuthenticated, async (_req, res) => {
+    try {
+      const allPosts = await storage.getPosts({ limit: 10000 });
+      let updated = 0;
+      for (const post of allPosts) {
+        if (!post.content) continue;
+        let content = post.content;
+
+        if (content.includes('class="citation-box"')) continue;
+
+        const citationRegex = /(<h2[^>]*>(?:\s*<[^>]+>)*\s*Como\s+citar\s*(?:<\/[^>]+>\s*)*<\/h2>\s*)(<p[^>]*>)([\s\S]*?)(<\/p>)/i;
+        const match = content.match(citationRegex);
+        if (match) {
+          const heading = match[1];
+          const pOpen = match[2];
+          const pContent = match[3];
+          const pClose = match[4];
+          const replacement = `${heading}<div class="citation-box">${pOpen}${pContent}${pClose}</div>`;
+          content = content.replace(match[0], replacement);
+          await storage.updatePost(post.id, { content });
+          updated++;
+        }
+      }
+      res.json({ updated, total: allPosts.length });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ===== ADMIN ROUTES (Protected) =====
 
   app.get("/api/admin/posts", isAuthenticated, async (req, res) => {

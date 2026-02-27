@@ -109,7 +109,14 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `POST /api/admin/media/migrate-images` - Download original WordPress images only (skips size variants), replace all WP URLs with local paths, strip srcset/sizes attributes from HTML
 - `POST /api/admin/media/refresh-sizes` - Populate file sizes (local fs.stat or remote HEAD), loops until all done
 - `PATCH /api/admin/media/:id` - Rename media item (with duplicate filename validation, returns 409 on conflict)
+- `POST /api/admin/media/fix-citations` - Mass-update all posts: wrap "Como citar" paragraph in `<div class="citation-box">`
 - `POST /api/admin/upload` - File upload (multipart, stores in uploads/ dir, returns URL)
+
+## Editor Features
+- TipTap rich text editor with: bold, italic, underline, strikethrough, headings, lists, blockquotes, code blocks, links, images (via MediaLibrary), math (KaTeX), tables (insert/add/remove rows/cols), citation box
+- Table extension: `@tiptap/extension-table` (includes Table, TableRow, TableCell, TableHeader)
+- Citation box: `<div class="citation-box">` styled with light blue background and blue left border
+- publishedAt is preserved on re-saves (only set on first publish)
 
 ## User Preferences
 - Portuguese language throughout the UI

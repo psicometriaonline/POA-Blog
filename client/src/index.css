@@ -201,6 +201,77 @@
   color: hsl(var(--foreground));
 }
 
+.prose table {
+  @apply w-full border-collapse my-4;
+}
+
+.prose table th,
+.prose table td {
+  @apply border border-border px-3 py-2 text-sm;
+}
+
+.prose table th {
+  @apply bg-muted font-semibold text-left;
+}
+
+.prose table tr:nth-child(even) {
+  @apply bg-muted/30;
+}
+
+.prose table.has-fixed-layout {
+  table-layout: fixed;
+}
+
+.prose .has-text-align-center {
+  text-align: center;
+}
+
+.prose .has-text-align-right {
+  text-align: right;
+}
+
+.prose .has-text-align-left {
+  text-align: left;
+}
+
+.prose .wp-block-table {
+  @apply overflow-x-auto;
+}
+
+.citation-box {
+  @apply rounded-md my-4 px-5 py-4;
+  background: hsl(197 71% 85% / 0.4);
+  border-left: 4px solid hsl(197 71% 65%);
+}
+
+.citation-box p {
+  @apply text-sm leading-relaxed m-0;
+}
+
+.tiptap table {
+  @apply w-full border-collapse my-4;
+}
+
+.tiptap table th,
+.tiptap table td {
+  @apply border border-border px-3 py-2 text-sm min-w-[80px];
+  position: relative;
+}
+
+.tiptap table th {
+  @apply bg-muted font-semibold;
+}
+
+.tiptap table .selectedCell {
+  @apply bg-primary/10;
+}
+
+.tiptap .citation-box {
+  @apply rounded-md my-4 px-5 py-4;
+  background: hsl(197 71% 85% / 0.4);
+  border-left: 4px solid hsl(197 71% 65%);
+}
+
 .math-block {
   @apply text-center py-4 overflow-x-auto;
 }

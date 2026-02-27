@@ -25,6 +25,7 @@ import ImageExtension from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
+import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import { MathInline, MathBlock } from "@/lib/tiptap-math";
 import katex from "katex";
 import "katex/dist/katex.min.css";
@@ -77,6 +78,10 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef }: { conten
         lowlight,
         defaultLanguage: null,
       }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableCell,
+      TableHeader,
       MathInline,
       MathBlock,
     ],
@@ -245,6 +250,58 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef }: { conten
           <Sigma className="h-4 w-4 mr-1" />
           Equacao
         </Button>
+
+        <div className="w-px h-6 bg-border mx-1" />
+
+        <Button
+          type="button"
+          size="sm"
+          variant={editor.isActive("table") ? "default" : "ghost"}
+          onClick={() => {
+            if (editor.isActive("table")) return;
+            const rows = window.prompt("Linhas:", "3");
+            const cols = window.prompt("Colunas:", "3");
+            if (rows && cols) {
+              editor.chain().focus().insertTable({ rows: parseInt(rows), cols: parseInt(cols), withHeaderRow: true }).run();
+            }
+          }}
+          data-testid="button-table"
+          title="Inserir tabela"
+        >
+          Tabela
+        </Button>
+        {editor.isActive("table") && (
+          <>
+            <Button type="button" size="sm" variant="ghost" onClick={() => editor.chain().focus().addColumnAfter().run()} data-testid="button-add-col" title="Adicionar coluna">
+              +Col
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => editor.chain().focus().addRowAfter().run()} data-testid="button-add-row" title="Adicionar linha">
+              +Linha
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => editor.chain().focus().deleteColumn().run()} data-testid="button-del-col" title="Remover coluna">
+              -Col
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => editor.chain().focus().deleteRow().run()} data-testid="button-del-row" title="Remover linha">
+              -Linha
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => editor.chain().focus().deleteTable().run()} data-testid="button-del-table" title="Remover tabela">
+              Apagar
+            </Button>
+          </>
+        )}
+
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            editor.chain().focus().insertContent('<div class="citation-box"><p>Insira a referência aqui</p></div><p></p>').run();
+          }}
+          data-testid="button-citation-box"
+          title="Caixa de citação (Como citar)"
+        >
+          Citação
+        </Button>
       </div>
       <div className="border border-t-0 rounded-b-md p-4">
         <EditorContent editor={editor} className="prose dark:prose-invert max-w-none" />
@@ -367,7 +424,9 @@ export default function PostEditor() {
         authorId: authorId ? parseInt(authorId) : null,
         authorName: selectedAuthor?.name || null,
         status,
-        publishedAt: status === "published" ? new Date().toISOString() : null,
+        publishedAt: status === "published"
+          ? (post?.publishedAt ? post.publishedAt : new Date().toISOString())
+          : null,
         categoryIds: selectedCategories,
         tagIds: selectedTags,
         disabledContainers: JSON.stringify(disabledContainers),

@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2, Settings, Users, BarChart3, Layers, ImageIcon, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2, Settings, Users, BarChart3, Layers, ImageIcon, Search, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import type { PostWithRelations, Category, Tag as TagType } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -257,14 +257,20 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
+                    <a href={`/${post.slug}`} target="_blank" rel="noopener noreferrer">
+                      <Button size="icon" variant="ghost" title="Ir para" data-testid={`button-goto-post-${post.id}`}>
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </a>
                     <Link href={`/admin/post/${post.id}`}>
-                      <Button size="icon" variant="ghost" data-testid={`button-edit-post-${post.id}`}>
+                      <Button size="icon" variant="ghost" title="Editar" data-testid={`button-edit-post-${post.id}`}>
                         <Edit className="h-4 w-4" />
                       </Button>
                     </Link>
                     <Button
                       size="icon"
                       variant="ghost"
+                      title="Excluir"
                       onClick={() => handleDeletePost(post.id)}
                       data-testid={`button-delete-post-${post.id}`}
                     >
