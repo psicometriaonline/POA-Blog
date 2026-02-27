@@ -322,24 +322,10 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef }: { conten
                 fmtTitle = fmtTitle.charAt(0).toUpperCase() + fmtTitle.slice(1).toLowerCase();
               }
               
-              const citation = `${lastName}, ${firstInitial}. (${now.getFullYear()}, ${now.getDate()} de ${months[now.getMonth()]}). ${fmtTitle}. <em>Blog Psicometria Online</em>. https://www.blog.psicometriaonline.com.br/${slug}`;
+              const endsWithPunctuation = /[.!?;:…]$/.test(fmtTitle);
+              const titleWithSeparator = endsWithPunctuation ? fmtTitle : fmtTitle + ".";
               
-              editor.chain().focus().insertContent({
-                type: "citationBox",
-                content: [
-                  {
-                    type: "paragraph",
-                    content: [
-                      { type: "text", text: citation.replace(/<[^>]*>/g, '') },
-                      { type: "text", marks: [{ type: "italic" }], text: " Blog Psicometria Online" },
-                      { type: "text", text: `. https://www.blog.psicometriaonline.com.br/${slug}` }
-                    ]
-                  }
-                ]
-              }).run();
-              
-              // Correcting the italic part since insertContent with HTML strings is safer for mixed marks
-              const htmlCitation = `<div class="citation-box"><p>${lastName}, ${firstInitial}. (${now.getFullYear()}, ${now.getDate()} de ${months[now.getMonth()]}). ${fmtTitle}. <em>Blog Psicometria Online</em>. https://www.blog.psicometriaonline.com.br/${slug}</p></div>`;
+              const htmlCitation = `<div class="citation-box"><p>${lastName}, ${firstInitial}. (${now.getFullYear()}, ${now.getDate()} de ${months[now.getMonth()]}). ${titleWithSeparator} <em>Blog Psicometria Online</em>. https://www.blog.psicometriaonline.com.br/${slug}</p></div>`;
               editor.chain().focus().insertContent(htmlCitation).run();
             }
           }}
