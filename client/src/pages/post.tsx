@@ -132,6 +132,33 @@ function renderMathAndCode(contentRef: React.RefObject<HTMLDivElement | null>) {
       hljs.highlightElement(block as HTMLElement);
     }
   });
+
+  el.querySelectorAll("pre").forEach((pre) => {
+    if (pre.querySelector(".copy-code-btn")) return;
+
+    const wrapper = document.createElement("div");
+    wrapper.style.position = "relative";
+    pre.parentNode?.insertBefore(wrapper, pre);
+    wrapper.appendChild(pre);
+
+    const btn = document.createElement("button");
+    btn.className = "copy-code-btn";
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+    btn.title = "Copiar código";
+    btn.setAttribute("data-testid", "button-copy-code");
+    btn.addEventListener("click", () => {
+      const code = pre.querySelector("code");
+      if (code) {
+        navigator.clipboard.writeText(code.textContent || "").then(() => {
+          btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+          setTimeout(() => {
+            btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+          }, 2000);
+        });
+      }
+    });
+    wrapper.appendChild(btn);
+  });
 }
 
 function Breadcrumb({ post }: { post: PostWithRelations }) {

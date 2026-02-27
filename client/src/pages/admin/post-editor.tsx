@@ -27,6 +27,7 @@ import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import { MathInline, MathBlock } from "@/lib/tiptap-math";
+import { CitationBox } from "@/lib/tiptap-citation";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 
@@ -82,6 +83,7 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef }: { conten
       TableRow,
       TableCell,
       TableHeader,
+      CitationBox,
       MathInline,
       MathBlock,
     ],
@@ -293,9 +295,13 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef }: { conten
         <Button
           type="button"
           size="sm"
-          variant="ghost"
+          variant={editor.isActive("citationBox") ? "default" : "ghost"}
           onClick={() => {
-            editor.chain().focus().insertContent('<div class="citation-box"><p>Insira a referência aqui</p></div><p></p>').run();
+            if (editor.isActive("citationBox")) {
+              (editor.commands as any).toggleCitationBox();
+            } else {
+              (editor.commands as any).insertCitationBox();
+            }
           }}
           data-testid="button-citation-box"
           title="Caixa de citação (Como citar)"

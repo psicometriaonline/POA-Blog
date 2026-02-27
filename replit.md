@@ -115,7 +115,8 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 ## Editor Features
 - TipTap rich text editor with: bold, italic, underline, strikethrough, headings, lists, blockquotes, code blocks, links, images (via MediaLibrary), math (KaTeX), tables (insert/add/remove rows/cols), citation box
 - Table extension: `@tiptap/extension-table` (includes Table, TableRow, TableCell, TableHeader)
-- Citation box: `<div class="citation-box">` styled with light blue background and blue left border
+- Citation box: Custom TipTap extension `CitationBox` (`client/src/lib/tiptap-citation.ts`) preserves `<div class="citation-box">` on editor re-saves; styled with light blue background and blue left border
+- Code blocks: Copy button (clipboard icon) appears on hover in top-right corner of `<pre>` blocks on post pages; changes to checkmark for 2s after copying
 - publishedAt is preserved on re-saves (only set on first publish)
 
 ## User Preferences
