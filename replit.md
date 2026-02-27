@@ -101,7 +101,8 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `GET/POST/PUT/DELETE /api/admin/image-bank` - Image bank item CRUD
 - `GET/POST/PUT/DELETE /api/admin/container-rules` - Container rule CRUD
 - `GET /api/admin/container-rules/:id/matching-posts` - Posts matching a rule's criteria
-- `GET /api/posts/:id/container-images` - Resolved container images for a post (matches ALL active rules, not just post-image type)
+- `GET /api/posts/:id/container-images` - Resolved container images for a post (returns images from ALL matching rules sorted by priority, with per-rule linkUrl)
+- `POST /api/admin/media/remove-manual-banners` - Remove manual banners from post content (figure>a>img without figcaption, excludes jasp-stats.org). Query: `?dryRun=true|false`
 - `GET/POST/PUT/DELETE /api/admin/media` - Media library CRUD
 - `GET /api/admin/media/stats` - Media storage overview
 - `GET /api/admin/media/duplicates` - Duplicate media detection
@@ -124,3 +125,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - Portuguese language throughout the UI
 - Blue/academic color scheme matching original WordPress blog
 - Content in psychometrics and quantitative research domain
+
+## Pending Items
+1. Snippet de códigos copiável (copy button on code blocks doesn't work)
+2. SEO tasks (robots.txt, sitemap.xml, SSR meta tags)

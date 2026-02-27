@@ -1016,6 +1016,18 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/media/remove-manual-banners", isAuthenticated, async (req, res) => {
+    req.setTimeout(300000);
+    res.setTimeout(300000);
+    try {
+      const dryRun = req.query.dryRun !== "false";
+      const result = await storage.removeManualBannersFromPosts(dryRun);
+      res.json({ dryRun, ...result });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ===== SITE SETTINGS ROUTES (Protected) =====
 
   app.get("/api/admin/settings", isAuthenticated, async (_req, res) => {

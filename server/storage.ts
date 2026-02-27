@@ -99,6 +99,7 @@ export interface IStorage {
 
   getContainerImagesForPost(postId: number): Promise<{ images: ImageBankItem[]; rule: ContainerRule }[]>;
   getMatchingPostsForRule(ruleId: number): Promise<{ count: number; posts: { id: number; title: string; slug: string }[] }>;
+  removeManualBannersFromPosts(dryRun: boolean): Promise<{ totalPosts: number; totalBanners: number; details: { postId: number; title: string; count: number; bannerUrls: string[] }[] }>;
 
   listMedia(options: { search?: string; page?: number; limit?: number; sort?: string }): Promise<{ items: MediaItem[]; total: number }>;
   getMedia(id: number): Promise<MediaItem | undefined>;
@@ -863,20 +864,23 @@ export class DatabaseStorage implements IStorage {
 
     if (matchingRules.length === 0) return [];
 
-    const bestRule = matchingRules[0];
+    const results: { images: ImageBankItem[]; rule: ContainerRule }[] = [];
 
-    const items = await db.select().from(imageBankItems)
-      .where(and(
-        eq(imageBankItems.groupId, bestRule.imageGroupId),
-        eq(imageBankItems.isActive, true),
-      ));
+    for (const rule of matchingRules) {
+      const items = await db.select().from(imageBankItems)
+        .where(and(
+          eq(imageBankItems.groupId, rule.imageGroupId),
+          eq(imageBankItems.isActive, true),
+        ));
 
-    if (items.length === 0) return [];
+      if (items.length === 0) continue;
 
-    const shuffled = items.sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, bestRule.maxImages);
+      const shuffled = items.sort(() => Math.random() - 0.5);
+      const selected = shuffled.slice(0, rule.maxImages);
+      results.push({ images: selected, rule });
+    }
 
-    return [{ images: selected, rule: bestRule }];
+    return results;
   }
 
   async listMedia(options: { search?: string; page?: number; limit?: number; sort?: string }): Promise<{ items: MediaItem[]; total: number }> {
@@ -1063,6 +1067,58 @@ export class DatabaseStorage implements IStorage {
     }
     
     return updatedCount;
+  }
+
+  async removeManualBannersFromPosts(dryRun: boolean): Promise<{ totalPosts: number; totalBanners: number; details: { postId: number; title: string; count: number; bannerUrls: string[] }[] }> {
+    const cheerio = await import("cheerio");
+    const allPosts = await db.select({
+      id: posts.id,
+      title: posts.title,
+      content: posts.content,
+    }).from(posts).where(eq(posts.status, "published"));
+
+    const details: { postId: number; title: string; count: number; bannerUrls: string[] }[] = [];
+    let totalBanners = 0;
+
+    for (const post of allPosts) {
+      if (!post.content) continue;
+
+      const $ = cheerio.load(post.content, { xmlMode: false, decodeEntities: false });
+      const bannersToRemove: { el: any; src: string }[] = [];
+
+      $("figure").each((_, fig) => {
+        const $fig = $(fig);
+        if ($fig.find("figcaption").length > 0) return;
+        const $link = $fig.find("a");
+        if ($link.length === 0) return;
+        const $img = $link.find("img");
+        if ($img.length === 0) return;
+        const href = $link.attr("href") || "";
+        if (href.includes("jasp-stats.org")) return;
+        const src = $img.attr("src") || "";
+        bannersToRemove.push({ el: fig, src });
+      });
+
+      if (bannersToRemove.length === 0) continue;
+
+      const bannerUrls = bannersToRemove.map(b => b.src);
+      totalBanners += bannersToRemove.length;
+
+      if (!dryRun) {
+        bannersToRemove.forEach(b => $(b.el).remove());
+        const newContent = $("body").html() || "";
+        await db.update(posts).set({ content: newContent }).where(eq(posts.id, post.id));
+      }
+
+      details.push({
+        postId: post.id,
+        title: post.title,
+        count: bannersToRemove.length,
+        bannerUrls,
+      });
+    }
+
+    return { totalPosts: details.length, totalBanners, details };
   }
 }
 

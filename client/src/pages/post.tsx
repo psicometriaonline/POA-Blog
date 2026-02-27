@@ -50,8 +50,54 @@ hljs.registerLanguage("json", json);
 hljs.registerLanguage("yaml", yaml);
 hljs.registerLanguage("latex", latex);
 
-function injectContainerImages(html: string, images: ImageBankItem[], linkUrl?: string | null, disabledContainers?: number[]): string {
-  if (!images || images.length === 0) return html;
+function isSectionEndingWithText(heading: Element): boolean {
+  let sibling = heading.previousSibling;
+  while (sibling) {
+    if (sibling.nodeType === Node.TEXT_NODE) {
+      if (sibling.textContent && sibling.textContent.trim() !== "") {
+        return true;
+      }
+      sibling = sibling.previousSibling;
+      continue;
+    }
+    if (sibling.nodeType !== Node.ELEMENT_NODE) {
+      sibling = sibling.previousSibling;
+      continue;
+    }
+    const el = sibling as Element;
+    const tag = el.tagName.toLowerCase();
+    if (tag === "br") {
+      sibling = sibling.previousSibling;
+      continue;
+    }
+    if (tag === "figure" || tag === "table" || tag === "pre") {
+      return false;
+    }
+    if (tag === "div" && (el.querySelector("img") || el.querySelector("figure") || el.querySelector("table"))) {
+      return false;
+    }
+    if (tag === "p") {
+      return true;
+    }
+    return true;
+  }
+  return true;
+}
+
+function injectContainerImages(
+  html: string,
+  ruleResults: { images: ImageBankItem[]; rule: { linkUrl?: string | null } }[],
+  disabledContainers?: number[]
+): string {
+  if (!ruleResults || ruleResults.length === 0) return html;
+
+  const allImages: { img: ImageBankItem; linkUrl?: string | null }[] = [];
+  for (const rr of ruleResults) {
+    for (const img of rr.images) {
+      allImages.push({ img, linkUrl: rr.rule?.linkUrl });
+    }
+  }
+  if (allImages.length === 0) return html;
 
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
@@ -62,18 +108,19 @@ function injectContainerImages(html: string, images: ImageBankItem[], linkUrl?: 
   const positions = Array.from(headings);
   const disabled = disabledContainers || [];
 
-  const assignments: { headingIdx: number; img: ImageBankItem }[] = [];
+  const assignments: { headingIdx: number; img: ImageBankItem; linkUrl?: string | null }[] = [];
   let imageIdx = 0;
   for (let i = 0; i < positions.length; i++) {
     if (disabled.includes(i)) continue;
-    if (imageIdx >= images.length) break;
-    assignments.push({ headingIdx: i, img: images[imageIdx] });
+    if (!isSectionEndingWithText(positions[i])) continue;
+    if (imageIdx >= allImages.length) break;
+    assignments.push({ headingIdx: i, img: allImages[imageIdx].img, linkUrl: allImages[imageIdx].linkUrl });
     imageIdx++;
   }
 
   for (let a = assignments.length - 1; a >= 0; a--) {
-    const { headingIdx, img } = assignments[a];
-    const heading = positions[headingIdx];
+    const { img, linkUrl } = assignments[a];
+    const heading = positions[assignments[a].headingIdx];
 
     const container = doc.createElement("div");
     container.className = "container-image-block my-6 rounded-lg overflow-hidden not-prose";
@@ -680,15 +727,13 @@ export default function PostPage() {
     enabled: !!post?.id,
   });
 
-  const containerImages = containerData && containerData.length > 0 ? containerData[0].images : [];
-  const containerLinkUrl = containerData && containerData.length > 0 ? containerData[0].rule?.linkUrl : null;
   const disabledContainers: number[] = post?.disabledContainers ? JSON.parse(post.disabledContainers) : [];
 
   useEffect(() => {
     if (post && contentRef.current) {
       setTimeout(() => renderMathAndCode(contentRef), 50);
     }
-  }, [post, containerImages]);
+  }, [post, containerData]);
 
   if (isLoading) {
     return (
@@ -795,7 +840,7 @@ export default function PostPage() {
                     data-testid="img-featured"
                   />
                 )}
-                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(injectContainerImages(post.content, containerImages, containerLinkUrl, disabledContainers), { ADD_TAGS: ["iframe", "span", "div", "a"], ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "scrolling", "data-type", "data-latex", "class", "loading", "title", "target", "rel", "href"] }) }} />
+                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(injectContainerImages(post.content, containerData || [], disabledContainers), { ADD_TAGS: ["iframe", "span", "div", "a"], ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "scrolling", "data-type", "data-latex", "class", "loading", "title", "target", "rel", "href"] }) }} />
               </div>
             </Card>
 
