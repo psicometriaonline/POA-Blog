@@ -102,6 +102,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `GET/POST/PUT/DELETE /api/admin/container-rules` - Container rule CRUD
 - `GET /api/admin/container-rules/:id/matching-posts` - Posts matching a rule's criteria
 - `GET /api/posts/:id/container-images` - Resolved container images for a post (returns images from ALL matching rules sorted by priority, with per-rule linkUrl)
+  - Container placement rules: skip heading index 0 (first), skip "Como citar" headings, skip sections ending with figure/table/pre, skip sections with <2 paragraphs, `disabledContainers` toggle; images distributed evenly across eligible slots (not sequential)
 - `POST /api/admin/media/remove-manual-banners` - Remove manual banners from post content (figure>a>img without figcaption, excludes jasp-stats.org). Query: `?dryRun=true|false`
 - `GET/POST/PUT/DELETE /api/admin/media` - Media library CRUD
 - `GET /api/admin/media/stats` - Media storage overview

@@ -84,6 +84,20 @@ function isSectionEndingWithText(heading: Element): boolean {
   return true;
 }
 
+function countParagraphsInSection(heading: Element): number {
+  let count = 0;
+  let sibling = heading.previousSibling;
+  while (sibling) {
+    if (sibling.nodeType === Node.ELEMENT_NODE) {
+      const tag = (sibling as Element).tagName.toLowerCase();
+      if (tag === "h2" || tag === "h3") break;
+      if (tag === "p") count++;
+    }
+    sibling = sibling.previousSibling;
+  }
+  return count;
+}
+
 function injectContainerImages(
   html: string,
   ruleResults: { images: ImageBankItem[]; rule: { linkUrl?: string | null } }[],
@@ -108,17 +122,40 @@ function injectContainerImages(
   const positions = Array.from(headings);
   const disabled = disabledContainers || [];
 
-  const assignments: { headingIdx: number; img: ImageBankItem; linkUrl?: string | null }[] = [];
-  let imageIdx = 0;
+  const eligibleSlots: number[] = [];
   for (let i = 0; i < positions.length; i++) {
     if (i === 0) continue;
     const headingText = (positions[i].textContent || "").toLowerCase();
     if (headingText.includes("como citar")) continue;
     if (disabled.includes(i)) continue;
     if (!isSectionEndingWithText(positions[i])) continue;
-    if (imageIdx >= allImages.length) break;
-    assignments.push({ headingIdx: i, img: allImages[imageIdx].img, linkUrl: allImages[imageIdx].linkUrl });
-    imageIdx++;
+    if (countParagraphsInSection(positions[i]) < 2) continue;
+    eligibleSlots.push(i);
+  }
+
+  const N = Math.min(allImages.length, eligibleSlots.length);
+  if (N === 0) return html;
+
+  const selectedSlots: number[] = [];
+  if (N >= eligibleSlots.length) {
+    selectedSlots.push(...eligibleSlots);
+  } else {
+    const spacing = eligibleSlots.length / N;
+    const used = new Set<number>();
+    for (let j = 0; j < N; j++) {
+      let idx = Math.floor(spacing / 2 + j * spacing);
+      idx = Math.min(idx, eligibleSlots.length - 1);
+      while (used.has(idx) && idx < eligibleSlots.length - 1) idx++;
+      if (!used.has(idx)) {
+        used.add(idx);
+        selectedSlots.push(eligibleSlots[idx]);
+      }
+    }
+  }
+
+  const assignments: { headingIdx: number; img: ImageBankItem; linkUrl?: string | null }[] = [];
+  for (let j = 0; j < selectedSlots.length; j++) {
+    assignments.push({ headingIdx: selectedSlots[j], img: allImages[j].img, linkUrl: allImages[j].linkUrl });
   }
 
   for (let a = assignments.length - 1; a >= 0; a--) {
