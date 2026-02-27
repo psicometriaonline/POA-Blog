@@ -15,13 +15,16 @@ interface MediaLibraryModalProps {
   open: boolean;
   onClose: () => void;
   onSelect: (url: string, alt?: string, title?: string) => void;
+  allowMultiple?: boolean;
+  onSelectMultiple?: (items: { url: string; alt?: string; title?: string }[]) => void;
 }
 
-export function MediaLibraryModal({ open, onClose, onSelect }: MediaLibraryModalProps) {
+export function MediaLibraryModal({ open, onClose, onSelect, allowMultiple, onSelectMultiple }: MediaLibraryModalProps) {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
+  const [selectedItems, setSelectedItems] = useState<MediaItem[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadAlt, setUploadAlt] = useState("");
   const [uploadTitle, setUploadTitle] = useState("");
@@ -54,20 +57,31 @@ export function MediaLibraryModal({ open, onClose, onSelect }: MediaLibraryModal
   });
 
   const handleUpload = async () => {
-    const file = fileInputRef.current?.files?.[0];
-    if (!file) return;
+    const files = fileInputRef.current?.files;
+    if (!files || files.length === 0) return;
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      if (uploadAlt) formData.append("altText", uploadAlt);
-      if (uploadTitle) formData.append("title", uploadTitle);
-      const res = await fetch("/api/admin/media", { method: "POST", body: formData, credentials: "include" });
-      if (!res.ok) throw new Error("Falha no upload");
-      const mediaItem = await res.json();
+      const uploadedItems = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append("file", file);
+        if (uploadAlt) formData.append("altText", uploadAlt);
+        if (uploadTitle) formData.append("title", uploadTitle);
+        const res = await fetch("/api/admin/media", { method: "POST", body: formData, credentials: "include" });
+        if (!res.ok) throw new Error(`Falha no upload do arquivo ${file.name}`);
+        const mediaItem = await res.json();
+        uploadedItems.push(mediaItem);
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
-      toast({ title: "Imagem enviada com sucesso" });
-      onSelect(mediaItem.url, mediaItem.altText || undefined, mediaItem.title || undefined);
+      toast({ title: files.length > 1 ? `${files.length} imagens enviadas` : "Imagem enviada com sucesso" });
+      
+      if (allowMultiple && onSelectMultiple) {
+        onSelectMultiple(uploadedItems.map(m => ({ url: m.url, alt: m.altText || undefined, title: m.title || undefined })));
+      } else {
+        const last = uploadedItems[uploadedItems.length - 1];
+        onSelect(last.url, last.altText || undefined, last.title || undefined);
+      }
       resetAndClose();
     } catch (e: any) {
       toast({ title: "Erro no upload", description: e.message, variant: "destructive" });
@@ -77,16 +91,36 @@ export function MediaLibraryModal({ open, onClose, onSelect }: MediaLibraryModal
   };
 
   const handleSelect = () => {
-    if (selectedItem) {
+    if (allowMultiple && onSelectMultiple && selectedItems.length > 0) {
+      onSelectMultiple(selectedItems.map(item => ({ url: item.url, alt: item.altText || undefined, title: item.title || undefined })));
+      resetAndClose();
+    } else if (selectedItem) {
       onSelect(selectedItem.url, selectedItem.altText || undefined, selectedItem.title || undefined);
       resetAndClose();
     }
+  };
+
+  const toggleSelection = (item: MediaItem) => {
+    if (!allowMultiple) {
+      setSelectedItem(item);
+      return;
+    }
+    
+    setSelectedItems(prev => {
+      const isSelected = prev.find(i => i.id === item.id);
+      if (isSelected) {
+        return prev.filter(i => i.id !== item.id);
+      } else {
+        return [...prev, item];
+      }
+    });
   };
 
   const resetAndClose = () => {
     setSearch("");
     setPage(1);
     setSelectedItem(null);
+    setSelectedItems([]);
     setUploadAlt("");
     setUploadTitle("");
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -151,9 +185,9 @@ export function MediaLibraryModal({ open, onClose, onSelect }: MediaLibraryModal
                   {data?.items.map((item) => (
                     <button
                       key={item.id}
-                      onClick={() => setSelectedItem(item)}
+                      onClick={() => toggleSelection(item)}
                       className={`group relative aspect-square rounded border-2 overflow-hidden transition-all ${
-                        selectedItem?.id === item.id
+                        (allowMultiple ? selectedItems.find(i => i.id === item.id) : selectedItem?.id === item.id)
                           ? "border-primary ring-2 ring-primary/30"
                           : "border-transparent hover:border-muted-foreground/30"
                       }`}
@@ -168,7 +202,7 @@ export function MediaLibraryModal({ open, onClose, onSelect }: MediaLibraryModal
                           (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23f0f0f0' width='100' height='100'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='%23999' font-size='10'%3EImagem%3C/text%3E%3C/svg%3E";
                         }}
                       />
-                      {selectedItem?.id === item.id && (
+                      {(allowMultiple ? selectedItems.find(i => i.id === item.id) : selectedItem?.id === item.id) && (
                         <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
                           <Check className="h-8 w-8 text-primary bg-white rounded-full p-1" />
                         </div>
@@ -210,13 +244,32 @@ export function MediaLibraryModal({ open, onClose, onSelect }: MediaLibraryModal
               </div>
             )}
 
-            {selectedItem && (
+            {(selectedItem || (allowMultiple && selectedItems.length > 0)) && (
               <div className="flex items-center justify-between mt-3 pt-3 border-t">
                 <div className="flex items-center gap-3">
-                  <img src={selectedItem.url} alt="" className="h-10 w-10 object-cover rounded" />
+                  {allowMultiple && selectedItems.length > 0 ? (
+                    <div className="flex -space-x-4 overflow-hidden">
+                      {selectedItems.slice(0, 5).map(item => (
+                        <img key={item.id} src={item.url} alt="" className="inline-block h-10 w-10 object-cover rounded-full ring-2 ring-white" />
+                      ))}
+                      {selectedItems.length > 5 && (
+                        <div className="flex items-center justify-center h-10 w-10 rounded-full bg-muted text-xs font-medium ring-2 ring-white">
+                          +{selectedItems.length - 5}
+                        </div>
+                      )}
+                    </div>
+                  ) : selectedItem && (
+                    <img src={selectedItem.url} alt="" className="h-10 w-10 object-cover rounded" />
+                  )}
                   <div>
-                    <p className="text-sm font-medium truncate max-w-xs">{selectedItem.filename}</p>
-                    {selectedItem.altText && <p className="text-xs text-muted-foreground">{selectedItem.altText}</p>}
+                    {allowMultiple && selectedItems.length > 0 ? (
+                      <p className="text-sm font-medium">{selectedItems.length} imagens selecionadas</p>
+                    ) : selectedItem && (
+                      <>
+                        <p className="text-sm font-medium truncate max-w-xs">{selectedItem.filename}</p>
+                        {selectedItem.altText && <p className="text-xs text-muted-foreground">{selectedItem.altText}</p>}
+                      </>
+                    )}
                   </div>
                 </div>
                 <Button onClick={handleSelect} data-testid="button-select-media">
@@ -230,11 +283,12 @@ export function MediaLibraryModal({ open, onClose, onSelect }: MediaLibraryModal
           <TabsContent value="upload" className="mt-0">
             <div className="max-w-md mx-auto space-y-4 py-6">
               <div>
-                <Label>Arquivo de Imagem *</Label>
+                <Label>Arquivos de Imagem *</Label>
                 <Input
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   className="cursor-pointer mt-1"
                   data-testid="input-upload-file"
                 />

@@ -87,25 +87,28 @@ function ImageGroupsTab() {
     onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
 
-  const handleFileUpload = async (groupId: number, file: File) => {
+  const handleFileUpload = async (groupId: number, files: FileList) => {
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const uploadRes = await fetch("/api/admin/upload", { method: "POST", body: formData, credentials: "include" });
-      if (!uploadRes.ok) throw new Error("Falha no upload");
-      const { url } = await uploadRes.json();
-      await apiRequest("POST", "/api/admin/image-bank", {
-        groupId,
-        imageUrl: url,
-        altText: newImageAlt || null,
-        title: newImageTitle || null,
-      });
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append("file", file);
+        const uploadRes = await fetch("/api/admin/upload", { method: "POST", body: formData, credentials: "include" });
+        if (!uploadRes.ok) throw new Error(`Falha no upload do arquivo ${file.name}`);
+        const { url } = await uploadRes.json();
+        await apiRequest("POST", "/api/admin/image-bank", {
+          groupId,
+          imageUrl: url,
+          altText: newImageAlt || null,
+          title: newImageTitle || null,
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/admin/image-groups"] });
       setNewImageAlt("");
       setNewImageTitle("");
       if (fileInputRef.current) fileInputRef.current.value = "";
-      toast({ title: "Imagem enviada e adicionada" });
+      toast({ title: files.length > 1 ? `${files.length} imagens enviadas` : "Imagem enviada e adicionada" });
     } catch (e: any) {
       toast({ title: "Erro no upload", description: e.message, variant: "destructive" });
     } finally {
@@ -289,6 +292,7 @@ function ImageGroupsTab() {
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
+                      multiple
                       data-testid="input-image-file"
                       className="cursor-pointer"
                     />
@@ -316,8 +320,8 @@ function ImageGroupsTab() {
                   <Button
                     size="sm"
                     onClick={() => {
-                      const file = fileInputRef.current?.files?.[0];
-                      if (file) handleFileUpload(group.id, file);
+                      const files = fileInputRef.current?.files;
+                      if (files && files.length > 0) handleFileUpload(group.id, files);
                     }}
                     disabled={uploading}
                     data-testid="button-add-image"
@@ -350,16 +354,32 @@ function ImageGroupsTab() {
       <MediaLibraryModal
         open={mediaLibOpen}
         onClose={() => { setMediaLibOpen(false); setMediaLibGroupId(null); }}
-        onSelect={async (url, alt, title) => {
+        allowMultiple={true}
+        onSelect={(url, alt, title) => {
           if (mediaLibGroupId) {
-            await apiRequest("POST", "/api/admin/image-bank", {
+            apiRequest("POST", "/api/admin/image-bank", {
               groupId: mediaLibGroupId,
               imageUrl: url,
               altText: alt || null,
               title: title || null,
+            }).then(() => {
+              queryClient.invalidateQueries({ queryKey: ["/api/admin/image-groups"] });
+              toast({ title: "Imagem adicionada do banco de mídias" });
             });
+          }
+        }}
+        onSelectMultiple={async (items) => {
+          if (mediaLibGroupId) {
+            for (const item of items) {
+              await apiRequest("POST", "/api/admin/image-bank", {
+                groupId: mediaLibGroupId,
+                imageUrl: item.url,
+                altText: item.alt || null,
+                title: item.title || null,
+              });
+            }
             queryClient.invalidateQueries({ queryKey: ["/api/admin/image-groups"] });
-            toast({ title: "Imagem adicionada do banco de mídias" });
+            toast({ title: `${items.length} imagens adicionadas do banco de mídias` });
           }
         }}
       />
