@@ -111,6 +111,9 @@ function injectContainerImages(
   const assignments: { headingIdx: number; img: ImageBankItem; linkUrl?: string | null }[] = [];
   let imageIdx = 0;
   for (let i = 0; i < positions.length; i++) {
+    if (i === 0) continue;
+    const headingText = (positions[i].textContent || "").toLowerCase();
+    if (headingText.includes("como citar")) continue;
     if (disabled.includes(i)) continue;
     if (!isSectionEndingWithText(positions[i])) continue;
     if (imageIdx >= allImages.length) break;
