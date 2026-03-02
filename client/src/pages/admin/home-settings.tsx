@@ -377,9 +377,9 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
           </div>
           <MediaLibraryModal 
             open={isMediaModalOpen} 
-            onOpenChange={setIsMediaModalOpen}
-            onSelect={(media) => {
-              setNewImageUrl(media.url);
+            onClose={() => setIsMediaModalOpen(false)}
+            onSelect={(url) => {
+              setNewImageUrl(url);
               setIsMediaModalOpen(false);
             }}
           />

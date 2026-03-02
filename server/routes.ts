@@ -624,25 +624,8 @@ export async function registerRoutes(
       let updated = 0;
       
       const properNouns = [
-        'Pearson', 'Spearman', 'Kendall', 'Fisher', 'Cronbach', 'Cohen', 'Shapiro', 'Wilk', 
-        'Levene', 'Kolmogorov', 'Smirnov', 'Kruskal', 'Wallis', 'Mann', 'Whitney', 'Welch', 
-        'Friedman', 'Bonferroni', 'Tukey', 'Scheffe', 'Dunn', 'Holm', 'Bayes', 'Bayesiana', 
-        'Bayesiano', 'Likert', 'Guttman', 'Rasch', 'Thurstone', 'Kuder', 'Richardson', 
-        'ANOVA', 'MANOVA', 'ANCOVA', 'MANCOVA', 'JASP', 'SPSS', 'RStudio', 'FACTOR', 'R', 
-        'ggplot2', 'Python', 'Excel', 'Stata', 'SAS', 'jamovi', 'APA', 'IEEE', 'McDonald', 'Mardia',
-        'Mauchly', 'Bartlett', 'Student', 'Glass', 'Hedges', 'Bonett', 'Satterthwaite', 'Box',
-        'Duncan', 'Dunnett', 'Kaiser', 'Meyer', 'Olkin', 'Cochran', 'Yates', 'Geisser', 'Greenhouse',
-        'PICO', 'TRI', 'IRaMuTeQ', 'teste F', 'V de Cramér', 'Bland', 'Altman', 'Poisson', 'PEDro',
-        'Physiotherapy Evidence Database', 'Fleiss', 'Wilcoxon', 'Q de Cochran', 'U de Mann-Whitney',
-        'SRMR', 'RMSEA', 'GLMs', 'R²', 'AMSTAR', 'Tipo I', 'Tipo II', 'Cook', 'Curva ROC', 'FWER',
-        'EndNote', 'Mendeley', 'Zotero', 'PROCESS', 'MIMIC', 'HARKing', 'SciELO', 'Google Acadêmico',
-        'Periódicos CAPES', 'Qualis CAPES', 'PRISMA', 'G*Power', 'E-book Análises Bi e Multivariadas: Definições e Usos',
-        'Bessel', 'Benjamini-Hochberg', 'IA', 'SVM', 'Goodman-Kruskal', 'Yuen', 'KR-20', 'KR-21', 'Q-Q',
-        'Markov', 'Matthews', 'XGBoost', 'Wald-Wolfowitz', 'Psicometria Online Academy'
-      ];
-
-      // Sort nouns by length descending to match longer phrases first
-      properNouns.sort((a, b) => b.length - a.length);
+        "Pearson", "Spearman", "Kendall", "Fisher", "Cronbach", "Cohen", "Shapiro", "Wilk", "Levene", "Kolmogorov", "Smirnov", "Kruskal", "Wallis", "Mann", "Whitney", "Welch", "Friedman", "Bonferroni", "Tukey", "Scheffe", "Dunn", "Holm", "Bayes", "Bayesiana", "Bayesiano", "Likert", "Guttman", "Rasch", "Thurstone", "Kuder", "Richardson", "ANOVA", "MANOVA", "ANCOVA", "MANCOVA", "JASP", "SPSS", "RStudio", "FACTOR", "R", "ggplot2", "Python", "Excel", "Stata", "SAS", "jamovi", "APA", "IEEE", "McDonald", "Mardia", "Mauchly", "Bartlett", "Student", "Glass", "Hedges", "Bonett", "Satterthwaite", "Box", "Duncan", "Dunnett", "Kaiser", "Meyer", "Olkin", "Cochran", "Yates", "Geisser", "Greenhouse", "PICO", "TRI", "IRaMuTeQ", "teste F", "V de Cramér", "Bland", "Altman", "Poisson", "PEDro", "Physiotherapy Evidence Database", "Fleiss", "Wilcoxon", "Q de Cochran", "U de Mann-Whitney", "SRMR", "RMSEA", "GLMs", "R²", "AMSTAR", "Tipo I", "Tipo II", "Cook", "Curva ROC", "FWER", "EndNote", "Mendeley", "Zotero", "PROCESS", "MIMIC", "HARKing", "SciELO", "Google Acadêmico", "Periódicos CAPES", "Qualis CAPES", "PRISMA", "G*Power", "E-book Análises Bi e Multivariadas: Definições e Usos", "Bessel", "Benjamini-Hochberg", "IA", "SVM", "Goodman-Kruskal", "Yuen", "KR-20", "KR-21", "Q-Q", "Markov", "Matthews", "XGBoost", "Wald-Wolfowitz", "Psicometria Online Academy"
+      ].sort((a, b) => b.length - a.length);
 
       for (const post of allPosts) {
         if (!post.content) continue;
@@ -670,26 +653,22 @@ export async function registerRoutes(
           let fixedInner = citationInner;
           
           // Try to use the post title as a reference for the title part of the citation
-          // Citations usually follow: Author (Year). Title. Blog Name. URL
           const titleMatch = fixedInner.match(/\)\.\s+(.*?)\s+<em>/i);
           if (titleMatch && post.title) {
             const citationTitle = titleMatch[1];
-            // If the citation title is just a lowercased version of the DB title (ignoring trailing punctuation)
             const dbTitleClean = post.title.trim().replace(/\?$/, '');
             const citTitleClean = citationTitle.trim().replace(/\.$/, '').replace(/\?$/, '');
             
             if (dbTitleClean.toLowerCase() === citTitleClean.toLowerCase()) {
-              // Replace the lowercased title with the properly capitalized one from the DB
-              // We keep the original punctuation from the citation title
               const suffix = citationTitle.endsWith('?') ? '?' : '.';
               fixedInner = fixedInner.replace(citationTitle, dbTitleClean + suffix);
             }
           }
 
           for (const noun of properNouns) {
-            const escaped = noun.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-            const regex = new RegExp(`\\b${escaped}\\b`, 'gi');
-            fixedInner = fixedInner.replace(regex, () => noun);
+            const escaped = noun.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`(?<![a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ])${escaped}(?![a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ])`, 'gi');
+            fixedInner = fixedInner.replace(regex, noun);
           }
           
           if (fixedInner !== citationInner) {
