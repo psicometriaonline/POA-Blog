@@ -311,6 +311,8 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
   const [titleFontSize, setTitleFontSize] = useState(18);
   const [buttonFontSize, setButtonFontSize] = useState(14);
   const [showTitle, setShowTitle] = useState(true);
+  const [buttonPosX, setButtonPosX] = useState(0);
+  const [buttonPosY, setButtonPosY] = useState(0);
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
 
   const resetForm = () => {
@@ -327,6 +329,8 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
     setTitleFontSize(18);
     setButtonFontSize(14);
     setShowTitle(true);
+    setButtonPosX(0);
+    setButtonPosY(0);
   };
 
   const createMutation = useMutation({
@@ -344,6 +348,8 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
         titleFontSize,
         buttonFontSize,
         showTitle,
+        buttonPosX,
+        buttonPosY,
       };
       if (editingBanner) {
         return apiRequest("PUT", `/api/admin/banners/${editingBanner.id}`, data);
@@ -375,6 +381,8 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
     setTitleFontSize(banner.titleFontSize || 18);
     setButtonFontSize(banner.buttonFontSize || 14);
     setShowTitle(banner.showTitle ?? true);
+    setButtonPosX(banner.buttonPosX || 0);
+    setButtonPosY(banner.buttonPosY || 0);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -531,6 +539,30 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
                   onChange={(e) => setButtonFontSize(parseInt(e.target.value) || 14)} 
                   data-testid="input-banner-button-font-size" 
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="button-pos-x">Posição X (-100 a 100)</Label>
+                  <Input 
+                    id="button-pos-x" 
+                    type="number" 
+                    value={buttonPosX} 
+                    onChange={(e) => setButtonPosX(parseInt(e.target.value) || 0)} 
+                    step="1"
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">Esq: -100, Centro: 0, Dir: 100</p>
+                </div>
+                <div>
+                  <Label htmlFor="button-pos-y">Posição Y (-100 a 100)</Label>
+                  <Input 
+                    id="button-pos-y" 
+                    type="number" 
+                    value={buttonPosY} 
+                    onChange={(e) => setButtonPosY(parseInt(e.target.value) || 0)} 
+                    step="1"
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">Topo: -100, Centro: 0, Base: 100</p>
+                </div>
               </div>
             </>
           )}

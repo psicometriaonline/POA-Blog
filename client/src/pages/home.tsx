@@ -152,10 +152,10 @@ function BannerHorizontal({ banner }: { banner: Banner }) {
       <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" className="block w-full">
         <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto object-cover" loading="lazy" />
       </a>
-      {( (banner.showTitle && banner.title) || banner.showButton) && (
-        <div className="absolute inset-0 flex flex-col justify-center p-8 bg-black/10">
-          <div className="max-w-xl">
-            {banner.showTitle && banner.title && (
+      {( (banner.showTitle ?? true) && banner.title || banner.showButton) && (
+        <div className="absolute inset-0 flex flex-col justify-center p-8 bg-black/5 pointer-events-none">
+          <div className="max-w-xl w-full">
+            {(banner.showTitle ?? true) && banner.title && (
               <h3 
                 className={`font-serif font-bold text-white mb-4 drop-shadow-md ${
                   banner.titleAlignment === 'center' ? 'text-center' : 
@@ -167,10 +167,17 @@ function BannerHorizontal({ banner }: { banner: Banner }) {
               </h3>
             )}
             {banner.showButton && banner.linkUrl && (
-              <div className={`flex ${
-                banner.buttonAlignment === 'center' ? 'justify-center' : 
-                banner.buttonAlignment === 'right' ? 'justify-end' : 'justify-start'
-              }`}>
+              <div 
+                className={`flex pointer-events-auto ${
+                  banner.buttonAlignment === 'center' ? 'justify-center' : 
+                  banner.buttonAlignment === 'right' ? 'justify-end' : 'justify-start'
+                }`}
+                style={{
+                  transform: banner.buttonPosX || banner.buttonPosY 
+                    ? `translate(${banner.buttonPosX || 0}%, ${banner.buttonPosY || 0}%)` 
+                    : undefined
+                }}
+              >
                 <a href={banner.linkUrl} target="_blank" rel="noopener noreferrer">
                   <Button 
                     className={`${banner.buttonColor || "bg-accent-bright"} text-white border-none shadow-lg px-8 py-6`}
@@ -263,7 +270,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                   <img src={banner1.imageUrl} alt={banner1.title} className="w-full h-full object-cover" loading="lazy" />
                 </div>
               </a>
-              {banner1.showTitle && banner1.title && (
+              {(banner1.showTitle ?? true) && banner1.title && (
                 <div className="mt-3">
                   <p 
                     className={`text-muted-foreground line-clamp-2 mb-2 ${
@@ -304,7 +311,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                   <img src={banner2.imageUrl} alt={banner2.title} className="w-full h-full object-cover" loading="lazy" />
                 </div>
               </a>
-              {banner2.showTitle && banner2.title && (
+              {(banner2.showTitle ?? true) && banner2.title && (
                 <div className="mt-3">
                   <p 
                     className={`text-muted-foreground line-clamp-2 mb-2 ${

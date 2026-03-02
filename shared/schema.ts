@@ -93,6 +93,8 @@ export const banners = pgTable("banners", {
   titleFontSize: integer("title_font_size").notNull().default(18),
   buttonFontSize: integer("button_font_size").notNull().default(14),
   showTitle: boolean("show_title").notNull().default(true),
+  buttonPosX: integer("button_pos_x").notNull().default(0),
+  buttonPosY: integer("button_pos_y").notNull().default(0),
 });
 
 export const freeMaterials = pgTable("free_materials", {
