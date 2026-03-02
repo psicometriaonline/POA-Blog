@@ -306,6 +306,10 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
   const [buttonText, setButtonText] = useState("Saiba mais");
   const [buttonColor, setButtonColor] = useState("bg-accent-bright");
   const [buttonAlignment, setButtonAlignment] = useState("left");
+  const [showButton, setShowButton] = useState(false);
+  const [titleAlignment, setTitleAlignment] = useState("left");
+  const [titleFontSize, setTitleFontSize] = useState(18);
+  const [buttonFontSize, setButtonFontSize] = useState(14);
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
 
   const resetForm = () => {
@@ -317,6 +321,10 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
     setButtonText("Saiba mais");
     setButtonColor("bg-accent-bright");
     setButtonAlignment("left");
+    setShowButton(false);
+    setTitleAlignment("left");
+    setTitleFontSize(18);
+    setButtonFontSize(14);
   };
 
   const createMutation = useMutation({
@@ -329,6 +337,10 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
         buttonText,
         buttonColor,
         buttonAlignment,
+        showButton,
+        titleAlignment,
+        titleFontSize,
+        buttonFontSize,
       };
       if (editingBanner) {
         return apiRequest("PUT", `/api/admin/banners/${editingBanner.id}`, data);
@@ -355,6 +367,10 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
     setButtonText(banner.buttonText || "Saiba mais");
     setButtonColor(banner.buttonColor || "bg-accent-bright");
     setButtonAlignment(banner.buttonAlignment || "left");
+    setShowButton(banner.showButton ?? false);
+    setTitleAlignment(banner.titleAlignment || "left");
+    setTitleFontSize(banner.titleFontSize || 18);
+    setButtonFontSize(banner.buttonFontSize || 14);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -433,17 +449,9 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
             <Input id="banner-link" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} data-testid="input-banner-link" />
           </div>
           <div>
-            <Label htmlFor="banner-button-text">Texto do Botão</Label>
-            <Input id="banner-button-text" value={buttonText} onChange={(e) => setButtonText(e.target.value)} data-testid="input-banner-button-text" />
-          </div>
-          <div>
-            <Label htmlFor="banner-button-color">Cor do Botão (Classe Tailwind)</Label>
-            <Input id="banner-button-color" value={buttonColor} onChange={(e) => setButtonColor(e.target.value)} data-testid="input-banner-button-color" placeholder="bg-accent-bright" />
-          </div>
-          <div>
-            <Label htmlFor="banner-button-alignment">Alinhamento do Botão</Label>
-            <Select value={buttonAlignment} onValueChange={setButtonAlignment}>
-              <SelectTrigger data-testid="select-banner-button-alignment">
+            <Label htmlFor="banner-title-alignment">Alinhamento do Título</Label>
+            <Select value={titleAlignment} onValueChange={setTitleAlignment}>
+              <SelectTrigger data-testid="select-banner-title-alignment">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -453,6 +461,61 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
               </SelectContent>
             </Select>
           </div>
+          <div>
+            <Label htmlFor="banner-title-font-size">Tamanho da Fonte do Título (px)</Label>
+            <Input 
+              id="banner-title-font-size" 
+              type="number" 
+              value={titleFontSize} 
+              onChange={(e) => setTitleFontSize(parseInt(e.target.value) || 18)} 
+              data-testid="input-banner-title-font-size" 
+            />
+          </div>
+          <div className="flex items-center space-x-2 pt-6">
+            <input 
+              type="checkbox" 
+              id="show-button" 
+              checked={showButton} 
+              onChange={(e) => setShowButton(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <Label htmlFor="show-button">Habilitar Botão</Label>
+          </div>
+          {showButton && (
+            <>
+              <div>
+                <Label htmlFor="banner-button-text">Texto do Botão</Label>
+                <Input id="banner-button-text" value={buttonText} onChange={(e) => setButtonText(e.target.value)} data-testid="input-banner-button-text" />
+              </div>
+              <div>
+                <Label htmlFor="banner-button-color">Cor do Botão (Classe Tailwind)</Label>
+                <Input id="banner-button-color" value={buttonColor} onChange={(e) => setButtonColor(e.target.value)} data-testid="input-banner-button-color" placeholder="bg-accent-bright" />
+              </div>
+              <div>
+                <Label htmlFor="banner-button-alignment">Alinhamento do Botão</Label>
+                <Select value={buttonAlignment} onValueChange={setButtonAlignment}>
+                  <SelectTrigger data-testid="select-banner-button-alignment">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="left">Esquerda</SelectItem>
+                    <SelectItem value="center">Centralizado</SelectItem>
+                    <SelectItem value="right">Direita</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="banner-button-font-size">Tamanho da Fonte do Botão (px)</Label>
+                <Input 
+                  id="banner-button-font-size" 
+                  type="number" 
+                  value={buttonFontSize} 
+                  onChange={(e) => setButtonFontSize(parseInt(e.target.value) || 14)} 
+                  data-testid="input-banner-button-font-size" 
+                />
+              </div>
+            </>
+          )}
         </div>
         <Button
           onClick={() => createMutation.mutate()}

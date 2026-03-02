@@ -231,8 +231,16 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
               </a>
               {banner1.title && (
                 <div className="mt-3">
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{banner1.title}</p>
-                  {banner1.linkUrl && (
+                  <p 
+                    className={`text-muted-foreground line-clamp-2 mb-2 ${
+                      banner1.titleAlignment === 'center' ? 'text-center' : 
+                      banner1.titleAlignment === 'right' ? 'text-right' : 'text-left'
+                    }`}
+                    style={{ fontSize: `${banner1.titleFontSize || 14}px` }}
+                  >
+                    {banner1.title}
+                  </p>
+                  {banner1.showButton && banner1.linkUrl && (
                     <div className={`flex ${
                       banner1.buttonAlignment === 'center' ? 'justify-center' : 
                       banner1.buttonAlignment === 'right' ? 'justify-end' : 'justify-start'
@@ -241,6 +249,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                         <Button 
                           size="sm" 
                           className={`${banner1.buttonColor || "bg-accent-bright"} text-white border-none`}
+                          style={{ fontSize: `${banner1.buttonFontSize || 12}px` }}
                           data-testid={`button-banner-cta-${banner1.id}`}
                         >
                           {banner1.buttonText || "Saiba mais"}
@@ -254,15 +263,37 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
             </div>
           )}
 
-          {banner2 && (
-            <div className="flex-1 border rounded-md p-4">
-              <a href={banner2.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner2.id}`}>
-                <div className="aspect-[1400/788] overflow-hidden rounded-md">
-                  <img src={banner2.imageUrl} alt={banner2.title} className="w-full h-full object-cover" loading="lazy" />
+              {banner2.title && (
+                <div className="mt-3">
+                  <p 
+                    className={`text-muted-foreground line-clamp-2 mb-2 ${
+                      banner2.titleAlignment === 'center' ? 'text-center' : 
+                      banner2.titleAlignment === 'right' ? 'text-right' : 'text-left'
+                    }`}
+                    style={{ fontSize: `${banner2.titleFontSize || 14}px` }}
+                  >
+                    {banner2.title}
+                  </p>
+                  {banner2.showButton && banner2.linkUrl && (
+                    <div className={`flex ${
+                      banner2.buttonAlignment === 'center' ? 'justify-center' : 
+                      banner2.buttonAlignment === 'right' ? 'justify-end' : 'justify-start'
+                    }`}>
+                      <a href={banner2.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-banner-cta-${banner2.id}`}>
+                        <Button 
+                          size="sm" 
+                          className={`${banner2.buttonColor || "bg-accent-bright"} text-white border-none`}
+                          style={{ fontSize: `${banner2.buttonFontSize || 12}px` }}
+                          data-testid={`button-banner-cta-${banner2.id}`}
+                        >
+                          {banner2.buttonText || "Saiba mais"}
+                          <ArrowRight className="h-3 w-3 ml-1" />
+                        </Button>
+                      </a>
+                    </div>
+                  )}
                 </div>
-              </a>
-            </div>
-          )}
+              )}
 
           {!banner1 && !banner2 && (
             <div className="aspect-[1400/788] rounded-md border p-4 flex items-center justify-center">
