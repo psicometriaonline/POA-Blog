@@ -181,12 +181,11 @@ function BannerHorizontal({ banner }: { banner: Banner }) {
               >
                 <a href={banner.linkUrl} target="_blank" rel="noopener noreferrer">
                   <Button 
-                    className={`${banner.buttonColor || "bg-accent-bright"} text-white border-none shadow-lg px-8 py-6`}
-                    style={{ fontSize: `${banner.buttonFontSize || 18}px` }}
+                    className={`${banner.buttonColor || "bg-accent-bright"} text-white border-none shadow-lg h-auto py-2 px-6 rounded-sm`}
+                    style={{ fontSize: `${banner.buttonFontSize || 14}px` }}
                     data-testid={`button-banner-cta-horiz-${banner.id}`}
                   >
                     {banner.buttonText || "Saiba mais"}
-                    <ArrowRight className="h-5 w-5 ml-2" />
                   </Button>
                 </a>
               </div>
@@ -290,12 +289,11 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                       <a href={banner1.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-banner-cta-${banner1.id}`}>
                         <Button 
                           size="sm" 
-                          className={`${banner1.buttonColor || "bg-accent-bright"} text-white border-none`}
+                          className={`${banner1.buttonColor || "bg-accent-bright"} text-white border-none h-auto py-2 px-4`}
                           style={{ fontSize: `${banner1.buttonFontSize || 12}px` }}
                           data-testid={`button-banner-cta-${banner1.id}`}
                         >
                           {banner1.buttonText || "Saiba mais"}
-                          <ArrowRight className="h-3 w-3 ml-1" />
                         </Button>
                       </a>
                     </div>
@@ -331,12 +329,11 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                       <a href={banner2.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-banner-cta-${banner2.id}`}>
                         <Button 
                           size="sm" 
-                          className={`${banner2.buttonColor || "bg-accent-bright"} text-white border-none`}
+                          className={`${banner2.buttonColor || "bg-accent-bright"} text-white border-none h-auto py-2 px-4`}
                           style={{ fontSize: `${banner2.buttonFontSize || 12}px` }}
                           data-testid={`button-banner-cta-${banner2.id}`}
                         >
                           {banner2.buttonText || "Saiba mais"}
-                          <ArrowRight className="h-3 w-3 ml-1" />
                         </Button>
                       </a>
                     </div>
