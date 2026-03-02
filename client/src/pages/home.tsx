@@ -147,15 +147,16 @@ function BannerSidebar({ banner }: { banner: Banner }) {
 }
 
 function BannerHorizontal({ banner }: { banner: Banner }) {
+  const showTitle = banner.showTitle ?? true;
   return (
     <div className="relative group overflow-hidden rounded-md border" data-testid={`banner-horizontal-${banner.id}`}>
       <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" className="block w-full">
         <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto object-cover" loading="lazy" />
       </a>
-      {( (banner.showTitle ?? true) && banner.title || banner.showButton) && (
+      {( (showTitle && banner.title) || banner.showButton) && (
         <div className="absolute inset-0 flex flex-col justify-center p-8 bg-black/5 pointer-events-none">
           <div className="max-w-xl w-full">
-            {(banner.showTitle ?? true) && banner.title && (
+            {showTitle && banner.title && (
               <h3 
                 className={`font-serif font-bold text-white mb-4 drop-shadow-md ${
                   banner.titleAlignment === 'center' ? 'text-center' : 
@@ -344,6 +345,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
               )}
             </div>
           )}
+        </div>
 
           {!banner1 && !banner2 && (
             <div className="aspect-[1400/788] rounded-md border p-4 flex items-center justify-center">
