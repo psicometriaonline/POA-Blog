@@ -7,12 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Image as ImageLucide, BookOpen, Download, Plus, Trash2, Save, ArrowLeft, Menu, GripVertical, ChevronDown } from "lucide-react";
+import { Settings, Image as ImageLucide, BookOpen, Download, Plus, Trash2, Save, ArrowLeft, Menu, GripVertical, ChevronDown, Search } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import type { Category, Banner, FreeMaterial } from "@shared/schema";
+import { MediaLibraryModal } from "@/components/media-library-modal";
 
 export default function HomeSettings() {
   const { user, isLoading: authLoading } = useAuth();
@@ -289,6 +290,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
   const [newButtonText, setNewButtonText] = useState("Saiba mais");
   const [newButtonColor, setNewButtonColor] = useState("bg-accent-bright");
   const [newButtonAlignment, setNewButtonAlignment] = useState("left");
+  const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -354,8 +356,33 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
           </div>
           <div>
             <Label htmlFor="banner-image">URL da Imagem</Label>
-            <Input id="banner-image" value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)} data-testid="input-banner-image" />
+            <div className="flex gap-2">
+              <Input 
+                id="banner-image" 
+                value={newImageUrl} 
+                onChange={(e) => setNewImageUrl(e.target.value)} 
+                data-testid="input-banner-image" 
+                placeholder="https://..."
+              />
+              <Button 
+                variant="outline" 
+                type="button" 
+                onClick={() => setIsMediaModalOpen(true)}
+                data-testid="button-banner-media-library"
+              >
+                <Search className="h-4 w-4 mr-1" />
+                Biblioteca
+              </Button>
+            </div>
           </div>
+          <MediaLibraryModal 
+            open={isMediaModalOpen} 
+            onOpenChange={setIsMediaModalOpen}
+            onSelect={(media) => {
+              setNewImageUrl(media.url);
+              setIsMediaModalOpen(false);
+            }}
+          />
           <div>
             <Label htmlFor="banner-link">URL do Link</Label>
             <Input id="banner-link" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} data-testid="input-banner-link" />
