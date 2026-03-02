@@ -266,7 +266,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
 
           {!banner1 && !banner2 && (
             <div className="aspect-[1400/788] rounded-md border p-4 flex items-center justify-center">
-              <p className="text-sm text-muted-foreground">Espaco para banner</p>
+              <p className="text-sm text-muted-foreground">Espaço para banner</p>
             </div>
           )}
         </div>
@@ -398,7 +398,7 @@ function SectionRandomPosts({ posts }: { posts: PostWithRelations[] }) {
   if (posts.length === 0) return null;
   return (
     <section className="max-w-7xl mx-auto px-4 py-10" data-testid="section-random-posts">
-      <SectionTitle>Voce tambem pode gostar</SectionTitle>
+      <SectionTitle>Você também pode gostar</SectionTitle>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {posts.slice(0, 6).map((post) => (
           <PostCardHorizontal key={post.id} post={post} />

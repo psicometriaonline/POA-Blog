@@ -52,7 +52,7 @@ export default function HomeSettings() {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8 text-center">
         <h1 className="font-serif text-2xl font-bold mb-4">Acesso Restrito</h1>
-        <p className="text-muted-foreground">Faca login para acessar esta pagina.</p>
+        <p className="text-muted-foreground">Faça login para acessar esta página.</p>
       </div>
     );
   }
@@ -65,7 +65,7 @@ export default function HomeSettings() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <h1 className="font-serif text-2xl font-bold" data-testid="text-page-title">Configuracoes da Home</h1>
+        <h1 className="font-serif text-2xl font-bold" data-testid="text-page-title">Configurações da Home</h1>
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
@@ -80,7 +80,7 @@ export default function HomeSettings() {
           </TabsTrigger>
           <TabsTrigger value="sections" data-testid="tab-sections">
             <BookOpen className="h-4 w-4 mr-1" />
-            Secoes
+            Seções
           </TabsTrigger>
           <TabsTrigger value="materials" data-testid="tab-materials">
             <Download className="h-4 w-4 mr-1" />
@@ -118,9 +118,16 @@ export default function HomeSettings() {
 
 function GeneralSettingsTab({ settings, categories }: { settings: Record<string, string>; categories: Category[] }) {
   const { toast } = useToast();
-  const [heroHeadline, setHeroHeadline] = useState(settings["hero_headline"] || "Blog Psicometria Online");
-  const [heroSubheadline, setHeroSubheadline] = useState(settings["hero_subheadline"] || "Recursos de aprendizagem em psicometria e analises quantitativas");
-  const [newsletterText, setNewsletterText] = useState(settings["newsletter_text"] || "Receba nossos conteudos diretamente no seu e-mail");
+  const [heroHeadline, setHeroHeadline] = useState("");
+  const [heroSubheadline, setHeroSubheadline] = useState("");
+  const [newsletterText, setNewsletterText] = useState("");
+
+  // Update local state when settings data changes
+  useEffect(() => {
+    setHeroHeadline(settings["hero_headline"] || "Blog Psicometria Online");
+    setHeroSubheadline(settings["hero_subheadline"] || "Recursos de aprendizagem em psicometria e análises quantitativas");
+    setNewsletterText(settings["newsletter_text"] || "Receba nossos conteúdos diretamente no seu e-mail");
+  }, [settings]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: Record<string, string>) => {
@@ -170,7 +177,7 @@ function GeneralSettingsTab({ settings, categories }: { settings: Record<string,
         data-testid="button-save-general"
       >
         <Save className="h-4 w-4 mr-1" />
-        {saveMutation.isPending ? "Salvando..." : "Salvar Configuracoes"}
+        {saveMutation.isPending ? "Salvando..." : "Salvar Configurações"}
       </Button>
     </Card>
   );
@@ -178,10 +185,17 @@ function GeneralSettingsTab({ settings, categories }: { settings: Record<string,
 
 function SectionsTab({ settings, categories }: { settings: Record<string, string>; categories: Category[] }) {
   const { toast } = useToast();
-  const [featuredSlug, setFeaturedSlug] = useState(settings["featured_category_slug"] || "");
-  const [diverseSlugs, setDiverseSlugs] = useState(settings["diverse_category_slugs"] || "");
-  const [row1Slug, setRow1Slug] = useState(settings["row_section_1_slug"] || "");
-  const [row2Slug, setRow2Slug] = useState(settings["row_section_2_slug"] || "");
+  const [featuredSlug, setFeaturedSlug] = useState("");
+  const [diverseSlugs, setDiverseSlugs] = useState("");
+  const [row1Slug, setRow1Slug] = useState("");
+  const [row2Slug, setRow2Slug] = useState("");
+
+  useEffect(() => {
+    setFeaturedSlug(settings["featured_category_slug"] || "");
+    setDiverseSlugs(settings["diverse_category_slugs"] || "");
+    setRow1Slug(settings["row_section_1_slug"] || "");
+    setRow2Slug(settings["row_section_2_slug"] || "");
+  }, [settings]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: Record<string, string>) => {
@@ -217,24 +231,24 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
       </div>
 
       <div>
-        <h3 className="font-semibold text-lg mb-4">Categorias Diversas (ate 3)</h3>
+        <h3 className="font-semibold text-lg mb-4">Categorias Diversas (até 3)</h3>
         <div>
-          <Label>Slugs separados por virgula</Label>
+          <Label>Slugs separados por vírgula</Label>
           <Input
             value={diverseSlugs}
             onChange={(e) => setDiverseSlugs(e.target.value)}
             placeholder="slug1,slug2,slug3"
             data-testid="input-diverse-slugs"
           />
-          <p className="text-xs text-muted-foreground mt-1">Categorias disponiveis: {categories.map(c => c.slug).join(", ")}</p>
+          <p className="text-xs text-muted-foreground mt-1">Categorias disponíveis: {categories.map(c => c.slug).join(", ")}</p>
         </div>
       </div>
 
       <div>
-        <h3 className="font-semibold text-lg mb-4">Secoes de Linha</h3>
+        <h3 className="font-semibold text-lg mb-4">Seções de Linha</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <Label>Secao 1</Label>
+            <Label>Seção 1</Label>
             <Select value={row1Slug} onValueChange={setRow1Slug}>
               <SelectTrigger data-testid="select-row1-category">
                 <SelectValue placeholder="Selecionar categoria" />
@@ -248,7 +262,7 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
             </Select>
           </div>
           <div>
-            <Label>Secao 2</Label>
+            <Label>Seção 2</Label>
             <Select value={row2Slug} onValueChange={setRow2Slug}>
               <SelectTrigger data-testid="select-row2-category">
                 <SelectValue placeholder="Selecionar categoria" />
@@ -275,7 +289,7 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
         data-testid="button-save-sections"
       >
         <Save className="h-4 w-4 mr-1" />
-        {saveMutation.isPending ? "Salvando..." : "Salvar Secoes"}
+        {saveMutation.isPending ? "Salvando..." : "Salvar Seções"}
       </Button>
     </Card>
   );
@@ -283,40 +297,66 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
 
 function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: boolean }) {
   const { toast } = useToast();
-  const [newTitle, setNewTitle] = useState("");
-  const [newImageUrl, setNewImageUrl] = useState("");
-  const [newLinkUrl, setNewLinkUrl] = useState("");
-  const [newSlot, setNewSlot] = useState("sidebar");
-  const [newButtonText, setNewButtonText] = useState("Saiba mais");
-  const [newButtonColor, setNewButtonColor] = useState("bg-accent-bright");
-  const [newButtonAlignment, setNewButtonAlignment] = useState("left");
+  const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
+  
+  const [title, setTitle] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [slot, setSlot] = useState("sidebar");
+  const [buttonText, setButtonText] = useState("Saiba mais");
+  const [buttonColor, setButtonColor] = useState("bg-accent-bright");
+  const [buttonAlignment, setButtonAlignment] = useState("left");
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
+
+  const resetForm = () => {
+    setEditingBanner(null);
+    setTitle("");
+    setImageUrl("");
+    setLinkUrl("");
+    setSlot("sidebar");
+    setButtonText("Saiba mais");
+    setButtonColor("bg-accent-bright");
+    setButtonAlignment("left");
+  };
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/admin/banners", {
-        title: newTitle,
-        imageUrl: newImageUrl,
-        linkUrl: newLinkUrl,
-        slot: newSlot,
-        buttonText: newButtonText,
-        buttonColor: newButtonColor,
-        buttonAlignment: newButtonAlignment,
-      });
+      const data = {
+        title,
+        imageUrl,
+        linkUrl,
+        slot,
+        buttonText,
+        buttonColor,
+        buttonAlignment,
+      };
+      if (editingBanner) {
+        return apiRequest("PUT", `/api/admin/banners/${editingBanner.id}`, data);
+      }
+      return apiRequest("POST", "/api/admin/banners", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/banners"] });
       queryClient.invalidateQueries({ queryKey: ["/api/home"] });
-      setNewTitle("");
-      setNewImageUrl("");
-      setNewLinkUrl("");
-      setNewButtonText("Saiba mais");
-      toast({ title: "Banner criado" });
+      resetForm();
+      toast({ title: editingBanner ? "Banner atualizado" : "Banner criado" });
     },
     onError: () => {
-      toast({ title: "Erro", description: "Falha ao criar banner.", variant: "destructive" });
+      toast({ title: "Erro", description: "Falha ao salvar banner.", variant: "destructive" });
     },
   });
+
+  const handleEdit = (banner: Banner) => {
+    setEditingBanner(banner);
+    setTitle(banner.title || "");
+    setImageUrl(banner.imageUrl);
+    setLinkUrl(banner.linkUrl || "");
+    setSlot(banner.slot);
+    setButtonText(banner.buttonText || "Saiba mais");
+    setButtonColor(banner.buttonColor || "bg-accent-bright");
+    setButtonAlignment(banner.buttonAlignment || "left");
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -336,15 +376,20 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
   return (
     <div className="space-y-6">
       <Card className="p-6">
-        <h3 className="font-semibold text-lg mb-4">Novo Banner</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-lg">{editingBanner ? "Editar Banner" : "Novo Banner"}</h3>
+          {editingBanner && (
+            <Button variant="ghost" size="sm" onClick={resetForm}>Cancelar Edição</Button>
+          )}
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="banner-title">Titulo</Label>
-            <Input id="banner-title" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} data-testid="input-banner-title" />
+            <Label htmlFor="banner-title">Título</Label>
+            <Input id="banner-title" value={title} onChange={(e) => setTitle(e.target.value)} data-testid="input-banner-title" />
           </div>
           <div>
             <Label htmlFor="banner-slot">Local</Label>
-            <Select value={newSlot} onValueChange={setNewSlot}>
+            <Select value={slot} onValueChange={setSlot}>
               <SelectTrigger data-testid="select-banner-slot">
                 <SelectValue />
               </SelectTrigger>
@@ -359,8 +404,8 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
             <div className="flex gap-2">
               <Input 
                 id="banner-image" 
-                value={newImageUrl} 
-                onChange={(e) => setNewImageUrl(e.target.value)} 
+                value={imageUrl} 
+                onChange={(e) => setImageUrl(e.target.value)} 
                 data-testid="input-banner-image" 
                 placeholder="https://..."
               />
@@ -379,25 +424,25 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
             open={isMediaModalOpen} 
             onClose={() => setIsMediaModalOpen(false)}
             onSelect={(url) => {
-              setNewImageUrl(url);
+              setImageUrl(url);
               setIsMediaModalOpen(false);
             }}
           />
           <div>
             <Label htmlFor="banner-link">URL do Link</Label>
-            <Input id="banner-link" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} data-testid="input-banner-link" />
+            <Input id="banner-link" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} data-testid="input-banner-link" />
           </div>
           <div>
             <Label htmlFor="banner-button-text">Texto do Botão</Label>
-            <Input id="banner-button-text" value={newButtonText} onChange={(e) => setNewButtonText(e.target.value)} data-testid="input-banner-button-text" />
+            <Input id="banner-button-text" value={buttonText} onChange={(e) => setButtonText(e.target.value)} data-testid="input-banner-button-text" />
           </div>
           <div>
             <Label htmlFor="banner-button-color">Cor do Botão (Classe Tailwind)</Label>
-            <Input id="banner-button-color" value={newButtonColor} onChange={(e) => setNewButtonColor(e.target.value)} data-testid="input-banner-button-color" placeholder="bg-accent-bright" />
+            <Input id="banner-button-color" value={buttonColor} onChange={(e) => setButtonColor(e.target.value)} data-testid="input-banner-button-color" placeholder="bg-accent-bright" />
           </div>
           <div>
             <Label htmlFor="banner-button-alignment">Alinhamento do Botão</Label>
-            <Select value={newButtonAlignment} onValueChange={setNewButtonAlignment}>
+            <Select value={buttonAlignment} onValueChange={setButtonAlignment}>
               <SelectTrigger data-testid="select-banner-button-alignment">
                 <SelectValue />
               </SelectTrigger>
@@ -411,12 +456,12 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
         </div>
         <Button
           onClick={() => createMutation.mutate()}
-          disabled={createMutation.isPending || !newTitle || !newImageUrl}
+          disabled={createMutation.isPending || !title || !imageUrl}
           className="mt-4"
           data-testid="button-create-banner"
         >
-          <Plus className="h-4 w-4 mr-1" />
-          {createMutation.isPending ? "Criando..." : "Adicionar Banner"}
+          {editingBanner ? <Save className="h-4 w-4 mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
+          {createMutation.isPending ? "Salvando..." : editingBanner ? "Salvar Alterações" : "Adicionar Banner"}
         </Button>
       </Card>
 
@@ -435,15 +480,25 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
                   <p className="text-sm font-medium truncate">{banner.title}</p>
                   <p className="text-xs text-muted-foreground">Local: {banner.slot}</p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => deleteMutation.mutate(banner.id)}
-                  disabled={deleteMutation.isPending}
-                  data-testid={`button-delete-banner-${banner.id}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleEdit(banner)}
+                    data-testid={`button-edit-banner-${banner.id}`}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deleteMutation.mutate(banner.id)}
+                    disabled={deleteMutation.isPending}
+                    data-testid={`button-delete-banner-${banner.id}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -455,33 +510,53 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
 
 function MaterialsTab({ materials, isLoading }: { materials: FreeMaterial[]; isLoading: boolean }) {
   const { toast } = useToast();
-  const [newTitle, setNewTitle] = useState("");
-  const [newDescription, setNewDescription] = useState("");
-  const [newImageUrl, setNewImageUrl] = useState("");
-  const [newLinkUrl, setNewLinkUrl] = useState("");
+  const [editingMaterial, setEditingMaterial] = useState<FreeMaterial | null>(null);
+  
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+
+  const resetForm = () => {
+    setEditingMaterial(null);
+    setTitle("");
+    setDescription("");
+    setImageUrl("");
+    setLinkUrl("");
+  };
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/admin/materials", {
-        title: newTitle,
-        description: newDescription,
-        imageUrl: newImageUrl || null,
-        linkUrl: newLinkUrl,
-      });
+      const data = {
+        title,
+        description,
+        imageUrl: imageUrl || null,
+        linkUrl,
+      };
+      if (editingMaterial) {
+        return apiRequest("PUT", `/api/admin/materials/${editingMaterial.id}`, data);
+      }
+      return apiRequest("POST", "/api/admin/materials", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/materials"] });
       queryClient.invalidateQueries({ queryKey: ["/api/home"] });
-      setNewTitle("");
-      setNewDescription("");
-      setNewImageUrl("");
-      setNewLinkUrl("");
-      toast({ title: "Material criado" });
+      resetForm();
+      toast({ title: editingMaterial ? "Material atualizado" : "Material criado" });
     },
     onError: () => {
-      toast({ title: "Erro", description: "Falha ao criar material.", variant: "destructive" });
+      toast({ title: "Erro", description: "Falha ao salvar material.", variant: "destructive" });
     },
   });
+
+  const handleEdit = (mat: FreeMaterial) => {
+    setEditingMaterial(mat);
+    setTitle(mat.title);
+    setDescription(mat.description || "");
+    setImageUrl(mat.imageUrl || "");
+    setLinkUrl(mat.linkUrl);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -501,33 +576,38 @@ function MaterialsTab({ materials, isLoading }: { materials: FreeMaterial[]; isL
   return (
     <div className="space-y-6">
       <Card className="p-6">
-        <h3 className="font-semibold text-lg mb-4">Novo Material</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-lg">{editingMaterial ? "Editar Material" : "Novo Material"}</h3>
+          {editingMaterial && (
+            <Button variant="ghost" size="sm" onClick={resetForm}>Cancelar Edição</Button>
+          )}
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="mat-title">Titulo</Label>
-            <Input id="mat-title" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} data-testid="input-material-title" />
+            <Label htmlFor="mat-title">Título</Label>
+            <Input id="mat-title" value={title} onChange={(e) => setTitle(e.target.value)} data-testid="input-material-title" />
           </div>
           <div>
             <Label htmlFor="mat-link">URL do Download</Label>
-            <Input id="mat-link" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} data-testid="input-material-link" />
+            <Input id="mat-link" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} data-testid="input-material-link" />
           </div>
           <div>
-            <Label htmlFor="mat-desc">Descricao</Label>
-            <Input id="mat-desc" value={newDescription} onChange={(e) => setNewDescription(e.target.value)} data-testid="input-material-description" />
+            <Label htmlFor="mat-desc">Descrição</Label>
+            <Input id="mat-desc" value={description} onChange={(e) => setDescription(e.target.value)} data-testid="input-material-description" />
           </div>
           <div>
             <Label htmlFor="mat-image">URL da Imagem (opcional)</Label>
-            <Input id="mat-image" value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)} data-testid="input-material-image" />
+            <Input id="mat-image" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} data-testid="input-material-image" />
           </div>
         </div>
         <Button
           onClick={() => createMutation.mutate()}
-          disabled={createMutation.isPending || !newTitle || !newLinkUrl}
+          disabled={createMutation.isPending || !title || !linkUrl}
           className="mt-4"
           data-testid="button-create-material"
         >
-          <Plus className="h-4 w-4 mr-1" />
-          {createMutation.isPending ? "Criando..." : "Adicionar Material"}
+          {editingMaterial ? <Save className="h-4 w-4 mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
+          {createMutation.isPending ? "Salvando..." : editingMaterial ? "Salvar Alterações" : "Adicionar Material"}
         </Button>
       </Card>
 
@@ -546,15 +626,25 @@ function MaterialsTab({ materials, isLoading }: { materials: FreeMaterial[]; isL
                   <p className="text-sm font-medium truncate">{mat.title}</p>
                   {mat.description && <p className="text-xs text-muted-foreground truncate">{mat.description}</p>}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => deleteMutation.mutate(mat.id)}
-                  disabled={deleteMutation.isPending}
-                  data-testid={`button-delete-material-${mat.id}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleEdit(mat)}
+                    data-testid={`button-edit-material-${mat.id}`}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deleteMutation.mutate(mat.id)}
+                    disabled={deleteMutation.isPending}
+                    data-testid={`button-delete-material-${mat.id}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -572,13 +662,15 @@ interface MenuItemEditable {
 
 function MenuTab({ settings }: { settings: Record<string, string> }) {
   const { toast } = useToast();
-  const [items, setItems] = useState<MenuItemEditable[]>(() => {
+  const [items, setItems] = useState<MenuItemEditable[]>([]);
+
+  useEffect(() => {
     try {
-      return JSON.parse(settings["menu_items"] || "[]");
+      setItems(JSON.parse(settings["menu_items"] || "[]"));
     } catch {
-      return [];
+      setItems([]);
     }
-  });
+  }, [settings]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {

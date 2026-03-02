@@ -71,7 +71,7 @@ export default function AdminDashboard() {
       <div className="max-w-6xl mx-auto px-4 py-16 text-center">
         <h1 className="text-2xl font-bold mb-4">Acesso Restrito</h1>
         <p className="text-muted-foreground mb-6">
-          Faca login para acessar o painel administrativo.
+          Faça login para acessar o painel administrativo.
         </p>
         <a href="/api/login">
           <Button data-testid="button-login">Fazer Login</Button>
