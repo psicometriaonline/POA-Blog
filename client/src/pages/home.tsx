@@ -152,10 +152,10 @@ function BannerHorizontal({ banner }: { banner: Banner }) {
       <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" className="block w-full">
         <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto object-cover" loading="lazy" />
       </a>
-      {(banner.title || banner.showButton) && (
+      {( (banner.showTitle && banner.title) || banner.showButton) && (
         <div className="absolute inset-0 flex flex-col justify-center p-8 bg-black/10">
           <div className="max-w-xl">
-            {banner.title && (
+            {banner.showTitle && banner.title && (
               <h3 
                 className={`font-serif font-bold text-white mb-4 drop-shadow-md ${
                   banner.titleAlignment === 'center' ? 'text-center' : 
@@ -263,7 +263,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                   <img src={banner1.imageUrl} alt={banner1.title} className="w-full h-full object-cover" loading="lazy" />
                 </div>
               </a>
-              {banner1.title && (
+              {banner1.showTitle && banner1.title && (
                 <div className="mt-3">
                   <p 
                     className={`text-muted-foreground line-clamp-2 mb-2 ${
@@ -304,7 +304,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                   <img src={banner2.imageUrl} alt={banner2.title} className="w-full h-full object-cover" loading="lazy" />
                 </div>
               </a>
-              {banner2.title && (
+              {banner2.showTitle && banner2.title && (
                 <div className="mt-3">
                   <p 
                     className={`text-muted-foreground line-clamp-2 mb-2 ${

@@ -92,6 +92,7 @@ export const banners = pgTable("banners", {
   titleAlignment: text("title_alignment").notNull().default("left"),
   titleFontSize: integer("title_font_size").notNull().default(18),
   buttonFontSize: integer("button_font_size").notNull().default(14),
+  showTitle: boolean("show_title").notNull().default(true),
 });
 
 export const freeMaterials = pgTable("free_materials", {

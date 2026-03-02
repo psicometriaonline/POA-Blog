@@ -310,6 +310,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
   const [titleAlignment, setTitleAlignment] = useState("left");
   const [titleFontSize, setTitleFontSize] = useState(18);
   const [buttonFontSize, setButtonFontSize] = useState(14);
+  const [showTitle, setShowTitle] = useState(true);
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
 
   const resetForm = () => {
@@ -325,6 +326,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
     setTitleAlignment("left");
     setTitleFontSize(18);
     setButtonFontSize(14);
+    setShowTitle(true);
   };
 
   const createMutation = useMutation({
@@ -341,6 +343,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
         titleAlignment,
         titleFontSize,
         buttonFontSize,
+        showTitle,
       };
       if (editingBanner) {
         return apiRequest("PUT", `/api/admin/banners/${editingBanner.id}`, data);
@@ -371,6 +374,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
     setTitleAlignment(banner.titleAlignment || "left");
     setTitleFontSize(banner.titleFontSize || 18);
     setButtonFontSize(banner.buttonFontSize || 14);
+    setShowTitle(banner.showTitle ?? true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -448,29 +452,43 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
             <Label htmlFor="banner-link">URL do Link</Label>
             <Input id="banner-link" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} data-testid="input-banner-link" />
           </div>
-          <div>
-            <Label htmlFor="banner-title-alignment">Alinhamento do Título</Label>
-            <Select value={titleAlignment} onValueChange={setTitleAlignment}>
-              <SelectTrigger data-testid="select-banner-title-alignment">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="left">Esquerda</SelectItem>
-                <SelectItem value="center">Centralizado</SelectItem>
-                <SelectItem value="right">Direita</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="banner-title-font-size">Tamanho da Fonte do Título (px)</Label>
-            <Input 
-              id="banner-title-font-size" 
-              type="number" 
-              value={titleFontSize} 
-              onChange={(e) => setTitleFontSize(parseInt(e.target.value) || 18)} 
-              data-testid="input-banner-title-font-size" 
+          <div className="flex items-center space-x-2 pt-6">
+            <input 
+              type="checkbox" 
+              id="show-title" 
+              checked={showTitle} 
+              onChange={(e) => setShowTitle(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
             />
+            <Label htmlFor="show-title">Mostrar Título no Site</Label>
           </div>
+          {showTitle && (
+            <>
+              <div>
+                <Label htmlFor="banner-title-alignment">Alinhamento do Título</Label>
+                <Select value={titleAlignment} onValueChange={setTitleAlignment}>
+                  <SelectTrigger data-testid="select-banner-title-alignment">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="left">Esquerda</SelectItem>
+                    <SelectItem value="center">Centralizado</SelectItem>
+                    <SelectItem value="right">Direita</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="banner-title-font-size">Tamanho da Fonte do Título (px)</Label>
+                <Input 
+                  id="banner-title-font-size" 
+                  type="number" 
+                  value={titleFontSize} 
+                  onChange={(e) => setTitleFontSize(parseInt(e.target.value) || 18)} 
+                  data-testid="input-banner-title-font-size" 
+                />
+              </div>
+            </>
+          )}
           <div className="flex items-center space-x-2 pt-6">
             <input 
               type="checkbox" 
