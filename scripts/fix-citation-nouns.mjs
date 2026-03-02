@@ -1,68 +1,64 @@
 import pg from 'pg';
 const { Client } = pg;
 
+const DATABASE_URL = process.env.DATABASE_URL;
+
 const properNouns = [
-  "Pearson", "Spearman", "Kendall", "Fisher", "Cronbach", "Cohen", "Shapiro", "Wilk", "Levene",
-  "Kolmogorov", "Smirnov", "Kruskal", "Wallis", "Mann", "Whitney", "Welch", "Friedman",
-  "Bonferroni", "Tukey", "Scheffe", "Dunn", "Holm", "Bayes", "Bayesiana", "Bayesiano",
-  "Likert", "Guttman", "Rasch", "Thurstone", "Kuder", "Richardson", "ANOVA", "MANOVA",
-  "ANCOVA", "MANCOVA", "JASP", "SPSS", "RStudio", "FACTOR", "R", "ggplot2", "Python",
-  "Excel", "Stata", "SAS", "jamovi", "APA", "IEEE", "McDonald", "Mardia", "Mauchly",
-  "Bartlett", "Student", "Glass", "Hedges", "Bonett", "Satterthwaite", "Box", "Duncan",
-  "Dunnett", "Kaiser", "Meyer", "Olkin", "Cochran", "Yates", "Geisser", "Greenhouse",
-  "PICO", "TRI", "IRaMuTeQ", "teste F", "V de Cramér", "Bland", "Altman", "Poisson",
-  "PEDro", "Physiotherapy Evidence Database", "Fleiss", "Wilcoxon", "Q de Cochran",
-  "U de Mann-Whitney", "SRMR", "RMSEA", "GLMs", "R²", "AMSTAR", "Tipo I", "Tipo II",
-  "Cook", "Curva ROC", "FWER", "EndNote", "Mendeley", "Zotero", "PROCESS", "MIMIC",
-  "HARKing", "SciELO", "Google Acadêmico", "Periódicos CAPES", "Qualis CAPES", "PRISMA",
-  "G*Power", "E-book Análises Bi e Multivariadas: Definições e Usos", "Bessel",
-  "Benjamini-Hochberg", "IA", "SVM", "Goodman-Kruskal", "Yuen", "KR-20", "KR-21",
-  "Q-Q", "Markov", "Matthews", "XGBoost", "Wald-Wolfowitz", "Psicometria Online Academy"
+  "Pearson", "Spearman", "Kendall", "Fisher", "Cronbach", "Cohen", "Shapiro", "Wilk", "Levene", "Kolmogorov", "Smirnov", "Kruskal", "Wallis", "Mann", "Whitney", "Welch", "Friedman", "Bonferroni", "Tukey", "Scheffe", "Dunn", "Holm", "Bayes", "Bayesiana", "Bayesiano", "Likert", "Guttman", "Rasch", "Thurstone", "Kuder", "Richardson", "ANOVA", "MANOVA", "ANCOVA", "MANCOVA", "JASP", "SPSS", "RStudio", "FACTOR", "R", "ggplot2", "Python", "Excel", "Stata", "SAS", "jamovi", "APA", "IEEE", "McDonald", "Mardia", "Mauchly", "Bartlett", "Student", "Glass", "Hedges", "Bonett", "Satterthwaite", "Box", "Duncan", "Dunnett", "Kaiser", "Meyer", "Olkin", "Cochran", "Yates", "Geisser", "Greenhouse", "PICO", "TRI", "IRaMuTeQ", "teste F", "V de Cramér", "Bland", "Altman", "Poisson", "PEDro", "Physiotherapy Evidence Database", "Fleiss", "Wilcoxon", "Q de Cochran", "U de Mann-Whitney", "SRMR", "RMSEA", "GLMs", "R²", "AMSTAR", "Tipo I", "Tipo II", "Cook", "Curva ROC", "FWER", "EndNote", "Mendeley", "Zotero", "PROCESS", "MIMIC", "HARKing", "SciELO", "Google Acadêmico", "Periódicos CAPES", "Qualis CAPES", "PRISMA", "G*Power", "E-book Análises Bi e Multivariadas: Definições e Usos", "Bessel", "Benjamini-Hochberg", "IA", "SVM", "Goodman-Kruskal", "Yuen", "KR-20", "KR-21", "Q-Q", "Markov", "Matthews", "XGBoost", "Wald-Wolfowitz", "Psicometria Online Academy"
 ].sort((a, b) => b.length - a.length);
 
 async function run() {
-  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  const client = new Client({ connectionString: DATABASE_URL });
   await client.connect();
-  console.log("Connected to database");
 
-  const res = await client.query("SELECT id, title, content FROM posts WHERE content LIKE '%citation-box%'");
-  console.log(`Found ${res.rows.length} posts with citation boxes`);
+  try {
+    const res = await client.query("SELECT id, title, content FROM posts WHERE content LIKE '%citation-box%'");
+    let updatedCount = 0;
 
-  let updatedCount = 0;
+    for (const post of res.rows) {
+      let content = post.content;
+      let changed = false;
 
-  for (const post of res.rows) {
-    let newContent = post.content;
-    const citationRegex = /<div class="citation-box">([\s\S]*?)<\/div>/g;
-    
-    newContent = newContent.replace(citationRegex, (match, p1) => {
-      let inner = p1;
-      
-      // 1. Try to fix the title part (usually before the first dot or comma)
-      // Citations usually start with "Como citar: Titulo do Post. ..."
-      const titleMatch = inner.match(/Como citar: (.*?)[.,]/);
-      if (titleMatch) {
-        const oldTitlePart = titleMatch[1];
-        inner = inner.replace(oldTitlePart, post.title);
+      // 1. Fix using DB title (if title is in citation box)
+      const citationTitleMatch = content.match(/<div class="citation-box">.*?<strong>(.*?)<\/strong>/s);
+      if (citationTitleMatch) {
+        const currentCitationTitle = citationTitleMatch[1];
+        if (currentCitationTitle.toLowerCase() === post.title.toLowerCase() && currentCitationTitle !== post.title) {
+          content = content.replace(currentCitationTitle, post.title);
+          changed = true;
+        }
       }
 
-      // 2. Apply proper nouns list for everything else in the box
+      // 2. Fix using proper nouns list
       for (const noun of properNouns) {
-        const escapedNoun = noun.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(`(?<![a-zA-ZÀ-ÿ])${escapedNoun}(?![a-zA-ZÀ-ÿ])`, 'gi');
-        inner = inner.replace(regex, noun);
+        // Only replace within citation-box
+        const boxRegex = /<div class="citation-box">([\s\S]*?)<\/div>/g;
+        content = content.replace(boxRegex, (match, boxContent) => {
+          const escapedNoun = noun.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const nounRegex = new RegExp(`(?<![a-zA-ZáàâãéèêíïóôõöúçÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇ])${escapedNoun}(?![a-zA-ZáàâãéèêíïóôõöúçÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇ])`, 'gi');
+          
+          if (nounRegex.test(boxContent)) {
+            const newBoxContent = boxContent.replace(nounRegex, noun);
+            if (newBoxContent !== boxContent) {
+              changed = true;
+              return `<div class="citation-box">${newBoxContent}</div>`;
+            }
+          }
+          return match;
+        });
       }
-      
-      return `<div class="citation-box">${inner}</div>`;
-    });
 
-    if (newContent !== post.content) {
-      await client.query("UPDATE posts SET content = $1 WHERE id = $2", [newContent, post.id]);
-      updatedCount++;
+      if (changed) {
+        await client.query("UPDATE posts SET content = $1 WHERE id = $2", [content, post.id]);
+        updatedCount++;
+        console.log(`Updated post: ${post.title}`);
+      }
     }
-  }
 
-  console.log(`Updated ${updatedCount} posts`);
-  await client.end();
+    console.log(`Finished. Total updated posts: ${updatedCount}`);
+  } finally {
+    await client.end();
+  }
 }
 
 run().catch(console.error);

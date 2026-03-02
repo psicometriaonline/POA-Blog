@@ -29,19 +29,19 @@ interface HomeData {
   materials: FreeMaterial[];
 }
 
-function formatDate(date: string | Date | null) {
+function formatDateShort(date: string | Date | null) {
   if (!date) return null;
-  return format(new Date(date), "dd 'de' MMMM, yyyy", { locale: ptBR });
+  return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
 }
 
-function formatDateShort(date: string | Date | null) {
+function formatDate(date: string | Date | null) {
   if (!date) return null;
   return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
 }
 
 function formatDateMonth(date: string | Date | null) {
   if (!date) return null;
-  return format(new Date(date), "MMM dd, yyyy", { locale: ptBR });
+  return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
 }
 
 function SectionTitle({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -57,9 +57,9 @@ function PostCardLarge({ post }: { post: PostWithRelations }) {
   const date = formatDate(post.publishedAt);
   return (
     <Link href={`/${post.slug}`} data-testid={`card-post-${post.id}`}>
-      <Card className="overflow-visible hover-elevate active-elevate-2 cursor-pointer h-full flex flex-col">
+      <Card className="overflow-visible hover-elevate active-elevate-2 cursor-pointer h-full flex flex-col border-none shadow-sm rounded-xl">
         {post.featuredImage && (
-          <div className="aspect-video overflow-hidden rounded-t-md">
+          <div className="aspect-video overflow-hidden rounded-t-xl">
             <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover" loading="lazy" />
           </div>
         )}
@@ -67,13 +67,13 @@ function PostCardLarge({ post }: { post: PostWithRelations }) {
           {post.categories.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {post.categories.map((cat) => (
-                <Badge key={cat.id} variant="secondary" className="text-xs">{cat.name}</Badge>
+                <Badge key={cat.id} variant="secondary" className="text-xs bg-accent/10 text-primary border-none">{cat.name}</Badge>
               ))}
             </div>
           )}
-          <h3 className="font-serif text-lg font-semibold leading-snug line-clamp-2">{post.title}</h3>
+          <h3 className="font-serif text-lg font-bold leading-snug line-clamp-2">{post.title}</h3>
           {post.excerpt && <p className="text-sm text-muted-foreground line-clamp-2 flex-1">{post.excerpt}</p>}
-          <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground mt-auto pt-2">
+          <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground mt-auto pt-2 font-medium">
             {date && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{date}</span>}
             {post.authorName && <span className="flex items-center gap-1"><User className="h-3 w-3" />{post.authorName}</span>}
           </div>
@@ -84,21 +84,21 @@ function PostCardLarge({ post }: { post: PostWithRelations }) {
 }
 
 function PostCardCompact({ post, index }: { post: PostWithRelations; index?: number }) {
-  const date = formatDateShort(post.publishedAt);
+  const date = formatDate(post.publishedAt);
   return (
     <Link href={`/${post.slug}`} data-testid={`card-compact-${post.id}`}>
-      <div className="flex gap-3 p-3 rounded-md hover-elevate active-elevate-2 cursor-pointer">
+      <div className="flex gap-4 p-3 rounded-md hover:bg-accent/5 transition-colors cursor-pointer group border-b border-border/50 last:border-0">
         {index !== undefined && (
-          <span className="text-3xl font-bold text-primary/20 flex-shrink-0 w-8 text-center">{index}</span>
+          <span className="text-4xl font-black text-primary/10 flex-shrink-0 w-12 text-center group-hover:text-primary/20 transition-colors italic">{index}</span>
         )}
         {post.featuredImage && (
-          <div className="w-20 h-16 flex-shrink-0 rounded-md overflow-hidden">
-            <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover" loading="lazy" />
+          <div className="w-24 h-16 flex-shrink-0 rounded overflow-hidden shadow-sm">
+            <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
           </div>
         )}
-        <div className="flex-1 min-w-0">
-          <h4 className="font-serif text-sm font-semibold leading-snug line-clamp-2">{post.title}</h4>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+        <div className="flex-1 min-w-0 flex flex-col justify-center">
+          <h4 className="font-serif text-base font-bold leading-tight line-clamp-2 group-hover:text-primary transition-colors">{post.title}</h4>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5 font-medium">
             {date && <span>{date}</span>}
           </div>
         </div>
@@ -111,9 +111,9 @@ function PostCardHorizontal({ post }: { post: PostWithRelations }) {
   const date = formatDate(post.publishedAt);
   return (
     <Link href={`/${post.slug}`} data-testid={`card-horiz-${post.id}`}>
-      <Card className="overflow-visible hover-elevate active-elevate-2 cursor-pointer flex flex-col sm:flex-row h-full">
+      <Card className="overflow-visible hover-elevate active-elevate-2 cursor-pointer flex flex-col sm:flex-row h-full border-none shadow-sm rounded-xl">
         {post.featuredImage && (
-          <div className="sm:w-48 aspect-video sm:aspect-auto flex-shrink-0 overflow-hidden rounded-t-md sm:rounded-l-md sm:rounded-tr-none">
+          <div className="sm:w-48 aspect-video sm:aspect-auto flex-shrink-0 overflow-hidden rounded-t-xl sm:rounded-l-xl sm:rounded-tr-none">
             <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover" loading="lazy" />
           </div>
         )}
@@ -121,13 +121,13 @@ function PostCardHorizontal({ post }: { post: PostWithRelations }) {
           {post.categories.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {post.categories.map((cat) => (
-                <Badge key={cat.id} variant="secondary" className="text-xs">{cat.name}</Badge>
+                <Badge key={cat.id} variant="secondary" className="text-xs bg-accent/10 text-primary border-none">{cat.name}</Badge>
               ))}
             </div>
           )}
-          <h3 className="font-serif text-base font-semibold leading-snug line-clamp-2">{post.title}</h3>
+          <h3 className="font-serif text-base font-bold leading-snug line-clamp-2">{post.title}</h3>
           {post.excerpt && <p className="text-sm text-muted-foreground line-clamp-2">{post.excerpt}</p>}
-          <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground mt-auto pt-1">
+          <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground mt-auto pt-1 font-medium">
             {date && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{date}</span>}
           </div>
         </div>
@@ -139,8 +139,8 @@ function PostCardHorizontal({ post }: { post: PostWithRelations }) {
 function BannerSidebar({ banner }: { banner: Banner }) {
   return (
     <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner.id}`}>
-      <Card className="overflow-visible hover-elevate cursor-pointer">
-        <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto rounded-md" loading="lazy" />
+      <Card className="overflow-visible hover-elevate cursor-pointer border-none shadow-none bg-transparent">
+        <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto rounded-xl shadow-md" loading="lazy" />
       </Card>
     </a>
   );
@@ -149,9 +149,9 @@ function BannerSidebar({ banner }: { banner: Banner }) {
 function BannerHorizontal({ banner }: { banner: Banner }) {
   const showTitle = banner.showTitle ?? true;
   return (
-    <div className="relative group overflow-hidden rounded-md border" data-testid={`banner-horizontal-${banner.id}`}>
+    <div className="relative group overflow-hidden rounded-xl border-none" data-testid={`banner-horizontal-${banner.id}`}>
       <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" className="block w-full">
-        <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto object-cover" loading="lazy" />
+        <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto object-cover shadow-lg" loading="lazy" />
       </a>
       {( (showTitle && banner.title) || banner.showButton) && (
         <div className="absolute inset-0 flex flex-col justify-end p-12 bg-black/5 pointer-events-none">
@@ -201,7 +201,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
   if (posts.length === 0) return null;
   const mainPost = posts[0];
   const bottomPosts = posts.slice(1, 4);
-  const mainDate = formatDateMonth(mainPost.publishedAt);
+  const mainDate = formatDate(mainPost.publishedAt);
 
   const banner1 = sidebarBanners[0] || null;
   const banner2 = sidebarBanners[1] || null;
@@ -212,49 +212,49 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-stretch">
         <div className="flex flex-col h-full">
           <Link href={`/${mainPost.slug}`} data-testid={`card-post-${mainPost.id}`}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-0 cursor-pointer hover-elevate active-elevate-2 rounded-md overflow-visible">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-0 cursor-pointer hover-elevate active-elevate-2 rounded-xl overflow-hidden shadow-sm border border-border/40">
               {mainPost.featuredImage && (
-                <div className="aspect-[16/10] md:aspect-auto overflow-hidden relative rounded-l-md">
+                <div className="aspect-[16/10] md:aspect-auto overflow-hidden relative">
                   {mainPost.categories.length > 0 && (
                     <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1">
                       {mainPost.categories.map((cat) => (
-                        <Badge key={cat.id} className="bg-accent-bright text-accent-bright-foreground border-accent-bright text-xs">{cat.name}</Badge>
+                        <Badge key={cat.id} className="bg-accent-bright text-accent-bright-foreground border-accent-bright text-xs rounded-sm shadow-sm">{cat.name}</Badge>
                       ))}
                     </div>
                   )}
                   <img src={mainPost.featuredImage} alt={mainPost.title} className="w-full h-full object-cover" loading="lazy" />
                 </div>
               )}
-              <div className="flex flex-col justify-center p-6 gap-3">
-                {mainDate && <span className="text-sm text-muted-foreground">{mainDate}</span>}
-                <h2 className="font-serif text-xl md:text-2xl font-bold leading-snug" data-testid="text-main-post-title">
+              <div className="flex flex-col justify-center p-8 gap-4 bg-card">
+                {mainDate && <span className="text-xs font-bold text-primary/60 uppercase tracking-wider">{mainDate}</span>}
+                <h2 className="font-serif text-2xl md:text-3xl font-black leading-tight text-foreground" data-testid="text-main-post-title">
                   {mainPost.title}
                 </h2>
                 {mainPost.excerpt && (
-                  <p className="text-sm text-muted-foreground line-clamp-3">{mainPost.excerpt}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">{mainPost.excerpt}</p>
                 )}
               </div>
             </div>
           </Link>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6 flex-1">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-8 flex-1">
             {bottomPosts.map((post) => {
-              const d = formatDateMonth(post.publishedAt);
+              const d = formatDate(post.publishedAt);
               return (
                 <Link key={post.id} href={`/${post.slug}`} data-testid={`card-post-${post.id}`}>
-                  <div className="cursor-pointer hover-elevate active-elevate-2 rounded-md p-1">
+                  <div className="cursor-pointer group">
                     {post.featuredImage && (
-                      <div className="aspect-[16/10] overflow-hidden rounded-md mb-3">
-                        <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover" loading="lazy" />
+                      <div className="aspect-[16/10] overflow-hidden rounded-xl mb-3 shadow-sm border border-border/40">
+                        <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                       </div>
                     )}
                     <div className="flex items-center gap-3 flex-wrap mb-2">
-                      {d && <span className="text-xs text-muted-foreground">{d}</span>}
+                      {d && <span className="text-xs font-bold text-muted-foreground/80">{d}</span>}
                       {post.categories.length > 0 && post.categories.slice(0, 1).map((cat) => (
-                        <Badge key={cat.id} className="bg-accent-bright text-accent-bright-foreground border-accent-bright text-xs">{cat.name}</Badge>
+                        <Badge key={cat.id} className="bg-accent-bright/10 text-accent-bright border-none text-[10px] uppercase font-bold tracking-tighter px-1.5 py-0">{cat.name}</Badge>
                       ))}
                     </div>
-                    <h3 className="font-serif text-sm font-bold leading-snug line-clamp-2">{post.title}</h3>
+                    <h3 className="font-serif text-base font-bold leading-tight line-clamp-2 group-hover:text-primary transition-colors">{post.title}</h3>
                   </div>
                 </Link>
               );
@@ -264,16 +264,16 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
 
         <div className="flex flex-col gap-6 h-full" data-testid="sidebar-banners">
           {banner1 && (
-            <div className="flex-1 border rounded-md p-4">
+            <div className="flex-1 border-none p-0">
               <a href={banner1.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner1.id}`}>
-                <div className="aspect-[1400/788] overflow-hidden rounded-md">
+                <div className="aspect-[1400/788] overflow-hidden rounded-xl shadow-md">
                   <img src={banner1.imageUrl} alt={banner1.title} className="w-full h-full object-cover" loading="lazy" />
                 </div>
               </a>
               {(banner1.showTitle ?? true) && banner1.title && (
-                <div className="mt-3">
+                <div className="mt-3 px-1">
                   <p 
-                    className={`text-muted-foreground line-clamp-2 mb-2 ${
+                    className={`text-muted-foreground line-clamp-2 mb-2 font-medium ${
                       banner1.titleAlignment === 'center' ? 'text-center' : 
                       banner1.titleAlignment === 'right' ? 'text-right' : 'text-left'
                     }`}
@@ -289,7 +289,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                       <a href={banner1.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-banner-cta-${banner1.id}`}>
                         <Button 
                           size="sm" 
-                          className={`${banner1.buttonColor || "bg-[#31D5FF]"} text-[#000A24] hover:opacity-90 border-none h-auto py-2 px-4 font-medium`}
+                          className={`${banner1.buttonColor || "bg-[#31D5FF]"} text-[#000A24] hover:opacity-90 border-none h-auto py-2 px-4 font-bold rounded-sm shadow-sm`}
                           style={{ fontSize: `${banner1.buttonFontSize || 12}px` }}
                           data-testid={`button-banner-cta-${banner1.id}`}
                         >
@@ -304,16 +304,16 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
           )}
 
           {banner2 && (
-            <div className="flex-1 border rounded-md p-4">
+            <div className="flex-1 border-none p-0">
               <a href={banner2.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner2.id}`}>
-                <div className="aspect-[1400/788] overflow-hidden rounded-md">
+                <div className="aspect-[1400/788] overflow-hidden rounded-xl shadow-md">
                   <img src={banner2.imageUrl} alt={banner2.title} className="w-full h-full object-cover" loading="lazy" />
                 </div>
               </a>
               {(banner2.showTitle ?? true) && banner2.title && (
-                <div className="mt-3">
+                <div className="mt-3 px-1">
                   <p 
-                    className={`text-muted-foreground line-clamp-2 mb-2 ${
+                    className={`text-muted-foreground line-clamp-2 mb-2 font-medium ${
                       banner2.titleAlignment === 'center' ? 'text-center' : 
                       banner2.titleAlignment === 'right' ? 'text-right' : 'text-left'
                     }`}
@@ -329,7 +329,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                       <a href={banner2.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-banner-cta-${banner2.id}`}>
                         <Button 
                           size="sm" 
-                          className={`${banner2.buttonColor || "bg-[#31D5FF]"} text-[#000A24] hover:opacity-90 border-none h-auto py-2 px-4 font-medium`}
+                          className={`${banner2.buttonColor || "bg-[#31D5FF]"} text-[#000A24] hover:opacity-90 border-none h-auto py-2 px-4 font-bold rounded-sm shadow-sm`}
                           style={{ fontSize: `${banner2.buttonFontSize || 12}px` }}
                           data-testid={`button-banner-cta-${banner2.id}`}
                         >
@@ -422,7 +422,7 @@ function SectionMostReadAndCategories({ mostRead, categories: cats }: { mostRead
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
         <div>
           <SectionTitle>Mais Lidos</SectionTitle>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+          <div className="flex flex-col gap-2">
             {mostRead.map((post, i) => (
               <PostCardCompact key={post.id} post={post} index={i + 1} />
             ))}
@@ -493,16 +493,16 @@ function SectionRowCategories({ row1, row2 }: { row1: { category: Category; post
   return (
     <section className="max-w-7xl mx-auto px-4 py-10" data-testid="section-row-categories">
       {rows.map((row) => (
-        <div key={row.category.id} className="mb-10 last:mb-0">
-          <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
+        <div key={row.category.id} className="mb-14 last:mb-0">
+          <div className="flex items-center justify-between gap-4 flex-wrap mb-8">
             <SectionTitle className="mb-0">{row.category.name}</SectionTitle>
             <Link href={`/categoria/${row.category.slug}`}>
-              <Button variant="outline" size="sm">
-                Ver mais <ArrowRight className="h-4 w-4 ml-1" />
+              <Button variant="outline" size="sm" className="rounded-full px-4 border-primary/20 hover:bg-primary/5">
+                Ver mais <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </Link>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {row.posts.map((post) => (
               <PostCardLarge key={post.id} post={post} />
             ))}

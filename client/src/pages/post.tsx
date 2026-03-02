@@ -248,38 +248,44 @@ function renderMathAndCode(contentRef: React.RefObject<HTMLDivElement | null>) {
 
     const btn = document.createElement("button");
     btn.className = "copy-code-btn";
-    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
     btn.title = "Copiar código";
     btn.setAttribute("data-testid", "button-copy-code");
-    btn.addEventListener("click", () => {
-      const code = pre.querySelector("code");
-      if (!code) return;
-      const text = code.textContent || "";
+    btn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const codeEl = pre.querySelector("code");
+      if (!codeEl) return;
+      
+      // Get text excluding line numbers
+      const text = Array.from(codeEl.childNodes)
+        .filter(node => !node.parentElement?.classList.contains('line-numbers'))
+        .map(node => node.textContent)
+        .join("");
+
       const showSuccess = () => {
-        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check text-green-500"><polyline points="20 6 9 17 4 12"/></svg>';
         setTimeout(() => {
-          btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+          btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
         }, 2000);
       };
-      const fallbackCopy = () => {
+
+      navigator.clipboard.writeText(text).then(showSuccess).catch(() => {
         const textarea = document.createElement("textarea");
         textarea.value = text;
         textarea.style.position = "fixed";
-        textarea.style.left = "-9999px";
+        textarea.style.opacity = "0";
         document.body.appendChild(textarea);
         textarea.select();
         try {
           document.execCommand("copy");
           showSuccess();
-        } catch {}
+        } catch (err) {
+          console.error('Fallback copy failed', err);
+        }
         document.body.removeChild(textarea);
-      };
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(showSuccess).catch(fallbackCopy);
-      } else {
-        fallbackCopy();
-      }
-    });
+      });
+    };
     wrapper.appendChild(btn);
   });
 }
