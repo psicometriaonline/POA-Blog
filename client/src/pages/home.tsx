@@ -154,8 +154,8 @@ function BannerHorizontal({ banner }: { banner: Banner }) {
         <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto object-cover" loading="lazy" />
       </a>
       {( (showTitle && banner.title) || banner.showButton) && (
-        <div className="absolute inset-0 flex flex-col justify-center p-8 bg-black/5 pointer-events-none">
-          <div className="max-w-xl w-full">
+        <div className="absolute inset-0 flex flex-col justify-end p-12 bg-black/5 pointer-events-none">
+          <div className="w-full">
             {showTitle && banner.title && (
               <h3 
                 className={`font-serif font-bold text-white mb-4 drop-shadow-md ${
@@ -181,7 +181,7 @@ function BannerHorizontal({ banner }: { banner: Banner }) {
               >
                 <a href={banner.linkUrl} target="_blank" rel="noopener noreferrer">
                   <Button 
-                    className={`${banner.buttonColor || "bg-accent-bright"} text-white border-none shadow-lg h-auto py-2 px-6 rounded-sm`}
+                    className={`${banner.buttonColor || "bg-[#31D5FF]"} text-[#000A24] hover:opacity-90 border-none shadow-lg h-auto py-2.5 px-8 rounded-sm font-semibold`}
                     style={{ fontSize: `${banner.buttonFontSize || 14}px` }}
                     data-testid={`button-banner-cta-horiz-${banner.id}`}
                   >
@@ -289,7 +289,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                       <a href={banner1.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-banner-cta-${banner1.id}`}>
                         <Button 
                           size="sm" 
-                          className={`${banner1.buttonColor || "bg-accent-bright"} text-white border-none h-auto py-2 px-4`}
+                          className={`${banner1.buttonColor || "bg-[#31D5FF]"} text-[#000A24] hover:opacity-90 border-none h-auto py-2 px-4 font-medium`}
                           style={{ fontSize: `${banner1.buttonFontSize || 12}px` }}
                           data-testid={`button-banner-cta-${banner1.id}`}
                         >
@@ -329,7 +329,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                       <a href={banner2.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-banner-cta-${banner2.id}`}>
                         <Button 
                           size="sm" 
-                          className={`${banner2.buttonColor || "bg-accent-bright"} text-white border-none h-auto py-2 px-4`}
+                          className={`${banner2.buttonColor || "bg-[#31D5FF]"} text-[#000A24] hover:opacity-90 border-none h-auto py-2 px-4 font-medium`}
                           style={{ fontSize: `${banner2.buttonFontSize || 12}px` }}
                           data-testid={`button-banner-cta-${banner2.id}`}
                         >

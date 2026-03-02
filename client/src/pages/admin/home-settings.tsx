@@ -304,7 +304,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
   const [linkUrl, setLinkUrl] = useState("");
   const [slot, setSlot] = useState("sidebar");
   const [buttonText, setButtonText] = useState("Saiba mais");
-  const [buttonColor, setButtonColor] = useState("bg-accent-bright");
+  const [buttonColor, setButtonColor] = useState("bg-[#31D5FF]");
   const [buttonAlignment, setButtonAlignment] = useState("left");
   const [showButton, setShowButton] = useState(false);
   const [titleAlignment, setTitleAlignment] = useState("left");
@@ -322,7 +322,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
     setLinkUrl("");
     setSlot("sidebar");
     setButtonText("Saiba mais");
-    setButtonColor("bg-accent-bright");
+    setButtonColor("bg-[#31D5FF]");
     setButtonAlignment("left");
     setShowButton(false);
     setTitleAlignment("left");
@@ -374,7 +374,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
     setLinkUrl(banner.linkUrl || "");
     setSlot(banner.slot);
     setButtonText(banner.buttonText || "Saiba mais");
-    setButtonColor(banner.buttonColor || "bg-accent-bright");
+    setButtonColor(banner.buttonColor || "bg-[#31D5FF]");
     setButtonAlignment(banner.buttonAlignment || "left");
     setShowButton(banner.showButton ?? false);
     setTitleAlignment(banner.titleAlignment || "left");
