@@ -345,7 +345,6 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
               )}
             </div>
           )}
-        </div>
 
           {!banner1 && !banner2 && (
             <div className="aspect-[1400/788] rounded-md border p-4 flex items-center justify-center">
