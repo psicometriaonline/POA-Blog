@@ -148,11 +148,45 @@ function BannerSidebar({ banner }: { banner: Banner }) {
 
 function BannerHorizontal({ banner }: { banner: Banner }) {
   return (
-    <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-horizontal-${banner.id}`}>
-      <Card className="overflow-visible hover-elevate cursor-pointer">
-        <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto rounded-md" loading="lazy" />
-      </Card>
-    </a>
+    <div className="relative group overflow-hidden rounded-md border" data-testid={`banner-horizontal-${banner.id}`}>
+      <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" className="block w-full">
+        <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto object-cover" loading="lazy" />
+      </a>
+      {(banner.title || banner.showButton) && (
+        <div className="absolute inset-0 flex flex-col justify-center p-8 bg-black/10">
+          <div className="max-w-xl">
+            {banner.title && (
+              <h3 
+                className={`font-serif font-bold text-white mb-4 drop-shadow-md ${
+                  banner.titleAlignment === 'center' ? 'text-center' : 
+                  banner.titleAlignment === 'right' ? 'text-right' : 'text-left'
+                }`}
+                style={{ fontSize: `${banner.titleFontSize || 28}px` }}
+              >
+                {banner.title}
+              </h3>
+            )}
+            {banner.showButton && banner.linkUrl && (
+              <div className={`flex ${
+                banner.buttonAlignment === 'center' ? 'justify-center' : 
+                banner.buttonAlignment === 'right' ? 'justify-end' : 'justify-start'
+              }`}>
+                <a href={banner.linkUrl} target="_blank" rel="noopener noreferrer">
+                  <Button 
+                    className={`${banner.buttonColor || "bg-accent-bright"} text-white border-none shadow-lg px-8 py-6`}
+                    style={{ fontSize: `${banner.buttonFontSize || 18}px` }}
+                    data-testid={`button-banner-cta-horiz-${banner.id}`}
+                  >
+                    {banner.buttonText || "Saiba mais"}
+                    <ArrowRight className="h-5 w-5 ml-2" />
+                  </Button>
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -263,6 +297,13 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
             </div>
           )}
 
+          {banner2 && (
+            <div className="flex-1 border rounded-md p-4">
+              <a href={banner2.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner2.id}`}>
+                <div className="aspect-[1400/788] overflow-hidden rounded-md">
+                  <img src={banner2.imageUrl} alt={banner2.title} className="w-full h-full object-cover" loading="lazy" />
+                </div>
+              </a>
               {banner2.title && (
                 <div className="mt-3">
                   <p 
@@ -294,6 +335,8 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                   )}
                 </div>
               )}
+            </div>
+          )}
 
           {!banner1 && !banner2 && (
             <div className="aspect-[1400/788] rounded-md border p-4 flex items-center justify-center">
