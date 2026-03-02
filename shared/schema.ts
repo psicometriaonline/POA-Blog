@@ -85,6 +85,9 @@ export const banners = pgTable("banners", {
   slot: text("slot").notNull(),
   isActive: boolean("is_active").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
+  buttonText: text("button_text"),
+  buttonColor: text("button_color"),
+  buttonAlignment: text("button_alignment"),
 });
 
 export const freeMaterials = pgTable("free_materials", {

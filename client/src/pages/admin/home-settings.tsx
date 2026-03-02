@@ -286,6 +286,9 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
   const [newImageUrl, setNewImageUrl] = useState("");
   const [newLinkUrl, setNewLinkUrl] = useState("");
   const [newSlot, setNewSlot] = useState("sidebar");
+  const [newButtonText, setNewButtonText] = useState("Saiba mais");
+  const [newButtonColor, setNewButtonColor] = useState("bg-accent-bright");
+  const [newButtonAlignment, setNewButtonAlignment] = useState("left");
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -294,6 +297,9 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
         imageUrl: newImageUrl,
         linkUrl: newLinkUrl,
         slot: newSlot,
+        buttonText: newButtonText,
+        buttonColor: newButtonColor,
+        buttonAlignment: newButtonAlignment,
       });
     },
     onSuccess: () => {
@@ -302,6 +308,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
       setNewTitle("");
       setNewImageUrl("");
       setNewLinkUrl("");
+      setNewButtonText("Saiba mais");
       toast({ title: "Banner criado" });
     },
     onError: () => {
@@ -352,6 +359,27 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
           <div>
             <Label htmlFor="banner-link">URL do Link</Label>
             <Input id="banner-link" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)} data-testid="input-banner-link" />
+          </div>
+          <div>
+            <Label htmlFor="banner-button-text">Texto do Botão</Label>
+            <Input id="banner-button-text" value={newButtonText} onChange={(e) => setNewButtonText(e.target.value)} data-testid="input-banner-button-text" />
+          </div>
+          <div>
+            <Label htmlFor="banner-button-color">Cor do Botão (Classe Tailwind)</Label>
+            <Input id="banner-button-color" value={newButtonColor} onChange={(e) => setNewButtonColor(e.target.value)} data-testid="input-banner-button-color" placeholder="bg-accent-bright" />
+          </div>
+          <div>
+            <Label htmlFor="banner-button-alignment">Alinhamento do Botão</Label>
+            <Select value={newButtonAlignment} onValueChange={setNewButtonAlignment}>
+              <SelectTrigger data-testid="select-banner-button-alignment">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="left">Esquerda</SelectItem>
+                <SelectItem value="center">Centralizado</SelectItem>
+                <SelectItem value="right">Direita</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <Button

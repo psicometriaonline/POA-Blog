@@ -233,12 +233,21 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                 <div className="mt-3">
                   <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{banner1.title}</p>
                   {banner1.linkUrl && (
-                    <a href={banner1.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-banner-cta-${banner1.id}`}>
-                      <Button size="sm" className="bg-accent-bright text-accent-bright-foreground border-accent-bright" data-testid={`button-banner-cta-${banner1.id}`}>
-                        Saiba mais
-                        <ArrowRight className="h-3 w-3 ml-1" />
-                      </Button>
-                    </a>
+                    <div className={`flex ${
+                      banner1.buttonAlignment === 'center' ? 'justify-center' : 
+                      banner1.buttonAlignment === 'right' ? 'justify-end' : 'justify-start'
+                    }`}>
+                      <a href={banner1.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-banner-cta-${banner1.id}`}>
+                        <Button 
+                          size="sm" 
+                          className={`${banner1.buttonColor || "bg-accent-bright"} text-white border-none`}
+                          data-testid={`button-banner-cta-${banner1.id}`}
+                        >
+                          {banner1.buttonText || "Saiba mais"}
+                          <ArrowRight className="h-3 w-3 ml-1" />
+                        </Button>
+                      </a>
+                    </div>
                   )}
                 </div>
               )}
