@@ -70,7 +70,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `/:slug` - Individual post (SEO-friendly, no /post/ prefix, matches original WP URLs)
 - `/categoria/:slug` - Posts by category
 - `/tag/:slug` - Posts by tag
-- `/busca` - Search page
+- `/busca` - Search page with simple/advanced modes (filter by title/content, category, tag, date range; sort by relevance/A-Z/Z-A/newest/oldest)
 - `/termos-de-uso` - Terms of Use static page
 - `/politicas-de-privacidade` - Privacy Policy static page
 - `/quem-somos` - About Us static page

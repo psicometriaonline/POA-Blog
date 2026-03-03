@@ -483,9 +483,16 @@ export async function registerRoutes(
       const query = (req.query.q as string) || "";
       const limit = parseInt(req.query.limit as string) || 12;
       const offset = parseInt(req.query.offset as string) || 0;
+      const searchIn = (req.query.searchIn as string) || "all";
+      const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined;
+      const tagId = req.query.tagId ? parseInt(req.query.tagId as string) : undefined;
+      const dateFrom = (req.query.dateFrom as string) || undefined;
+      const dateTo = (req.query.dateTo as string) || undefined;
+      const sort = (req.query.sort as string) || "relevance";
       if (!query) return res.json({ posts: [], total: 0, limit, offset });
-      const posts = await storage.searchPosts(query, { limit, offset });
-      const total = await storage.searchPostCount(query);
+      const searchOptions = { limit, offset, searchIn, categoryId, tagId, dateFrom, dateTo, sort };
+      const posts = await storage.searchPosts(query, searchOptions);
+      const total = await storage.searchPostCount(query, { searchIn, categoryId, tagId, dateFrom, dateTo });
       res.json({ posts, total, limit, offset });
     } catch (error: any) {
       res.status(500).json({ message: error.message });

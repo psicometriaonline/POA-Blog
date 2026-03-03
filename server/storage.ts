@@ -51,8 +51,8 @@ export interface IStorage {
   getPostCountByCategory(categorySlug: string): Promise<number>;
   getPostsByTag(tagSlug: string, options?: { limit?: number; offset?: number }): Promise<PostWithRelations[]>;
   getPostCountByTag(tagSlug: string): Promise<number>;
-  searchPosts(query: string, options?: { limit?: number; offset?: number }): Promise<PostWithRelations[]>;
-  searchPostCount(query: string): Promise<number>;
+  searchPosts(query: string, options?: { limit?: number; offset?: number; searchIn?: string; categoryId?: number; tagId?: number; dateFrom?: string; dateTo?: string; sort?: string }): Promise<PostWithRelations[]>;
+  searchPostCount(query: string, options?: { searchIn?: string; categoryId?: number; tagId?: number; dateFrom?: string; dateTo?: string }): Promise<number>;
   createPost(data: InsertPost, categoryIds?: number[], tagIds?: number[]): Promise<PostWithRelations>;
   updatePost(id: number, data: Partial<InsertPost>, categoryIds?: number[], tagIds?: number[]): Promise<PostWithRelations | undefined>;
   deletePost(id: number): Promise<boolean>;
@@ -392,33 +392,77 @@ export class DatabaseStorage implements IStorage {
     return result.count;
   }
 
-  async searchPosts(query: string, options?: { limit?: number; offset?: number }): Promise<PostWithRelations[]> {
+  private buildSearchConditions(query: string, options?: { searchIn?: string; categoryId?: number; tagId?: number; dateFrom?: string; dateTo?: string }) {
     const searchTerm = `%${query}%`;
-    let dbQuery = db.select().from(posts)
-      .where(or(
-        ilike(posts.title, searchTerm),
-        ilike(posts.content, searchTerm),
-        ilike(posts.excerpt, searchTerm),
-      ))
-      .orderBy(desc(posts.publishedAt), desc(posts.createdAt))
-      .$dynamic();
+    const conditions: any[] = [];
+
+    const searchIn = options?.searchIn || "all";
+    if (searchIn === "title") {
+      conditions.push(ilike(posts.title, searchTerm));
+    } else if (searchIn === "content") {
+      conditions.push(or(ilike(posts.content, searchTerm), ilike(posts.excerpt, searchTerm)));
+    } else {
+      conditions.push(or(ilike(posts.title, searchTerm), ilike(posts.content, searchTerm), ilike(posts.excerpt, searchTerm)));
+    }
+
+    if (options?.dateFrom) {
+      conditions.push(gte(posts.publishedAt, new Date(options.dateFrom)));
+    }
+    if (options?.dateTo) {
+      const endDate = new Date(options.dateTo);
+      endDate.setHours(23, 59, 59, 999);
+      conditions.push(lte(posts.publishedAt, endDate));
+    }
+
+    return conditions;
+  }
+
+  private buildSearchQuery(options?: { categoryId?: number; tagId?: number }) {
+    let baseQuery = db.select({ id: posts.id }).from(posts).$dynamic();
+    if (options?.categoryId) {
+      baseQuery = baseQuery.innerJoin(postCategories, and(eq(postCategories.postId, posts.id), eq(postCategories.categoryId, options.categoryId)));
+    }
+    if (options?.tagId) {
+      baseQuery = baseQuery.innerJoin(postTags, and(eq(postTags.postId, posts.id), eq(postTags.tagId, options.tagId)));
+    }
+    return baseQuery;
+  }
+
+  async searchPosts(query: string, options?: { limit?: number; offset?: number; searchIn?: string; categoryId?: number; tagId?: number; dateFrom?: string; dateTo?: string; sort?: string }): Promise<PostWithRelations[]> {
+    const conditions = this.buildSearchConditions(query, options);
+
+    const sortOrder = options?.sort || "relevance";
+    let orderClause;
+    if (sortOrder === "az") orderClause = [asc(posts.title)];
+    else if (sortOrder === "za") orderClause = [desc(posts.title)];
+    else if (sortOrder === "newest") orderClause = [desc(posts.publishedAt)];
+    else if (sortOrder === "oldest") orderClause = [asc(posts.publishedAt)];
+    else orderClause = [desc(posts.publishedAt), desc(posts.createdAt)];
+
+    let dbQuery = this.buildSearchQuery(options);
+    dbQuery = dbQuery.where(and(...conditions)).orderBy(...orderClause);
 
     if (options?.limit) dbQuery = dbQuery.limit(options.limit);
     if (options?.offset) dbQuery = dbQuery.offset(options.offset);
 
-    const rawPosts = await dbQuery;
+    const matchedIds = await dbQuery;
+    if (matchedIds.length === 0) return [];
+
+    const ids = matchedIds.map(r => r.id);
+    const rawPosts = await db.select().from(posts).where(inArray(posts.id, ids)).orderBy(...orderClause);
     return enrichPostsWithRelations(rawPosts);
   }
 
-  async searchPostCount(query: string): Promise<number> {
-    const searchTerm = `%${query}%`;
-    const [result] = await db.select({ count: sql<number>`count(*)::int` })
-      .from(posts)
-      .where(or(
-        ilike(posts.title, searchTerm),
-        ilike(posts.content, searchTerm),
-        ilike(posts.excerpt, searchTerm),
-      ));
+  async searchPostCount(query: string, options?: { searchIn?: string; categoryId?: number; tagId?: number; dateFrom?: string; dateTo?: string }): Promise<number> {
+    const conditions = this.buildSearchConditions(query, options);
+    let baseQuery = db.select({ count: sql<number>`count(DISTINCT ${posts.id})::int` }).from(posts).$dynamic();
+    if (options?.categoryId) {
+      baseQuery = baseQuery.innerJoin(postCategories, and(eq(postCategories.postId, posts.id), eq(postCategories.categoryId, options.categoryId)));
+    }
+    if (options?.tagId) {
+      baseQuery = baseQuery.innerJoin(postTags, and(eq(postTags.postId, posts.id), eq(postTags.tagId, options.tagId)));
+    }
+    const [result] = await baseQuery.where(and(...conditions));
     return result.count;
   }
 
