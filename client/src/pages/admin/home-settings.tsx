@@ -186,13 +186,18 @@ function GeneralSettingsTab({ settings, categories }: { settings: Record<string,
 function SectionsTab({ settings, categories }: { settings: Record<string, string>; categories: Category[] }) {
   const { toast } = useToast();
   const [featuredSlug, setFeaturedSlug] = useState("");
-  const [diverseSlugs, setDiverseSlugs] = useState("");
+  const [diverseSlug1, setDiverseSlug1] = useState("");
+  const [diverseSlug2, setDiverseSlug2] = useState("");
+  const [diverseSlug3, setDiverseSlug3] = useState("");
   const [row1Slug, setRow1Slug] = useState("");
   const [row2Slug, setRow2Slug] = useState("");
 
   useEffect(() => {
     setFeaturedSlug(settings["featured_category_slug"] || "");
-    setDiverseSlugs(settings["diverse_category_slugs"] || "");
+    const diverseParts = (settings["diverse_category_slugs"] || "").split(",").filter(Boolean);
+    setDiverseSlug1(diverseParts[0]?.trim() || "");
+    setDiverseSlug2(diverseParts[1]?.trim() || "");
+    setDiverseSlug3(diverseParts[2]?.trim() || "");
     setRow1Slug(settings["row_section_1_slug"] || "");
     setRow2Slug(settings["row_section_2_slug"] || "");
   }, [settings]);
@@ -232,15 +237,49 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
 
       <div>
         <h3 className="font-semibold text-lg mb-4">Categorias Diversas (até 3)</h3>
-        <div>
-          <Label>Slugs separados por vírgula</Label>
-          <Input
-            value={diverseSlugs}
-            onChange={(e) => setDiverseSlugs(e.target.value)}
-            placeholder="slug1,slug2,slug3"
-            data-testid="input-diverse-slugs"
-          />
-          <p className="text-xs text-muted-foreground mt-1">Categorias disponíveis: {categories.map(c => c.slug).join(", ")}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <Label>Categoria 1</Label>
+            <Select value={diverseSlug1 || "none"} onValueChange={(v) => setDiverseSlug1(v === "none" ? "" : v)}>
+              <SelectTrigger data-testid="select-diverse-1">
+                <SelectValue placeholder="Selecionar categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhuma</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.slug}>{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Categoria 2</Label>
+            <Select value={diverseSlug2 || "none"} onValueChange={(v) => setDiverseSlug2(v === "none" ? "" : v)}>
+              <SelectTrigger data-testid="select-diverse-2">
+                <SelectValue placeholder="Selecionar categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhuma</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.slug}>{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Categoria 3</Label>
+            <Select value={diverseSlug3 || "none"} onValueChange={(v) => setDiverseSlug3(v === "none" ? "" : v)}>
+              <SelectTrigger data-testid="select-diverse-3">
+                <SelectValue placeholder="Selecionar categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhuma</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.slug}>{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -281,7 +320,7 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
       <Button
         onClick={() => saveMutation.mutate({
           featured_category_slug: featuredSlug,
-          diverse_category_slugs: diverseSlugs,
+          diverse_category_slugs: [diverseSlug1, diverseSlug2, diverseSlug3].filter(Boolean).join(","),
           row_section_1_slug: row1Slug === "none" ? "" : row1Slug,
           row_section_2_slug: row2Slug === "none" ? "" : row2Slug,
         })}
