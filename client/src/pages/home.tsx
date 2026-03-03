@@ -67,7 +67,7 @@ function PostCardLarge({ post }: { post: PostWithRelations }) {
           {post.categories.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {post.categories.map((cat) => (
-                <Badge key={cat.id} className="bg-accent-bright/10 text-accent-bright border-none text-[10px] font-bold tracking-tight px-1.5 py-0">{cat.name}</Badge>
+                <Badge key={cat.id} className="bg-accent-bright text-accent-bright-foreground border-none text-[10px] font-bold tracking-tight px-1.5 py-0.5">{cat.name}</Badge>
               ))}
             </div>
           )}
@@ -101,7 +101,7 @@ function PostCardCompact({ post, index }: { post: PostWithRelations; index?: num
           <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5 font-medium">
             {date && <span>{date}</span>}
             {post.categories.length > 0 && (
-              <Badge className="bg-accent-bright/10 text-accent-bright border-none text-[10px] font-bold tracking-tight px-1.5 py-0">{post.categories[0].name}</Badge>
+              <Badge className="bg-accent-bright text-accent-bright-foreground border-none text-[10px] font-bold tracking-tight px-1.5 py-0.5">{post.categories[0].name}</Badge>
             )}
           </div>
         </div>
@@ -124,7 +124,7 @@ function PostCardHorizontal({ post }: { post: PostWithRelations }) {
           {post.categories.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {post.categories.map((cat) => (
-                <Badge key={cat.id} className="bg-accent-bright/10 text-accent-bright border-none text-[10px] font-bold tracking-tight px-1.5 py-0">{cat.name}</Badge>
+                <Badge key={cat.id} className="bg-accent-bright text-accent-bright-foreground border-none text-[10px] font-bold tracking-tight px-1.5 py-0.5">{cat.name}</Badge>
               ))}
             </div>
           )}
@@ -221,7 +221,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                   {mainPost.categories.length > 0 && (
                     <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1">
                       {mainPost.categories.map((cat) => (
-                        <Badge key={cat.id} className="bg-white/90 text-accent-bright border-none text-[10px] font-bold tracking-tight px-2 py-0.5 shadow-sm">{cat.name}</Badge>
+                        <Badge key={cat.id} className="bg-white/90 text-accent-bright-foreground border-none text-[10px] font-bold tracking-tight px-2 py-0.5 shadow-sm">{cat.name}</Badge>
                       ))}
                     </div>
                   )}
@@ -254,7 +254,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                     <div className="flex items-center gap-3 flex-wrap mb-2">
                       {d && <span className="text-xs font-bold text-muted-foreground/80">{d}</span>}
                       {post.categories.length > 0 && post.categories.slice(0, 1).map((cat) => (
-                        <Badge key={cat.id} className="bg-accent-bright/10 text-accent-bright border-none text-[10px] font-bold tracking-tight px-1.5 py-0">{cat.name}</Badge>
+                        <Badge key={cat.id} className="bg-accent-bright text-accent-bright-foreground border-none text-[10px] font-bold tracking-tight px-1.5 py-0.5">{cat.name}</Badge>
                       ))}
                     </div>
                     <h3 className="font-serif text-base font-bold leading-tight line-clamp-2 group-hover:text-primary transition-colors">{post.title}</h3>
