@@ -1,4 +1,5 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -6,6 +7,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { BlogHeader } from "@/components/blog-header";
 import { BlogFooter } from "@/components/blog-footer";
+import { HeroBar } from "@/components/hero-bar";
+import { SectionFreeMaterials } from "@/components/section-free-materials";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import PostPage from "@/pages/post";
@@ -25,6 +28,7 @@ import ManageMediaPage from "@/pages/admin/manage-media";
 import TermsPage from "@/pages/terms";
 import PrivacyPage from "@/pages/privacy";
 import AboutPage from "@/pages/about";
+import type { FreeMaterial } from "@shared/schema";
 
 function Router() {
   return (
@@ -52,6 +56,31 @@ function Router() {
   );
 }
 
+function useIsAdmin() {
+  const [location] = useLocation();
+  return location === "/admin" || location.startsWith("/admin/");
+}
+
+function SharedHeroBar() {
+  const isAdmin = useIsAdmin();
+  const { data: settings } = useQuery<Record<string, string>>({
+    queryKey: ["/api/settings"],
+    enabled: !isAdmin,
+  });
+  if (isAdmin) return null;
+  return <HeroBar showHeadline={true} settings={settings || {}} />;
+}
+
+function SharedFreeMaterials() {
+  const isAdmin = useIsAdmin();
+  const { data: materials } = useQuery<FreeMaterial[]>({
+    queryKey: ["/api/materials"],
+    enabled: !isAdmin,
+  });
+  if (isAdmin || !materials || materials.length === 0) return null;
+  return <SectionFreeMaterials materials={materials} />;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -59,9 +88,11 @@ function App() {
         <TooltipProvider>
           <div className="min-h-screen flex flex-col">
             <BlogHeader />
+            <SharedHeroBar />
             <main className="flex-1">
               <Router />
             </main>
+            <SharedFreeMaterials />
             <BlogFooter />
           </div>
           <Toaster />

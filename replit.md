@@ -18,7 +18,8 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `server/crawler.ts` - WordPress post crawler using Cheerio
 - `client/src/pages/home.tsx` - Magazine-style home page with 11 configurable sections
 - `client/src/pages/post.tsx` - Individual post page (two-column layout, breadcrumb, social sharing, comments)
-- `client/src/components/hero-bar.tsx` - Reusable hero section (categories dropdown, search, email signup)
+- `client/src/components/hero-bar.tsx` - Reusable hero section (headline, email signup) - rendered in App.tsx shared layout
+- `client/src/components/section-free-materials.tsx` - Free materials carousel section - rendered in App.tsx shared layout
 - `client/src/pages/category.tsx` - Category listing page
 - `client/src/pages/tag.tsx` - Tag listing page
 - `client/src/pages/search.tsx` - Search results page

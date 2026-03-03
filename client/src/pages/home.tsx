@@ -2,16 +2,30 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+
+function CategoryBadge({ slug, name, className = "bg-accent-bright text-accent-bright-foreground border-none text-[10px] font-bold tracking-tight px-1.5 py-0.5 hover:bg-accent-bright/80 cursor-pointer transition-colors" }: { slug: string; name: string; className?: string }) {
+  const [, navigate] = useLocation();
+  return (
+    <button
+      type="button"
+      className={className + " inline-flex items-center rounded-md"}
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/categoria/${slug}`); }}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); navigate(`/categoria/${slug}`); } }}
+      aria-label={`Categoria: ${name}`}
+    >
+      {name}
+    </button>
+  );
+}
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, User, ArrowRight, Mail, ChevronRight, ChevronLeft, ChevronDown, Download, Search, Menu as MenuIcon } from "lucide-react";
+import { Calendar, User, ArrowRight, Mail, ChevronRight, ChevronDown, Search, Menu as MenuIcon } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import type { PostWithRelations, Category, Banner, FreeMaterial } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { HeroBar } from "@/components/hero-bar";
 import { PostCard } from "@/components/post-card";
 
 interface HomeData {
@@ -68,14 +82,7 @@ function PostCardLarge({ post }: { post: PostWithRelations }) {
           {post.categories.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {post.categories.map((cat) => (
-                <Link key={cat.id} href={`/categoria/${cat.slug}`}>
-                  <Badge 
-                    className="bg-accent-bright text-accent-bright-foreground border-none text-[10px] font-bold tracking-tight px-1.5 py-0.5 hover:bg-accent-bright/80 cursor-pointer transition-colors"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {cat.name}
-                  </Badge>
-                </Link>
+                <CategoryBadge key={cat.id} slug={cat.slug} name={cat.name} />
               ))}
             </div>
           )}
@@ -109,11 +116,7 @@ function PostCardCompact({ post, index }: { post: PostWithRelations; index?: num
           <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5 font-medium">
             {date && <span>{date}</span>}
             {post.categories.length > 0 && (
-              <Link href={`/categoria/${post.categories[0].slug}`} onClick={(e) => e.stopPropagation()}>
-                <Badge className="bg-accent-bright text-accent-bright-foreground border-none text-[10px] font-bold tracking-tight px-1.5 py-0.5 hover:bg-accent-bright/80 cursor-pointer transition-colors">
-                  {post.categories[0].name}
-                </Badge>
-              </Link>
+              <CategoryBadge slug={post.categories[0].slug} name={post.categories[0].name} />
             )}
           </div>
         </div>
@@ -136,14 +139,7 @@ function PostCardHorizontal({ post }: { post: PostWithRelations }) {
           {post.categories.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {post.categories.map((cat) => (
-                <Link key={cat.id} href={`/categoria/${cat.slug}`}>
-                  <Badge 
-                    className="bg-accent-bright text-accent-bright-foreground border-none text-[10px] font-bold tracking-tight px-1.5 py-0.5 hover:bg-accent-bright/80 cursor-pointer transition-colors"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {cat.name}
-                  </Badge>
-                </Link>
+                <CategoryBadge key={cat.id} slug={cat.slug} name={cat.name} />
               ))}
             </div>
           )}
@@ -545,78 +541,7 @@ function SectionRowCategories({ row1, row2 }: { row1: { category: Category; post
   );
 }
 
-function SectionFreeMaterials({ materials }: { materials: FreeMaterial[] }) {
-  if (materials.length === 0) return null;
 
-  const [emblaRef, emblaApi] = useEmblaCarousel({
-    loop: true,
-    align: "start",
-    slidesToScroll: 1,
-  });
-
-  const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
-  const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi]);
-
-  return (
-    <section className="bg-dark-bg" data-testid="section-free-materials">
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="font-serif text-2xl font-bold text-white mb-1">Materiais Gratuitos</h2>
-            <p className="text-white/60 text-sm">Baixe nossos recursos de estudo gratuitamente</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={scrollPrev}
-              className="flex items-center justify-center h-10 w-10 rounded-full border border-white/20 text-white/70 hover:text-white hover:border-white/40 transition-colors"
-              data-testid="button-materials-prev"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              onClick={scrollNext}
-              className="flex items-center justify-center h-10 w-10 rounded-full border border-white/20 text-white/70 hover:text-white hover:border-white/40 transition-colors"
-              data-testid="button-materials-next"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="overflow-hidden" ref={emblaRef}>
-          <div className="flex gap-5">
-            {materials.map((mat) => (
-              <div key={mat.id} className="flex-[0_0_70%] sm:flex-[0_0_45%] lg:flex-[0_0_23%] min-w-0">
-                <a href={mat.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`material-${mat.id}`} className="block group">
-                  <div className="rounded-xl overflow-hidden border border-white/10 bg-white/5 transition-colors hover:bg-white/10">
-                    {mat.imageUrl && (
-                      <div className="overflow-hidden">
-                        <img
-                          src={mat.imageUrl}
-                          alt={mat.title}
-                          className="w-full h-auto block group-hover:scale-105 transition-transform duration-300"
-                          loading="lazy"
-                        />
-                      </div>
-                    )}
-                    <div className="p-4">
-                      <h3 className="font-serif text-sm font-semibold text-white leading-snug mb-1">{mat.title}</h3>
-                      {mat.description && <p className="text-xs text-white/50 line-clamp-2">{mat.description}</p>}
-                      <div className="flex items-center gap-1 text-accent-bright text-xs font-medium mt-3">
-                        <Download className="h-3.5 w-3.5" />
-                        Baixar grátis
-                      </div>
-                    </div>
-                  </div>
-                </a>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 function HomeSkeleton() {
   return (
@@ -649,8 +574,7 @@ export default function Home() {
 
   return (
     <div>
-      {/* 1. Hero */}
-      <HeroBar showHeadline={true} settings={data.settings} />
+      {/* HeroBar is rendered in App.tsx shared layout */}
 
       {/* 2. Recent posts (main + sidebar) with sidebar banners on the right */}
       <SectionRecentPosts posts={data.recentPosts} sidebarBanners={data.sidebarBanners} />
@@ -676,8 +600,7 @@ export default function Home() {
       {/* 9. Row category sections */}
       <SectionRowCategories row1={data.rowSection1} row2={data.rowSection2} />
 
-      {/* 10. Free materials */}
-      <SectionFreeMaterials materials={data.materials} />
+      {/* SectionFreeMaterials is rendered in App.tsx shared layout */}
     </div>
   );
 }

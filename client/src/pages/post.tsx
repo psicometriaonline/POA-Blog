@@ -16,7 +16,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import DOMPurify from "dompurify";
 import { useEffect, useRef, useState } from "react";
-import { HeroBar } from "@/components/hero-bar";
+
 import { Calendar, User, Tag, ChevronRight, Send, MessageSquare, List } from "lucide-react";
 import { SiFacebook, SiLinkedin, SiWhatsapp, SiX } from "react-icons/si";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -784,7 +784,6 @@ export default function PostPage() {
   if (isLoading) {
     return (
       <>
-        <HeroBar showHeadline={true} />
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
             <div>
@@ -810,7 +809,6 @@ export default function PostPage() {
   if (!post) {
     return (
       <>
-        <HeroBar showHeadline={true} />
         <div className="max-w-7xl mx-auto px-4 py-16 text-center">
           <h1 className="text-2xl font-bold mb-4">Post nao encontrado</h1>
           <Link href="/">
@@ -831,7 +829,6 @@ export default function PostPage() {
 
   return (
     <>
-      <HeroBar showHeadline={true} />
       <div className="max-w-7xl mx-auto px-4 py-8">
         <Breadcrumb post={post} />
         <SocialShare post={post} />

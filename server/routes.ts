@@ -520,6 +520,24 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/settings", async (_req, res) => {
+    try {
+      const settings = await storage.getAllSettings();
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/materials", async (_req, res) => {
+    try {
+      const materials = await storage.getFreeMaterials();
+      res.json(materials);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/categories", async (_req, res) => {
     try {
       const cats = await storage.getCategories();

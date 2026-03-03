@@ -1,6 +1,5 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Calendar, User } from "lucide-react";
 import type { PostWithRelations } from "@shared/schema";
 import { format } from "date-fns";
@@ -11,6 +10,7 @@ interface PostCardProps {
 }
 
 export function PostCard({ post }: PostCardProps) {
+  const [, navigate] = useLocation();
   const publishedDate = post.publishedAt
     ? format(new Date(post.publishedAt), "dd 'de' MMMM, yyyy", { locale: ptBR })
     : null;
@@ -33,16 +33,16 @@ export function PostCard({ post }: PostCardProps) {
           {post.categories.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {post.categories.map((cat) => (
-                <Link key={cat.id} href={`/categoria/${cat.slug}`}>
-                  <Badge
-                    variant="secondary"
-                    className="text-xs hover:bg-accent-bright hover:text-accent-bright-foreground cursor-pointer transition-colors"
-                    data-testid={`badge-category-${cat.id}`}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {cat.name}
-                  </Badge>
-                </Link>
+                <button
+                  key={cat.id}
+                  type="button"
+                  className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold bg-secondary text-secondary-foreground hover:bg-accent-bright hover:text-accent-bright-foreground cursor-pointer transition-colors"
+                  data-testid={`badge-category-${cat.id}`}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/categoria/${cat.slug}`); }}
+                  aria-label={`Categoria: ${cat.name}`}
+                >
+                  {cat.name}
+                </button>
               ))}
             </div>
           )}
