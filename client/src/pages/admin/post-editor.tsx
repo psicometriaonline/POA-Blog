@@ -456,16 +456,6 @@ export default function PostEditor() {
     saveMutation.mutate();
   };
 
-  // Add a cleanup mutation to remove empty Indefinida category/tag after saving
-  const cleanupMutation = useMutation({
-    mutationFn: async () => {
-      // We can just call a dummy endpoint or use the existing ones if we knew the IDs, 
-      // but it's cleaner to let the backend handle it during category/tag removal.
-      // However, when EDITING a post, we might leave Indefinida empty.
-      return apiRequest("POST", "/api/admin/cleanup-indefinida", {});
-    }
-  });
-
   const saveMutation = useMutation({
     mutationFn: async () => {
       const selectedAuthor = allAuthors?.find(a => a.id === parseInt(authorId));
@@ -493,7 +483,6 @@ export default function PostEditor() {
       }
     },
     onSuccess: () => {
-      cleanupMutation.mutate();
       toast({ title: isNew ? "Post criado com sucesso" : "Post atualizado com sucesso" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/posts?limit=50&offset=0"] });
       queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string)?.startsWith("/api/posts") });

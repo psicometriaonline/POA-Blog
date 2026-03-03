@@ -741,6 +741,22 @@ export async function registerRoutes(
       }
       const post = await storage.updatePost(parseInt(req.params.id), postData, categoryIds, tagIds);
       if (!post) return res.status(404).json({ message: "Post not found" });
+
+      const cats = await storage.getCategories();
+      for (const c of cats) {
+        if (c.slug === "indefinida") {
+          const cnt = await storage.countPostsInCategory(c.id);
+          if (cnt === 0) await storage.deleteCategory(c.id);
+        }
+      }
+      const allTags = await storage.getTags();
+      for (const t of allTags) {
+        if (t.slug === "indefinida") {
+          const cnt = await storage.countPostsInTag(t.id);
+          if (cnt === 0) await storage.deleteTag(t.id);
+        }
+      }
+
       res.json(post);
     } catch (error: any) {
       console.error("Error updating post:", error);
@@ -781,10 +797,6 @@ export async function registerRoutes(
   app.delete("/api/admin/categories/:id", isAuthenticated, async (req, res) => {
     try {
       const categoryId = parseInt(req.params.id);
-      const cat = await storage.getCategory(categoryId);
-      if (cat && cat.slug === "indefinida") {
-        return res.status(400).json({ message: "A categoria \"Indefinida\" não pode ser excluída pois é usada como fallback para posts sem categoria." });
-      }
       const postsWithOnlyThis = await storage.getPostsWithOnlyCategory(categoryId);
       if (postsWithOnlyThis.length > 0) {
         let fallback = await storage.getCategoryBySlug("indefinida");
@@ -838,10 +850,6 @@ export async function registerRoutes(
   app.delete("/api/admin/tags/:id", isAuthenticated, async (req, res) => {
     try {
       const tagId = parseInt(req.params.id);
-      const tag = await storage.getTag(tagId);
-      if (tag && tag.slug === "indefinida") {
-        return res.status(400).json({ message: "A tag \"Indefinida\" não pode ser excluída pois é usada como fallback para posts sem tag." });
-      }
       const postsWithOnlyThis = await storage.getPostsWithOnlyTag(tagId);
       if (postsWithOnlyThis.length > 0) {
         let fallback = await storage.getTagBySlug("indefinida");
@@ -872,28 +880,6 @@ export async function registerRoutes(
   });
 
   // ===== AUTHOR ROUTES (Protected) =====
-
-  app.post("/api/admin/cleanup-indefinida", isAuthenticated, async (req, res) => {
-    try {
-      const cats = await storage.getCategories();
-      for (const cat of cats) {
-        if (cat.slug === "indefinida") {
-          const count = await storage.countPostsInCategory(cat.id);
-          if (count === 0) await storage.deleteCategory(cat.id);
-        }
-      }
-      const tags = await storage.getTags();
-      for (const t of tags) {
-        if (t.slug === "indefinida") {
-          const count = await storage.countPostsInTag(t.id);
-          if (count === 0) await storage.deleteTag(t.id);
-        }
-      }
-      res.json({ message: "Cleanup complete" });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
 
   app.post("/api/admin/authors", isAuthenticated, async (req, res) => {
     try {
