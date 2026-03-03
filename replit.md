@@ -135,5 +135,10 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - Date format: dd/MM/yyyy throughout home page
 - Header nav: responsive — full menu at xl+ breakpoint, hamburger menu below xl
 
+## Post Validation Rules
+- Posts must have at least 1 category and 1 tag to be saved (frontend toast + backend 400)
+- Deleting a category/tag triggers orphan check: posts that would lose their only category/tag get reassigned to "Indefinida" (auto-created if needed)
+- Confirmation dialog before deleting categories/tags in CMS
+
 ## Pending Items
 1. SEO tasks (robots.txt, sitemap.xml, SSR meta tags)

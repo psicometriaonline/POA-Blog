@@ -51,13 +51,21 @@ export default function ManageCategories() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/admin/categories/${id}`),
-    onSuccess: () => {
-      toast({ title: "Categoria excluida" });
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/categories/${id}`);
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "Categoria excluída", description: data?.reassigned ? `${data.reassigned} post(s) reclassificado(s) como "Indefinida".` : undefined });
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
     },
     onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
+
+  const handleDelete = (cat: Category) => {
+    if (!window.confirm(`Tem certeza que deseja excluir a categoria "${cat.name}"? Posts que ficarem sem categoria serão reclassificados como "Indefinida".`)) return;
+    deleteMutation.mutate(cat.id);
+  };
 
   const resetForm = () => { setName(""); setSlug(""); setDescription(""); setEditingId(null); setIsAdding(false); };
 
@@ -135,7 +143,7 @@ export default function ManageCategories() {
                 <Button size="icon" variant="ghost" onClick={() => startEdit(cat)} data-testid={`button-edit-category-${cat.id}`}>
                   <Edit className="h-4 w-4" />
                 </Button>
-                <Button size="icon" variant="ghost" onClick={() => deleteMutation.mutate(cat.id)} data-testid={`button-delete-category-${cat.id}`}>
+                <Button size="icon" variant="ghost" onClick={() => handleDelete(cat)} data-testid={`button-delete-category-${cat.id}`}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>

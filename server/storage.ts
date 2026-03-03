@@ -31,6 +31,7 @@ export interface IStorage {
   createCategory(data: InsertCategory): Promise<Category>;
   updateCategory(id: number, data: Partial<InsertCategory>): Promise<Category | undefined>;
   deleteCategory(id: number): Promise<boolean>;
+  getPostsWithOnlyCategory(categoryId: number): Promise<number[]>;
 
   getTags(): Promise<Tag[]>;
   getTag(id: number): Promise<Tag | undefined>;
@@ -38,6 +39,7 @@ export interface IStorage {
   createTag(data: InsertTag): Promise<Tag>;
   updateTag(id: number, data: Partial<InsertTag>): Promise<Tag | undefined>;
   deleteTag(id: number): Promise<boolean>;
+  getPostsWithOnlyTag(tagId: number): Promise<number[]>;
 
   getPosts(options?: { status?: string; limit?: number; offset?: number; search?: string }): Promise<PostWithRelations[]>;
   getPostCount(status?: string, search?: string): Promise<number>;
@@ -220,6 +222,18 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
+  async getPostsWithOnlyCategory(categoryId: number): Promise<number[]> {
+    const result = await db.execute(sql`
+      SELECT pc.post_id FROM post_categories pc
+      WHERE pc.category_id = ${categoryId}
+      AND NOT EXISTS (
+        SELECT 1 FROM post_categories pc2
+        WHERE pc2.post_id = pc.post_id AND pc2.category_id != ${categoryId}
+      )
+    `);
+    return (result.rows as any[]).map(r => r.post_id);
+  }
+
   async getTags(): Promise<Tag[]> {
     return db.select().from(tags).orderBy(tags.name);
   }
@@ -247,6 +261,18 @@ export class DatabaseStorage implements IStorage {
   async deleteTag(id: number): Promise<boolean> {
     const result = await db.delete(tags).where(eq(tags.id, id)).returning();
     return result.length > 0;
+  }
+
+  async getPostsWithOnlyTag(tagId: number): Promise<number[]> {
+    const result = await db.execute(sql`
+      SELECT pt.post_id FROM post_tags pt
+      WHERE pt.tag_id = ${tagId}
+      AND NOT EXISTS (
+        SELECT 1 FROM post_tags pt2
+        WHERE pt2.post_id = pt.post_id AND pt2.tag_id != ${tagId}
+      )
+    `);
+    return (result.rows as any[]).map(r => r.post_id);
   }
 
   async getPosts(options?: { status?: string; limit?: number; offset?: number; search?: string }): Promise<PostWithRelations[]> {

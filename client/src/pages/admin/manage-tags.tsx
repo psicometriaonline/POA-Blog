@@ -49,13 +49,21 @@ export default function ManageTags() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest("DELETE", `/api/admin/tags/${id}`),
-    onSuccess: () => {
-      toast({ title: "Tag excluida" });
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/tags/${id}`);
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "Tag excluída", description: data?.reassigned ? `${data.reassigned} post(s) reclassificado(s) como "Indefinida".` : undefined });
       queryClient.invalidateQueries({ queryKey: ["/api/tags"] });
     },
     onError: (e: any) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
+
+  const handleDelete = (tag: Tag) => {
+    if (!window.confirm(`Tem certeza que deseja excluir a tag "${tag.name}"? Posts que ficarem sem tag serão reclassificados como "Indefinida".`)) return;
+    deleteMutation.mutate(tag.id);
+  };
 
   const resetForm = () => { setName(""); setSlug(""); setEditingId(null); setIsAdding(false); };
 
@@ -124,7 +132,7 @@ export default function ManageTags() {
               <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => startEdit(tag)} data-testid={`button-edit-tag-${tag.id}`}>
                 <Edit className="h-3 w-3" />
               </Button>
-              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => deleteMutation.mutate(tag.id)} data-testid={`button-delete-tag-${tag.id}`}>
+              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleDelete(tag)} data-testid={`button-delete-tag-${tag.id}`}>
                 <Trash2 className="h-3 w-3" />
               </Button>
             </div>

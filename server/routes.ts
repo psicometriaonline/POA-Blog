@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema, insertMediaSchema } from "@shared/schema";
+import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema, insertMediaSchema, postCategories, postTags } from "@shared/schema";
+import { db } from "./db";
 import { crawlMultipleUrls } from "./crawler";
 import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
 import multer from "multer";
@@ -708,6 +709,12 @@ export async function registerRoutes(
   app.post("/api/admin/posts", isAuthenticated, async (req, res) => {
     try {
       const { categoryIds, tagIds, ...postData } = req.body;
+      if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
+        return res.status(400).json({ message: "Você precisa definir pelo menos uma categoria para salvar o post." });
+      }
+      if (!Array.isArray(tagIds) || tagIds.length === 0) {
+        return res.status(400).json({ message: "Você precisa definir pelo menos uma tag para salvar o post." });
+      }
       if (postData.publishedAt) {
         postData.publishedAt = new Date(postData.publishedAt);
       }
@@ -723,6 +730,12 @@ export async function registerRoutes(
   app.put("/api/admin/posts/:id", isAuthenticated, async (req, res) => {
     try {
       const { categoryIds, tagIds, ...postData } = req.body;
+      if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
+        return res.status(400).json({ message: "Você precisa definir pelo menos uma categoria para salvar o post." });
+      }
+      if (!Array.isArray(tagIds) || tagIds.length === 0) {
+        return res.status(400).json({ message: "Você precisa definir pelo menos uma tag para salvar o post." });
+      }
       if (postData.publishedAt) {
         postData.publishedAt = new Date(postData.publishedAt);
       }
@@ -767,9 +780,24 @@ export async function registerRoutes(
 
   app.delete("/api/admin/categories/:id", isAuthenticated, async (req, res) => {
     try {
-      const success = await storage.deleteCategory(parseInt(req.params.id));
+      const categoryId = parseInt(req.params.id);
+      const cat = await storage.getCategory(categoryId);
+      if (cat && cat.slug === "indefinida") {
+        return res.status(400).json({ message: "A categoria \"Indefinida\" não pode ser excluída pois é usada como fallback para posts sem categoria." });
+      }
+      const postsWithOnlyThis = await storage.getPostsWithOnlyCategory(categoryId);
+      if (postsWithOnlyThis.length > 0) {
+        let fallback = await storage.getCategoryBySlug("indefinida");
+        if (!fallback) {
+          fallback = await storage.createCategory({ name: "Indefinida", slug: "indefinida" });
+        }
+        for (const postId of postsWithOnlyThis) {
+          await db.insert(postCategories).values({ postId, categoryId: fallback.id }).onConflictDoNothing();
+        }
+      }
+      const success = await storage.deleteCategory(categoryId);
       if (!success) return res.status(404).json({ message: "Category not found" });
-      res.json({ message: "Category deleted" });
+      res.json({ message: "Category deleted", reassigned: postsWithOnlyThis.length });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -797,9 +825,24 @@ export async function registerRoutes(
 
   app.delete("/api/admin/tags/:id", isAuthenticated, async (req, res) => {
     try {
-      const success = await storage.deleteTag(parseInt(req.params.id));
+      const tagId = parseInt(req.params.id);
+      const tag = await storage.getTag(tagId);
+      if (tag && tag.slug === "indefinida") {
+        return res.status(400).json({ message: "A tag \"Indefinida\" não pode ser excluída pois é usada como fallback para posts sem tag." });
+      }
+      const postsWithOnlyThis = await storage.getPostsWithOnlyTag(tagId);
+      if (postsWithOnlyThis.length > 0) {
+        let fallback = await storage.getTagBySlug("indefinida");
+        if (!fallback) {
+          fallback = await storage.createTag({ name: "Indefinida", slug: "indefinida" });
+        }
+        for (const postId of postsWithOnlyThis) {
+          await db.insert(postTags).values({ postId, tagId: fallback.id }).onConflictDoNothing();
+        }
+      }
+      const success = await storage.deleteTag(tagId);
       if (!success) return res.status(404).json({ message: "Tag not found" });
-      res.json({ message: "Tag deleted" });
+      res.json({ message: "Tag deleted", reassigned: postsWithOnlyThis.length });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

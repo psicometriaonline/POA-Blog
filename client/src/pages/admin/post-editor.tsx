@@ -444,6 +444,18 @@ export default function PostEditor() {
     }
   }, [title, slugManual]);
 
+  const handleSave = () => {
+    if (selectedCategories.length === 0) {
+      toast({ title: "Erro", description: "Você precisa definir pelo menos uma categoria para salvar o post.", variant: "destructive" });
+      return;
+    }
+    if (selectedTags.length === 0) {
+      toast({ title: "Erro", description: "Você precisa definir pelo menos uma tag para salvar o post.", variant: "destructive" });
+      return;
+    }
+    saveMutation.mutate();
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const selectedAuthor = allAuthors?.find(a => a.id === parseInt(authorId));
@@ -528,7 +540,7 @@ export default function PostEditor() {
           </h1>
         </div>
         <Button
-          onClick={() => saveMutation.mutate()}
+          onClick={handleSave}
           disabled={saveMutation.isPending || !title || !content}
           data-testid="button-save-post"
         >
