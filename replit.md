@@ -128,7 +128,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - Content in psychometrics and quantitative research domain
 
 ## Home Page Design Details
-- Category badges: standardized across all sections as `bg-accent-bright/10 text-accent-bright uppercase text-[10px] font-bold tracking-tight` (exception: main featured post uses `bg-white/90` for readability on image)
+- Category badges: standardized across all sections as `bg-accent-bright/10 text-accent-bright text-[10px] font-bold tracking-tight` sentence case (exception: main featured post uses `bg-white/90` for readability on image)
 - Mais Lidos ranking numbers: `text-primary/30` opacity for legibility
 - PostCardCompact shows first category badge next to date
 - SectionMostReadAndCategories: uses `sidebarBanners[2]` as below-categories banner slot
