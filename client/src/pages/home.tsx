@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { HeroBar } from "@/components/hero-bar";
+import { PostCard } from "@/components/post-card";
 
 interface HomeData {
   settings: Record<string, string>;
@@ -491,9 +492,9 @@ function SectionRandomPosts({ posts }: { posts: PostWithRelations[] }) {
   return (
     <section className="max-w-7xl mx-auto px-4 py-10" data-testid="section-random-posts">
       <SectionTitle>Você Também Pode Gostar</SectionTitle>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {posts.slice(0, 6).map((post) => (
-          <PostCardHorizontal key={post.id} post={post} />
+          <PostCard key={post.id} post={post} />
         ))}
       </div>
     </section>
