@@ -104,6 +104,7 @@ export interface IStorage {
   getContainerImagesForPost(postId: number): Promise<{ images: ImageBankItem[]; rule: ContainerRule }[]>;
   getMatchingPostsForRule(ruleId: number): Promise<{ count: number; posts: { id: number; title: string; slug: string }[] }>;
   removeManualBannersFromPosts(dryRun: boolean): Promise<{ totalPosts: number; totalBanners: number; details: { postId: number; title: string; count: number; bannerUrls: string[] }[] }>;
+  removeBareBannersFromPosts(dryRun: boolean): Promise<{ totalPosts: number; totalBanners: number; details: { postId: number; title: string; count: number; bannerUrls: string[] }[] }>;
 
   listMedia(options: { search?: string; page?: number; limit?: number; sort?: string }): Promise<{ items: MediaItem[]; total: number }>;
   getMedia(id: number): Promise<MediaItem | undefined>;
@@ -1222,6 +1223,65 @@ export class DatabaseStorage implements IStorage {
 
       if (!dryRun) {
         bannersToRemove.forEach(b => $(b.el).remove());
+        const newContent = $("body").html() || "";
+        await db.update(posts).set({ content: newContent }).where(eq(posts.id, post.id));
+      }
+
+      details.push({
+        postId: post.id,
+        title: post.title,
+        count: bannersToRemove.length,
+        bannerUrls,
+      });
+    }
+
+    return { totalPosts: details.length, totalBanners, details };
+  }
+
+  async removeBareBannersFromPosts(dryRun: boolean): Promise<{ totalPosts: number; totalBanners: number; details: { postId: number; title: string; count: number; bannerUrls: string[] }[] }> {
+    const cheerio = await import("cheerio");
+    const allPosts = await db.select({
+      id: posts.id,
+      title: posts.title,
+      content: posts.content,
+    }).from(posts).where(eq(posts.status, "published"));
+
+    const bannerPatterns = [/1024x240/i, /banner-naopare/i, /glossario-afe-banner/i];
+
+    const details: { postId: number; title: string; count: number; bannerUrls: string[] }[] = [];
+    let totalBanners = 0;
+
+    for (const post of allPosts) {
+      if (!post.content) continue;
+
+      const $ = cheerio.load(post.content, { xmlMode: false, decodeEntities: false });
+      const bannersToRemove: { el: any; src: string }[] = [];
+
+      $("img").each((_, img) => {
+        const $img = $(img);
+        const src = $img.attr("src") || "";
+        if (!bannerPatterns.some(p => p.test(src))) return;
+        const $parent = $img.parent();
+        if ($parent.is("figure") && $parent.find("figcaption").length > 0) return;
+        if ($parent.is("a") && $parent.parent().is("figure") && $parent.parent().find("figcaption").length > 0) return;
+        bannersToRemove.push({ el: img, src });
+      });
+
+      if (bannersToRemove.length === 0) continue;
+
+      const bannerUrls = bannersToRemove.map(b => b.src);
+      totalBanners += bannersToRemove.length;
+
+      if (!dryRun) {
+        bannersToRemove.forEach(b => {
+          const $el = $(b.el);
+          const $parent = $el.parent();
+          if ($parent.is("figure") && $parent.find("figcaption").length === 0) {
+            $parent.remove();
+          } else {
+            $el.remove();
+          }
+        });
         const newContent = $("body").html() || "";
         await db.update(posts).set({ content: newContent }).where(eq(posts.id, post.id));
       }
