@@ -22,11 +22,17 @@ import ManageAuthors from "@/pages/admin/manage-authors";
 import AnalyticsPage from "@/pages/admin/analytics";
 import ContainersPage from "@/pages/admin/containers";
 import ManageMediaPage from "@/pages/admin/manage-media";
+import TermsPage from "@/pages/terms";
+import PrivacyPage from "@/pages/privacy";
+import AboutPage from "@/pages/about";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/termos-de-uso" component={TermsPage} />
+      <Route path="/politicas-de-privacidade" component={PrivacyPage} />
+      <Route path="/quem-somos" component={AboutPage} />
       <Route path="/categoria/:slug" component={CategoryPage} />
       <Route path="/tag/:slug" component={TagPage} />
       <Route path="/busca" component={SearchPage} />

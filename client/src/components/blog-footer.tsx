@@ -111,8 +111,9 @@ export function BlogFooter() {
         <div className="border-t border-white/10 py-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-white/30">
           <p>© {currentYear} Psicometria Online. Todos os direitos reservados.</p>
           <div className="flex items-center gap-6">
-            <a href="#" className="hover:text-white/60 transition-colors">Políticas de Privacidade</a>
-            <a href="#" className="hover:text-white/60 transition-colors">Termos de Uso</a>
+            <Link href="/quem-somos" className="hover:text-white/60 transition-colors" data-testid="link-footer-about">Quem Somos</Link>
+            <Link href="/politicas-de-privacidade" className="hover:text-white/60 transition-colors" data-testid="link-footer-privacy">Políticas de Privacidade</Link>
+            <Link href="/termos-de-uso" className="hover:text-white/60 transition-colors" data-testid="link-footer-terms">Termos de Uso</Link>
           </div>
         </div>
       </div>

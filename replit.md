@@ -71,6 +71,9 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `/categoria/:slug` - Posts by category
 - `/tag/:slug` - Posts by tag
 - `/busca` - Search page
+- `/termos-de-uso` - Terms of Use static page
+- `/politicas-de-privacidade` - Privacy Policy static page
+- `/quem-somos` - About Us static page
 
 ### Admin (requires Replit Auth)
 - `/admin` - Dashboard with post management
