@@ -67,7 +67,7 @@ function PostCardLarge({ post }: { post: PostWithRelations }) {
           {post.categories.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {post.categories.map((cat) => (
-                <Badge key={cat.id} variant="secondary" className="text-xs bg-accent/10 text-primary border-none">{cat.name}</Badge>
+                <Badge key={cat.id} className="bg-accent-bright/10 text-accent-bright border-none text-[10px] uppercase font-bold tracking-tight px-1.5 py-0">{cat.name}</Badge>
               ))}
             </div>
           )}
@@ -89,7 +89,7 @@ function PostCardCompact({ post, index }: { post: PostWithRelations; index?: num
     <Link href={`/${post.slug}`} data-testid={`card-compact-${post.id}`}>
       <div className="flex gap-4 p-3 rounded-md hover:bg-accent/5 transition-colors cursor-pointer group border-b border-border/50 last:border-0">
         {index !== undefined && (
-          <span className="text-4xl font-black text-primary/10 flex-shrink-0 w-12 text-center group-hover:text-primary/20 transition-colors italic">{index}</span>
+          <span className="text-4xl font-black text-primary/30 flex-shrink-0 w-12 text-center group-hover:text-primary/40 transition-colors italic">{index}</span>
         )}
         {post.featuredImage && (
           <div className="w-24 h-16 flex-shrink-0 rounded overflow-hidden shadow-sm">
@@ -100,6 +100,9 @@ function PostCardCompact({ post, index }: { post: PostWithRelations; index?: num
           <h4 className="font-serif text-base font-bold leading-tight line-clamp-2 group-hover:text-primary transition-colors">{post.title}</h4>
           <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5 font-medium">
             {date && <span>{date}</span>}
+            {post.categories.length > 0 && (
+              <Badge className="bg-accent-bright/10 text-accent-bright border-none text-[10px] uppercase font-bold tracking-tight px-1.5 py-0">{post.categories[0].name}</Badge>
+            )}
           </div>
         </div>
       </div>
@@ -121,7 +124,7 @@ function PostCardHorizontal({ post }: { post: PostWithRelations }) {
           {post.categories.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {post.categories.map((cat) => (
-                <Badge key={cat.id} variant="secondary" className="text-xs bg-accent/10 text-primary border-none">{cat.name}</Badge>
+                <Badge key={cat.id} className="bg-accent-bright/10 text-accent-bright border-none text-[10px] uppercase font-bold tracking-tight px-1.5 py-0">{cat.name}</Badge>
               ))}
             </div>
           )}
@@ -218,7 +221,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                   {mainPost.categories.length > 0 && (
                     <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1">
                       {mainPost.categories.map((cat) => (
-                        <Badge key={cat.id} className="bg-accent-bright text-accent-bright-foreground border-accent-bright text-xs rounded-sm shadow-sm">{cat.name}</Badge>
+                        <Badge key={cat.id} className="bg-white/90 text-accent-bright border-none text-[10px] uppercase font-bold tracking-tight px-2 py-0.5 shadow-sm">{cat.name}</Badge>
                       ))}
                     </div>
                   )}
@@ -251,7 +254,7 @@ function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelation
                     <div className="flex items-center gap-3 flex-wrap mb-2">
                       {d && <span className="text-xs font-bold text-muted-foreground/80">{d}</span>}
                       {post.categories.length > 0 && post.categories.slice(0, 1).map((cat) => (
-                        <Badge key={cat.id} className="bg-accent-bright/10 text-accent-bright border-none text-[10px] uppercase font-bold tracking-tighter px-1.5 py-0">{cat.name}</Badge>
+                        <Badge key={cat.id} className="bg-accent-bright/10 text-accent-bright border-none text-[10px] uppercase font-bold tracking-tight px-1.5 py-0">{cat.name}</Badge>
                       ))}
                     </div>
                     <h3 className="font-serif text-base font-bold leading-tight line-clamp-2 group-hover:text-primary transition-colors">{post.title}</h3>
@@ -416,7 +419,8 @@ function SectionNewsletter({ settings }: { settings: Record<string, string> }) {
   );
 }
 
-function SectionMostReadAndCategories({ mostRead, categories: cats }: { mostRead: PostWithRelations[]; categories: Category[] }) {
+function SectionMostReadAndCategories({ mostRead, categories: cats, sidebarBanners }: { mostRead: PostWithRelations[]; categories: Category[]; sidebarBanners: Banner[] }) {
+  const belowCatBanner = sidebarBanners[2] || null;
   return (
     <section className="max-w-7xl mx-auto px-4 py-10" data-testid="section-most-read">
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
@@ -428,18 +432,27 @@ function SectionMostReadAndCategories({ mostRead, categories: cats }: { mostRead
             ))}
           </div>
         </div>
-        <div>
-          <SectionTitle>Categorias</SectionTitle>
-          <div className="space-y-1 border border-border rounded-xl p-3">
-            {cats.map((cat) => (
-              <Link key={cat.id} href={`/categoria/${cat.slug}`} data-testid={`link-category-${cat.id}`}>
-                <div className="flex items-center justify-between gap-2 p-3 rounded-lg hover-elevate active-elevate-2 cursor-pointer">
-                  <span className="text-sm font-medium">{cat.name}</span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </Link>
-            ))}
+        <div className="flex flex-col gap-6">
+          <div>
+            <SectionTitle>Categorias</SectionTitle>
+            <div className="space-y-1 border border-border rounded-xl p-3">
+              {cats.map((cat) => (
+                <Link key={cat.id} href={`/categoria/${cat.slug}`} data-testid={`link-category-${cat.id}`}>
+                  <div className="flex items-center justify-between gap-2 p-3 rounded-lg hover-elevate active-elevate-2 cursor-pointer">
+                    <span className="text-sm font-medium">{cat.name}</span>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
+          {belowCatBanner && (
+            <a href={belowCatBanner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-below-categories-${belowCatBanner.id}`}>
+              <div className="overflow-hidden rounded-xl shadow-md">
+                <img src={belowCatBanner.imageUrl} alt={belowCatBanner.title} className="w-full h-auto object-cover" loading="lazy" />
+              </div>
+            </a>
+          )}
         </div>
       </div>
     </section>
@@ -477,7 +490,7 @@ function SectionRandomPosts({ posts }: { posts: PostWithRelations[] }) {
   if (posts.length === 0) return null;
   return (
     <section className="max-w-7xl mx-auto px-4 py-10" data-testid="section-random-posts">
-      <SectionTitle>Você também pode gostar</SectionTitle>
+      <SectionTitle>Você Também Pode Gostar</SectionTitle>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {posts.slice(0, 6).map((post) => (
           <PostCardHorizontal key={post.id} post={post} />
@@ -633,7 +646,7 @@ export default function Home() {
       <SectionNewsletter settings={data.settings} />
 
       {/* 6. Most read + categories sidebar */}
-      <SectionMostReadAndCategories mostRead={data.mostRead} categories={data.categories} />
+      <SectionMostReadAndCategories mostRead={data.mostRead} categories={data.categories} sidebarBanners={data.sidebarBanners} />
 
       {/* 7. Diverse categories (3 columns) */}
       <SectionDiverseCategories sections={data.diverseSections} />
