@@ -40,6 +40,8 @@ export interface IStorage {
   updateTag(id: number, data: Partial<InsertTag>): Promise<Tag | undefined>;
   deleteTag(id: number): Promise<boolean>;
   getPostsWithOnlyTag(tagId: number): Promise<number[]>;
+  countPostsInCategory(categoryId: number): Promise<number>;
+  countPostsInTag(tagId: number): Promise<number>;
 
   getPosts(options?: { status?: string; limit?: number; offset?: number; search?: string }): Promise<PostWithRelations[]>;
   getPostCount(status?: string, search?: string): Promise<number>;
@@ -232,6 +234,16 @@ export class DatabaseStorage implements IStorage {
       )
     `);
     return (result.rows as any[]).map(r => r.post_id);
+  }
+
+  async countPostsInCategory(categoryId: number): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(postCategories).where(eq(postCategories.categoryId, categoryId));
+    return result.count;
+  }
+
+  async countPostsInTag(tagId: number): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(postTags).where(eq(postTags.tagId, tagId));
+    return result.count;
   }
 
   async getTags(): Promise<Tag[]> {

@@ -797,7 +797,19 @@ export async function registerRoutes(
       }
       const success = await storage.deleteCategory(categoryId);
       if (!success) return res.status(404).json({ message: "Category not found" });
+
+      // After deleting a category, check if any OTHER category (like Indefinida) became empty
+      const categoriesList = await storage.getCategories();
+      for (const cat of categoriesList) {
+        if (cat.slug === "indefinida") {
+          const postCount = await storage.countPostsInCategory(cat.id);
+          if (postCount === 0) {
+            await storage.deleteCategory(cat.id);
+          }
+        }
+      }
       res.json({ message: "Category deleted", reassigned: postsWithOnlyThis.length });
+
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -842,6 +854,17 @@ export async function registerRoutes(
       }
       const success = await storage.deleteTag(tagId);
       if (!success) return res.status(404).json({ message: "Tag not found" });
+
+      // After deleting a tag, check if any OTHER tag (like Indefinida) became empty
+      const tagsList = await storage.getTags();
+      for (const t of tagsList) {
+        if (t.slug === "indefinida") {
+          const postCount = await storage.countPostsInTag(t.id);
+          if (postCount === 0) {
+            await storage.deleteTag(t.id);
+          }
+        }
+      }
       res.json({ message: "Tag deleted", reassigned: postsWithOnlyThis.length });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -849,6 +872,28 @@ export async function registerRoutes(
   });
 
   // ===== AUTHOR ROUTES (Protected) =====
+
+  app.post("/api/admin/cleanup-indefinida", isAuthenticated, async (req, res) => {
+    try {
+      const cats = await storage.getCategories();
+      for (const cat of cats) {
+        if (cat.slug === "indefinida") {
+          const count = await storage.countPostsInCategory(cat.id);
+          if (count === 0) await storage.deleteCategory(cat.id);
+        }
+      }
+      const tags = await storage.getTags();
+      for (const t of tags) {
+        if (t.slug === "indefinida") {
+          const count = await storage.countPostsInTag(t.id);
+          if (count === 0) await storage.deleteTag(t.id);
+        }
+      }
+      res.json({ message: "Cleanup complete" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   app.post("/api/admin/authors", isAuthenticated, async (req, res) => {
     try {
