@@ -58,7 +58,7 @@ export function BlogFooter() {
                 <Link href="/busca" className="text-white/50 hover:text-[#31D5FF] transition-colors">Buscar Artigos</Link>
               </li>
               <li>
-                <Link href="/categorias" className="text-white/50 hover:text-[#31D5FF] transition-colors">Categorias</Link>
+                <Link href="/categoria/geral" className="text-white/50 hover:text-[#31D5FF] transition-colors">Categorias</Link>
               </li>
             </ul>
           </div>
