@@ -68,7 +68,14 @@ function PostCardLarge({ post }: { post: PostWithRelations }) {
           {post.categories.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {post.categories.map((cat) => (
-                <Badge key={cat.id} className="bg-accent-bright text-accent-bright-foreground border-none text-[10px] font-bold tracking-tight px-1.5 py-0.5">{cat.name}</Badge>
+                <Link key={cat.id} href={`/categoria/${cat.slug}`}>
+                  <Badge 
+                    className="bg-accent-bright text-accent-bright-foreground border-none text-[10px] font-bold tracking-tight px-1.5 py-0.5 hover:bg-accent-bright/80 cursor-pointer transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {cat.name}
+                  </Badge>
+                </Link>
               ))}
             </div>
           )}
@@ -102,7 +109,11 @@ function PostCardCompact({ post, index }: { post: PostWithRelations; index?: num
           <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1.5 font-medium">
             {date && <span>{date}</span>}
             {post.categories.length > 0 && (
-              <Badge className="bg-accent-bright text-accent-bright-foreground border-none text-[10px] font-bold tracking-tight px-1.5 py-0.5">{post.categories[0].name}</Badge>
+              <Link href={`/categoria/${post.categories[0].slug}`} onClick={(e) => e.stopPropagation()}>
+                <Badge className="bg-accent-bright text-accent-bright-foreground border-none text-[10px] font-bold tracking-tight px-1.5 py-0.5 hover:bg-accent-bright/80 cursor-pointer transition-colors">
+                  {post.categories[0].name}
+                </Badge>
+              </Link>
             )}
           </div>
         </div>
@@ -125,7 +136,14 @@ function PostCardHorizontal({ post }: { post: PostWithRelations }) {
           {post.categories.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {post.categories.map((cat) => (
-                <Badge key={cat.id} className="bg-accent-bright text-accent-bright-foreground border-none text-[10px] font-bold tracking-tight px-1.5 py-0.5">{cat.name}</Badge>
+                <Link key={cat.id} href={`/categoria/${cat.slug}`}>
+                  <Badge 
+                    className="bg-accent-bright text-accent-bright-foreground border-none text-[10px] font-bold tracking-tight px-1.5 py-0.5 hover:bg-accent-bright/80 cursor-pointer transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {cat.name}
+                  </Badge>
+                </Link>
               ))}
             </div>
           )}

@@ -33,9 +33,16 @@ export function PostCard({ post }: PostCardProps) {
           {post.categories.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {post.categories.map((cat) => (
-                <Badge key={cat.id} variant="secondary" className="text-xs" data-testid={`badge-category-${cat.id}`}>
-                  {cat.name}
-                </Badge>
+                <Link key={cat.id} href={`/categoria/${cat.slug}`}>
+                  <Badge
+                    variant="secondary"
+                    className="text-xs hover:bg-accent-bright hover:text-accent-bright-foreground cursor-pointer transition-colors"
+                    data-testid={`badge-category-${cat.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {cat.name}
+                  </Badge>
+                </Link>
               ))}
             </div>
           )}
