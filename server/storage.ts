@@ -428,16 +428,50 @@ export class DatabaseStorage implements IStorage {
     return baseQuery;
   }
 
+  private buildRelevanceScore(query: string) {
+    const lowerQuery = query.toLowerCase();
+    return sql<number>`(
+      CASE WHEN LOWER(${posts.title}) = ${lowerQuery} THEN 100
+           WHEN LOWER(${posts.title}) LIKE ${lowerQuery + '%'} THEN 80
+           WHEN LOWER(${posts.title}) LIKE ${'%' + lowerQuery + '%'} THEN 60
+           ELSE 0 END
+      + CASE WHEN LOWER(${posts.excerpt}) LIKE ${'%' + lowerQuery + '%'} THEN 20 ELSE 0 END
+      + CASE WHEN LOWER(${posts.content}) LIKE ${'%' + lowerQuery + '%'} THEN 5 ELSE 0 END
+    )`;
+  }
+
   async searchPosts(query: string, options?: { limit?: number; offset?: number; searchIn?: string; categoryId?: number; tagId?: number; dateFrom?: string; dateTo?: string; sort?: string }): Promise<PostWithRelations[]> {
     const conditions = this.buildSearchConditions(query, options);
-
     const sortOrder = options?.sort || "relevance";
+
+    if (sortOrder === "relevance") {
+      const relevanceScore = this.buildRelevanceScore(query);
+      let baseQuery = db.select({ id: posts.id, score: relevanceScore.as("relevance_score") }).from(posts).$dynamic();
+      if (options?.categoryId) {
+        baseQuery = baseQuery.innerJoin(postCategories, and(eq(postCategories.postId, posts.id), eq(postCategories.categoryId, options.categoryId)));
+      }
+      if (options?.tagId) {
+        baseQuery = baseQuery.innerJoin(postTags, and(eq(postTags.postId, posts.id), eq(postTags.tagId, options.tagId)));
+      }
+      baseQuery = baseQuery.where(and(...conditions)).orderBy(sql`relevance_score DESC`, desc(posts.publishedAt));
+      if (options?.limit) baseQuery = baseQuery.limit(options.limit);
+      if (options?.offset) baseQuery = baseQuery.offset(options.offset);
+
+      const matchedIds = await baseQuery;
+      if (matchedIds.length === 0) return [];
+
+      const ids = matchedIds.map(r => r.id);
+      const idOrder = new Map(ids.map((id, i) => [id, i]));
+      const rawPosts = await db.select().from(posts).where(inArray(posts.id, ids));
+      rawPosts.sort((a, b) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0));
+      return enrichPostsWithRelations(rawPosts);
+    }
+
     let orderClause;
     if (sortOrder === "az") orderClause = [asc(posts.title)];
     else if (sortOrder === "za") orderClause = [desc(posts.title)];
     else if (sortOrder === "newest") orderClause = [desc(posts.publishedAt)];
-    else if (sortOrder === "oldest") orderClause = [asc(posts.publishedAt)];
-    else orderClause = [desc(posts.publishedAt), desc(posts.createdAt)];
+    else orderClause = [asc(posts.publishedAt)];
 
     let dbQuery = this.buildSearchQuery(options);
     dbQuery = dbQuery.where(and(...conditions)).orderBy(...orderClause);
