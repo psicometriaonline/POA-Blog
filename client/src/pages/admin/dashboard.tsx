@@ -6,7 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2, Settings, Users, BarChart3, Layers, ImageIcon, Search, ChevronLeft, ChevronRight, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2, Settings, Users, BarChart3, Layers, ImageIcon, Search, ChevronLeft, ChevronRight, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import type { PostWithRelations, Category, Tag as TagType } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -16,7 +17,7 @@ import { ptBR } from "date-fns/locale";
 
 const POSTS_PER_PAGE = 20;
 
-type SortField = "title" | "authorName" | "publishedAt" | "inboundLinks" | "outboundLinks";
+type SortField = "title" | "authorName" | "publishedAt" | "inboundLinks" | "outboundLinks" | "categories" | "tags";
 type SortOrder = "asc" | "desc";
 
 function SortHeader({ label, field, currentSort, currentOrder, onSort }: { label: string; field: SortField; currentSort: SortField | null; currentOrder: SortOrder; onSort: (f: SortField) => void }) {
@@ -35,6 +36,66 @@ function SortHeader({ label, field, currentSort, currentOrder, onSort }: { label
         <ArrowUpDown className="h-3 w-3 opacity-40" />
       )}
     </button>
+  );
+}
+
+type LinkInfo = { id: number; title: string; slug: string };
+
+function LinkCountPopover({ postId, count, type, colorClass }: { postId: number; count: number; type: "inbound" | "outbound"; colorClass: string }) {
+  const [open, setOpen] = useState(false);
+
+  const { data, isLoading } = useQuery<{ inbound: LinkInfo[]; outbound: LinkInfo[] }>({
+    queryKey: ["/api/admin/posts", postId, "internal-links"],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/posts/${postId}/internal-links`, { credentials: "include" });
+      if (!res.ok) throw new Error("Erro ao carregar links");
+      return res.json();
+    },
+    enabled: open,
+  });
+
+  const links = type === "inbound" ? data?.inbound : data?.outbound;
+  const label = type === "inbound" ? "Links recebidos" : "Links enviados";
+
+  if (count === 0) {
+    return <span className="text-xs font-medium text-muted-foreground">0</span>;
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={`text-xs font-medium ${colorClass} hover:underline cursor-pointer`}
+          data-testid={`button-${type}-links-${postId}`}
+        >
+          {count}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 max-h-64 overflow-y-auto p-3" align="center">
+        <p className="text-sm font-semibold mb-2">{label} ({count})</p>
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Carregando...
+          </div>
+        ) : links && links.length > 0 ? (
+          <ul className="space-y-1">
+            {links.map(link => (
+              <li key={link.id}>
+                <Link href={`/admin/post/${link.id}`}>
+                  <span className="text-sm text-primary hover:underline cursor-pointer" data-testid={`link-popup-post-${link.id}`}>
+                    {link.title}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">Nenhum link encontrado.</p>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -310,8 +371,12 @@ export default function AdminDashboard() {
                   <th className="text-left p-3 font-medium min-w-[120px]">
                     <SortHeader label="Autor" field="authorName" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} />
                   </th>
-                  <th className="text-left p-3 font-medium min-w-[140px]">Categorias</th>
-                  <th className="text-left p-3 font-medium min-w-[140px]">Tags</th>
+                  <th className="text-left p-3 font-medium min-w-[140px]">
+                    <SortHeader label="Categorias" field="categories" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="text-left p-3 font-medium min-w-[140px]">
+                    <SortHeader label="Tags" field="tags" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} />
+                  </th>
                   <th className="text-left p-3 font-medium min-w-[100px]">
                     <SortHeader label="Data" field="publishedAt" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} />
                   </th>
@@ -341,14 +406,22 @@ export default function AdminDashboard() {
                           </Badge>
                         </div>
                       </td>
-                      <td className="p-3 text-muted-foreground" data-testid={`text-author-${post.id}`}>
-                        {post.authorName || post.author?.name || "—"}
+                      <td className="p-3" data-testid={`text-author-${post.id}`}>
+                        {post.authorName || post.author?.name ? (
+                          <Link href="/admin/autores">
+                            <span className="text-muted-foreground hover:text-foreground hover:underline cursor-pointer">
+                              {post.authorName || post.author?.name}
+                            </span>
+                          </Link>
+                        ) : "—"}
                       </td>
                       <td className="p-3">
                         <div className="flex flex-wrap gap-1">
                           {post.categories.length > 0
                             ? post.categories.map(c => (
-                                <span key={c.id} className="text-xs text-muted-foreground">{c.name}</span>
+                                <Link key={c.id} href="/admin/categorias">
+                                  <span className="text-xs text-muted-foreground hover:text-foreground hover:underline cursor-pointer" data-testid={`link-category-${c.id}`}>{c.name}</span>
+                                </Link>
                               ))
                             : <span className="text-xs text-muted-foreground">—</span>
                           }
@@ -358,7 +431,9 @@ export default function AdminDashboard() {
                         <div className="flex flex-wrap gap-1">
                           {post.tags.length > 0
                             ? post.tags.map(t => (
-                                <span key={t.id} className="text-xs text-muted-foreground">{t.name}</span>
+                                <Link key={t.id} href="/admin/tags">
+                                  <span className="text-xs text-muted-foreground hover:text-foreground hover:underline cursor-pointer" data-testid={`link-tag-${t.id}`}>{t.name}</span>
+                                </Link>
                               ))
                             : <span className="text-xs text-muted-foreground">—</span>
                           }
@@ -370,14 +445,18 @@ export default function AdminDashboard() {
                           : "Sem data"}
                       </td>
                       <td className="p-3 text-center" data-testid={`text-inbound-${post.id}`}>
-                        <span className={`text-xs font-medium ${lc && lc.inbound > 0 ? "text-green-600" : "text-muted-foreground"}`}>
-                          {lc?.inbound ?? "—"}
-                        </span>
+                        {lc ? (
+                          <LinkCountPopover postId={post.id} count={lc.inbound} type="inbound" colorClass="text-green-600" />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="p-3 text-center" data-testid={`text-outbound-${post.id}`}>
-                        <span className={`text-xs font-medium ${lc && lc.outbound > 0 ? "text-blue-600" : "text-muted-foreground"}`}>
-                          {lc?.outbound ?? "—"}
-                        </span>
+                        {lc ? (
+                          <LinkCountPopover postId={post.id} count={lc.outbound} type="outbound" colorClass="text-blue-600" />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="p-3">
                         <div className="flex items-center justify-end gap-1">

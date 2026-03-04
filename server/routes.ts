@@ -778,6 +778,22 @@ export async function registerRoutes(
         allFiltered.sort((a, b) => sortOrder === "asc" ? (sortMap[a.id] || 0) - (sortMap[b.id] || 0) : (sortMap[b.id] || 0) - (sortMap[a.id] || 0));
         const paginated = allFiltered.slice(offset, offset + limit);
         res.json({ posts: paginated, total, limit, offset });
+      } else if (sortBy === "categories" || sortBy === "tags") {
+        const allFiltered = await storage.getPosts({ status, limit: 5000, offset: 0, search });
+        const total = allFiltered.length;
+
+        allFiltered.sort((a, b) => {
+          const aItems = sortBy === "categories" ? a.categories : a.tags;
+          const bItems = sortBy === "categories" ? b.categories : b.tags;
+          const aNames = aItems.map(i => i.name.toLowerCase()).sort((x, y) => x.localeCompare(y, "pt-BR"));
+          const bNames = bItems.map(i => i.name.toLowerCase()).sort((x, y) => x.localeCompare(y, "pt-BR"));
+          const aName = aNames.length > 0 ? aNames[0] : "";
+          const bName = bNames.length > 0 ? bNames[0] : "";
+          return sortOrder === "asc" ? aName.localeCompare(bName, "pt-BR") : bName.localeCompare(aName, "pt-BR");
+        });
+
+        const paginated = allFiltered.slice(offset, offset + limit);
+        res.json({ posts: paginated, total, limit, offset });
       } else {
         const fetchedPosts = await storage.getPosts({ status, limit, offset, search, sortBy, sortOrder });
         const total = await storage.getPostCount(status, search);
@@ -1055,7 +1071,7 @@ export async function registerRoutes(
 
   app.get("/api/admin/posts/link-counts", isAuthenticated, async (req, res) => {
     try {
-      const allPosts = await storage.getPosts({ limit: 2000, offset: 0 });
+      const allPosts = await storage.getPosts({ limit: 5000, offset: 0 });
       const slugToId = new Map<string, number>();
       for (const p of allPosts) {
         slugToId.set(p.slug, p.id);
@@ -1117,6 +1133,80 @@ export async function registerRoutes(
       }
 
       res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/posts/:id/internal-links", isAuthenticated, async (req, res) => {
+    try {
+      const postId = parseInt(req.params.id);
+      const allPosts = await storage.getPosts({ limit: 5000, offset: 0 });
+      const slugToPost = new Map<string, { id: number; title: string; slug: string }>();
+      const idToPost = new Map<number, { id: number; title: string; slug: string }>();
+      for (const p of allPosts) {
+        const info = { id: p.id, title: p.title, slug: p.slug };
+        slugToPost.set(p.slug, info);
+        idToPost.set(p.id, info);
+      }
+
+      const internalDomains = [
+        "blog.psicometriaonline.com.br",
+        "www.blog.psicometriaonline.com.br",
+        "blog-academy.replit.app",
+      ];
+      const hrefRegex = /<a[^>]+href=["']([^"'#?]+)["'][^>]*>/gi;
+
+      function extractSlug(href: string): string | null {
+        if (href.startsWith("http://") || href.startsWith("https://")) {
+          try {
+            const url = new URL(href);
+            if (!internalDomains.includes(url.hostname)) return null;
+            return url.pathname.replace(/^\//, "").replace(/\/$/, "");
+          } catch { return null; }
+        }
+        return href.replace(/^\//, "").replace(/\/$/, "");
+      }
+
+      const outboundIds = new Set<number>();
+      const currentPost = allPosts.find(p => p.id === postId);
+      if (!currentPost) {
+        return res.status(404).json({ message: "Post não encontrado" });
+      }
+      {
+        const content = currentPost.content || "";
+        let match;
+        hrefRegex.lastIndex = 0;
+        const seenSlugs = new Set<string>();
+        while ((match = hrefRegex.exec(content)) !== null) {
+          const slug = extractSlug(match[1]);
+          if (!slug || seenSlugs.has(slug)) continue;
+          seenSlugs.add(slug);
+          const target = slugToPost.get(slug);
+          if (target && target.id !== postId) outboundIds.add(target.id);
+        }
+      }
+
+      const inboundIds = new Set<number>();
+      for (const p of allPosts) {
+        if (p.id === postId) continue;
+        const content = p.content || "";
+        let match;
+        hrefRegex.lastIndex = 0;
+        const seenSlugs = new Set<string>();
+        while ((match = hrefRegex.exec(content)) !== null) {
+          const slug = extractSlug(match[1]);
+          if (!slug || seenSlugs.has(slug)) continue;
+          seenSlugs.add(slug);
+          const target = slugToPost.get(slug);
+          if (target && target.id === postId) { inboundIds.add(p.id); break; }
+        }
+      }
+
+      const inbound = Array.from(inboundIds).map(id => idToPost.get(id)!).filter(Boolean);
+      const outbound = Array.from(outboundIds).map(id => idToPost.get(id)!).filter(Boolean);
+
+      res.json({ inbound, outbound });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
