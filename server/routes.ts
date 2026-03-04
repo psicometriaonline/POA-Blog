@@ -731,6 +731,22 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/posts/check-keyword", isAuthenticated, async (req, res) => {
+    try {
+      const keyword = (req.query.keyword as string || "").trim().toLowerCase();
+      const excludeId = req.query.excludeId ? parseInt(req.query.excludeId as string) : undefined;
+      if (!keyword) return res.json({ used: false, postTitle: null });
+
+      const allPosts = await storage.getPosts({ limit: 1000, offset: 0 });
+      const match = allPosts.find(p =>
+        p.focusKeyword && p.focusKeyword.toLowerCase() === keyword && p.id !== excludeId
+      );
+      res.json({ used: !!match, postTitle: match?.title || null });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.post("/api/admin/posts", isAuthenticated, async (req, res) => {
     try {
       const { categoryIds, tagIds, ...postData } = req.body;

@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Save, Code, Sigma, Plus, Image as ImageIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { MediaLibraryModal } from "@/components/media-library-modal";
+import { SeoPanel } from "@/components/seo-panel";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -362,6 +363,9 @@ export default function PostEditor() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newTagName, setNewTagName] = useState("");
   const [disabledContainers, setDisabledContainers] = useState<number[]>([]);
+  const [seoTitle, setSeoTitle] = useState("");
+  const [metaDescription, setMetaDescription] = useState("");
+  const [focusKeyword, setFocusKeyword] = useState("");
   const [mediaLibOpen, setMediaLibOpen] = useState(false);
   const [mediaLibTarget, setMediaLibTarget] = useState<"inline" | "featured">("inline");
   const editorInstanceRef = useRef<any>(null);
@@ -432,6 +436,9 @@ export default function PostEditor() {
       setSelectedCategories(post.categories.map(c => c.id));
       setSelectedTags(post.tags.map(t => t.id));
       setSlugManual(true);
+      setSeoTitle(post.seoTitle || "");
+      setMetaDescription(post.metaDescription || "");
+      setFocusKeyword(post.focusKeyword || "");
       try {
         setDisabledContainers(post.disabledContainers ? JSON.parse(post.disabledContainers) : []);
       } catch { setDisabledContainers([]); }
@@ -468,6 +475,9 @@ export default function PostEditor() {
         authorId: authorId ? parseInt(authorId) : null,
         authorName: selectedAuthor?.name || null,
         status,
+        seoTitle: seoTitle || null,
+        metaDescription: metaDescription || null,
+        focusKeyword: focusKeyword || null,
         publishedAt: status === "published"
           ? (post?.publishedAt ? post.publishedAt : new Date().toISOString())
           : null,
@@ -527,7 +537,7 @@ export default function PostEditor() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
         <div className="flex items-center gap-2">
           <Link href="/admin">
@@ -577,6 +587,60 @@ export default function PostEditor() {
             <Label>Conteudo</Label>
             <TiptapEditor content={content} onChange={setContent} onOpenMediaLib={() => { setMediaLibTarget("inline"); setMediaLibOpen(true); }} editorRef={editorInstanceRef} />
           </div>
+
+          <SeoPanel
+            title={title}
+            slug={slug}
+            content={content}
+            excerpt={excerpt}
+            seoTitle={seoTitle}
+            metaDescription={metaDescription}
+            focusKeyword={focusKeyword}
+            onSeoTitleChange={setSeoTitle}
+            onMetaDescriptionChange={setMetaDescription}
+            onFocusKeywordChange={setFocusKeyword}
+            postId={isNew ? undefined : parseInt(params.id!)}
+            onHighlight={(texts) => {
+              const editor = editorInstanceRef.current;
+              if (!editor) return;
+              const { state } = editor;
+              const { doc } = state;
+              const textContent = doc.textContent;
+              for (const t of texts) {
+                const snippet = t.slice(0, 60);
+                const idx = textContent.indexOf(snippet);
+                if (idx >= 0) {
+                  let resolvedFrom = -1;
+                  doc.descendants((node: any, nodePos: number) => {
+                    if (node.isText && resolvedFrom === -1) {
+                      const nodeText = node.text || "";
+                      const localIdx = nodeText.indexOf(snippet);
+                      if (localIdx >= 0) {
+                        resolvedFrom = nodePos + localIdx;
+                      }
+                    }
+                  });
+                  if (resolvedFrom >= 0) {
+                    editor.chain().focus().setTextSelection({ from: resolvedFrom, to: Math.min(resolvedFrom + snippet.length, doc.content.size) }).run();
+                    setTimeout(() => {
+                      const editorEl = document.querySelector(".ProseMirror");
+                      if (editorEl) {
+                        const selection = window.getSelection();
+                        if (selection && selection.rangeCount > 0) {
+                          const range = selection.getRangeAt(0);
+                          const rect = range.getBoundingClientRect();
+                          if (rect.top < 0 || rect.bottom > window.innerHeight) {
+                            range.startContainer.parentElement?.scrollIntoView({ behavior: "smooth", block: "center" });
+                          }
+                        }
+                      }
+                    }, 50);
+                    break;
+                  }
+                }
+              }
+            }}
+          />
 
           <div>
             <Label htmlFor="excerpt">Resumo</Label>

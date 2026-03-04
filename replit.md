@@ -24,7 +24,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `client/src/pages/tag.tsx` - Tag listing page
 - `client/src/pages/search.tsx` - Search results page
 - `client/src/pages/admin/dashboard.tsx` - Admin CMS dashboard
-- `client/src/pages/admin/post-editor.tsx` - Post editor with TipTap + MediaLibrary integration
+- `client/src/pages/admin/post-editor.tsx` - Post editor with TipTap + MediaLibrary + SEO assistant integration
 - `client/src/components/media-library-modal.tsx` - Reusable media library modal (browse/upload/select images)
 - `client/src/pages/admin/manage-media.tsx` - Media library management page (stats, search, usage, duplicates)
 - `client/src/pages/admin/manage-categories.tsx` - Category management
@@ -34,10 +34,14 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `client/src/pages/admin/manage-authors.tsx` - Author management
 - `client/src/pages/admin/analytics.tsx` - Post views analytics with charts and filters
 - `client/src/pages/admin/containers.tsx` - Container management (image groups, rules, preview)
+- `client/src/components/seo-panel.tsx` - SEO assistant panel (Google preview, SEO/readability analysis, keyword fields)
+- `client/src/lib/seo-analyzer.ts` - SEO analysis engine (16 checks: keyword placement, density, meta description, links, images)
+- `client/src/lib/readability-analyzer.ts` - Readability analysis engine (6 checks: passive voice, sections, paragraphs, sentences, transitions)
+- `client/src/lib/portuguese-utils.ts` - Portuguese text utilities (passive voice detection, transition words, sentence splitting)
 
 ## Database Schema
 - `authors` - Author profiles (name, photo, bio) - linked to posts via authorId
-- `posts` - Blog posts with title, slug, content, status, featured image, viewCount, authorId, disabledContainers (JSON array of heading indices to skip container images)
+- `posts` - Blog posts with title, slug, content, status, featured image, viewCount, authorId, disabledContainers (JSON array of heading indices to skip container images), seoTitle, metaDescription, focusKeyword
 - `categories` - Post categories with slug
 - `tags` - Post tags with slug
 - `post_categories` - Many-to-many junction table
@@ -118,6 +122,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `POST /api/admin/media/refresh-sizes` - Populate file sizes (local fs.stat or remote HEAD), loops until all done
 - `PATCH /api/admin/media/:id` - Rename media item (with duplicate filename validation, returns 409 on conflict)
 - `POST /api/admin/media/fix-citations` - Mass-update all posts: wrap "Como citar" paragraph in `<div class="citation-box">` + fix proper noun capitalization in citations (comprehensive list of statistician names, software names, acronyms)
+- `GET /api/admin/posts/check-keyword?keyword=&excludeId=` - Check if focus keyword is already used by another post
 - `POST /api/admin/upload` - File upload (multipart, stores in uploads/ dir, returns URL)
 
 ## Editor Features
@@ -148,3 +153,14 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 
 ## Pending Items
 1. SEO tasks (robots.txt, sitemap.xml, SSR meta tags)
+
+## SEO Assistant (Yoast-like)
+- Integrated into post editor below the TipTap content area
+- Fields: Focus keyword, SEO title (with char counter, ≤60), Meta description (with char counter, 100-155)
+- Google search preview: live preview of how the post appears in Google results
+- SEO analysis (16 checks): keyword in title, SEO title, slug, meta description, introduction, headings (some but not all), image alt texts, keyword density (0.5-2.5%), text length (≥300 words), internal/external links, images, unique H1
+- Readability analysis (6 checks): passive voice (<10%), consecutive same-start sentences, section length (≤300 words), paragraph length (≤150 words), sentence length (<25% over 25 words), transition words (≥30%)
+- Results grouped by severity: Problems (red), Improvements (amber), Good results (green)
+- Keyword uniqueness: real-time API check to prevent duplicate focus keywords across posts
+- Click-to-highlight: clicking an issue scrolls to and selects the offending text in the editor
+- All labels and messages in Portuguese
