@@ -124,6 +124,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `POST /api/admin/media/fix-citations` - Mass-update all posts: wrap "Como citar" paragraph in `<div class="citation-box">` + fix proper noun capitalization in citations (comprehensive list of statistician names, software names, acronyms)
 - `GET /api/admin/posts/check-keyword?keyword=&excludeId=` - Check if focus keyword is already used by another post
 - `POST /api/admin/upload` - File upload (multipart, stores in uploads/ dir, returns URL)
+- `POST /api/admin/crawl/import-seo?dryRun=true|false` - Import Yoast SEO data (seoTitle, metaDescription) from WordPress REST API for all posts
 
 ## Editor Features
 - TipTap rich text editor with: bold, italic, underline, strikethrough, headings, lists, blockquotes, code blocks, links, images (via MediaLibrary), math (KaTeX), tables (insert/add/remove rows/cols), citation box

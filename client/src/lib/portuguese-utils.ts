@@ -10,12 +10,42 @@ export function countWords(text: string): number {
 }
 
 export function splitIntoSentences(text: string): string[] {
-  const sentences = text.split(/(?<=[.!?…])\s+/);
-  return sentences.map(s => s.trim()).filter(s => s.length > 0);
+  const sentences = text.split(/(?<=[.!?…;])\s+/);
+  return sentences.map(s => s.trim()).filter(s => s.length > 2);
 }
 
-const PASSIVE_AUX = /\b(é|são|foi|foram|era|eram|será|serão|seria|seriam|seja|sejam|fosse|fossem|está|estão|estava|estavam|esteve|estiveram|ficou|ficaram|fica|ficam|ficava|ficavam|fora|forem|for|sendo|sido|estar|ficar|ser)\b/i;
-const PARTICIPLE = /\b\w+(ado|ada|ados|adas|ido|ida|idos|idas|to|ta|tos|tas|so|sa|sos|sas|sto|sta|stos|stas)\b/i;
+const PASSIVE_AUX = /\b(é|são|foi|foram|era|eram|será|serão|seria|seriam|seja|sejam|fosse|fossem|está|estão|estava|estavam|esteve|estiveram|ficou|ficaram|fica|ficam|ficava|ficavam|fora|forem|for|sendo|sido|ser|estar|ficar)\b/i;
+
+const PARTICIPLE_PATTERN = /\b\w{3,}(ado|ada|ados|adas|ido|ida|idos|idas)\b/i;
+const IRREGULAR_PARTICIPLES = /\b(feito|feita|feitos|feitas|dito|dita|ditos|ditas|escrito|escrita|escritos|escritas|visto|vista|vistos|vistas|posto|posta|postos|postas|aberto|aberta|abertos|abertas|coberto|coberta|cobertos|cobertas|descrito|descrita|descritos|descritas|eleito|eleita|eleitos|eleitas|exposto|exposta|expostos|expostas|impresso|impressa|impressos|impressas|incluso|inclusa|inclusos|inclusas|morto|morta|mortos|mortas|preso|presa|presos|presas|previsto|prevista|previstos|previstas|proposto|proposta|propostos|propostas|resolvido|resolvida|resolvidos|resolvidas|satisfeito|satisfeita|satisfeitos|satisfeitas|suspenso|suspensa|suspensos|suspensas|aceito|aceita|aceitos|aceitas|entregue|entregues)\b/i;
+
+const FALSE_POSITIVE_WORDS = new Set([
+  "resultado", "resultados", "resultada", "resultadas",
+  "conteúdo", "conteúdos", "método", "métodos",
+  "atributo", "atributos", "período", "períodos",
+  "estado", "estados", "grau", "graus",
+  "sentido", "sentidos", "modo", "modos",
+  "cuidado", "cuidados", "significado", "significados",
+  "passado", "passados", "mercado", "mercados",
+  "lado", "lados", "dado", "dados",
+  "pedido", "pedidos", "partido", "partidos",
+  "tamanho", "tamanhos", "quadrado", "quadrados",
+  "privado", "privada", "privados", "privadas",
+  "elevado", "elevada", "elevados", "elevadas",
+  "adequado", "adequada", "adequados", "adequadas",
+  "determinado", "determinada", "determinados", "determinadas",
+  "conhecido", "conhecida", "conhecidos", "conhecidas",
+  "devido", "devida", "devidos", "devidas",
+  "todo", "toda", "todos", "todas",
+  "tido", "tida", "tidos", "tidas",
+  "sido",
+]);
+
+function isParticiple(word: string): boolean {
+  const clean = word.replace(/[.,;:!?"'()]/g, "").toLowerCase();
+  if (FALSE_POSITIVE_WORDS.has(clean)) return false;
+  return PARTICIPLE_PATTERN.test(clean) || IRREGULAR_PARTICIPLES.test(clean);
+}
 
 export interface PassiveMatch {
   sentence: string;
@@ -31,11 +61,16 @@ export function detectPassiveVoice(text: string): PassiveMatch[] {
     const idx = text.indexOf(sentence, charIndex);
     const words = sentence.split(/\s+/);
 
+    let found = false;
     for (let i = 0; i < words.length - 1; i++) {
-      if (PASSIVE_AUX.test(words[i]) && PARTICIPLE.test(words[i + 1])) {
-        results.push({ sentence, index: idx >= 0 ? idx : charIndex });
+      const cleanWord = words[i].replace(/[.,;:!?"'()]/g, "");
+      if (PASSIVE_AUX.test(cleanWord) && isParticiple(words[i + 1])) {
+        found = true;
         break;
       }
+    }
+    if (found) {
+      results.push({ sentence, index: idx >= 0 ? idx : charIndex });
     }
     charIndex = idx >= 0 ? idx + sentence.length : charIndex + sentence.length;
   }

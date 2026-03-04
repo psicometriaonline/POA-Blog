@@ -1398,5 +1398,86 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/crawl/import-seo", isAuthenticated, async (req, res) => {
+    try {
+      const dryRun = req.query.dryRun !== "false";
+      const WP_BASE = "https://blog.psicometriaonline.com.br";
+      const allPosts = await storage.getPosts({ limit: 1000, offset: 0 });
+      const results: { id: number; slug: string; title: string; seoTitle: string | null; metaDescription: string | null }[] = [];
+      const skipped: { id: number; slug: string; reason: string }[] = [];
+      const errors: { id: number; slug: string; error: string }[] = [];
+      let actuallyUpdated = 0;
+
+      for (const post of allPosts) {
+        if (post.seoTitle && post.metaDescription) {
+          skipped.push({ id: post.id, slug: post.slug, reason: "already has SEO data" });
+          continue;
+        }
+
+        try {
+          const wpUrl = `${WP_BASE}/wp-json/wp/v2/posts?slug=${encodeURIComponent(post.slug)}&_fields=id,yoast_head_json`;
+          const wpRes = await fetch(wpUrl);
+          if (!wpRes.ok) {
+            errors.push({ id: post.id, slug: post.slug, error: `WP API returned ${wpRes.status}` });
+            continue;
+          }
+          const wpData = await wpRes.json();
+          if (!wpData || wpData.length === 0) {
+            skipped.push({ id: post.id, slug: post.slug, reason: "not found in WordPress" });
+            continue;
+          }
+
+          const yoast = wpData[0].yoast_head_json;
+          if (!yoast) {
+            skipped.push({ id: post.id, slug: post.slug, reason: "no Yoast data in WP" });
+            continue;
+          }
+
+          const seoTitle = yoast.title || null;
+          const metaDesc = yoast.description || null;
+
+          if (!seoTitle && !metaDesc) {
+            skipped.push({ id: post.id, slug: post.slug, reason: "empty Yoast data" });
+            continue;
+          }
+
+          results.push({
+            id: post.id,
+            slug: post.slug,
+            title: post.title,
+            seoTitle,
+            metaDescription: metaDesc,
+          });
+
+          if (!dryRun) {
+            const updateData: any = {};
+            if (seoTitle && !post.seoTitle) updateData.seoTitle = seoTitle;
+            if (metaDesc && !post.metaDescription) updateData.metaDescription = metaDesc;
+            if (Object.keys(updateData).length > 0) {
+              await storage.updatePost(post.id, updateData);
+              actuallyUpdated++;
+            }
+          }
+        } catch (err: any) {
+          errors.push({ id: post.id, slug: post.slug, error: err.message });
+        }
+      }
+
+      res.json({
+        dryRun,
+        totalPosts: allPosts.length,
+        imported: dryRun ? results.length : actuallyUpdated,
+        candidates: results.length,
+        skipped: skipped.length,
+        errors: errors.length,
+        results: results.slice(0, 20),
+        skippedDetails: skipped.slice(0, 10),
+        errorDetails: errors,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

@@ -270,13 +270,24 @@ export function analyzeSEO(input: SeoAnalysisInput): SeoCheck[] {
   return checks;
 }
 
+function isExternalHref(href: string): boolean {
+  if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return false;
+  if (!href.startsWith("http") && !href.startsWith("//")) return false;
+  return !href.includes(window.location.hostname) && !href.includes("psicometriaonline");
+}
+
+function isInternalHref(href: string): boolean {
+  if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return false;
+  if (href.startsWith("/") && !href.startsWith("//")) return true;
+  if (href.includes(window.location.hostname) || href.includes("psicometriaonline")) return true;
+  if (!href.startsWith("http") && !href.startsWith("//")) return true;
+  return false;
+}
+
 function checkInternalLinks(content: string): SeoCheck {
   const doc = new DOMParser().parseFromString(content, "text/html");
   const links = doc.querySelectorAll("a[href]");
-  const internal = Array.from(links).filter(a => {
-    const href = a.getAttribute("href") || "";
-    return href.startsWith("/") || href.includes(window.location.hostname) || href.includes("psicometriaonline");
-  });
+  const internal = Array.from(links).filter(a => isInternalHref(a.getAttribute("href") || ""));
   return {
     id: "internal-links",
     label: "Links internos",
@@ -290,10 +301,7 @@ function checkInternalLinks(content: string): SeoCheck {
 function checkExternalLinks(content: string): SeoCheck {
   const doc = new DOMParser().parseFromString(content, "text/html");
   const links = doc.querySelectorAll("a[href]");
-  const external = Array.from(links).filter(a => {
-    const href = a.getAttribute("href") || "";
-    return href.startsWith("http") && !href.includes(window.location.hostname) && !href.includes("psicometriaonline");
-  });
+  const external = Array.from(links).filter(a => isExternalHref(a.getAttribute("href") || ""));
   return {
     id: "external-links",
     label: "Links externos",

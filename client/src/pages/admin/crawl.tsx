@@ -1,11 +1,12 @@
 import { useState, useRef, useCallback } from "react";
 import { Link } from "wouter";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Play, Square, Check, AlertCircle, Loader2, Clock, RotateCcw } from "lucide-react";
+import { ArrowLeft, Play, Square, Check, AlertCircle, Loader2, Clock, RotateCcw, Search } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -127,6 +128,25 @@ export default function CrawlPage() {
       case "error": return "Erro";
     }
   };
+
+  const [seoImportResult, setSeoImportResult] = useState<any>(null);
+
+  const seoImportMutation = useMutation({
+    mutationFn: async (dryRun: boolean) => {
+      const res = await apiRequest("POST", `/api/admin/crawl/import-seo?dryRun=${dryRun}`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setSeoImportResult(data);
+      if (!data.dryRun) {
+        toast({ title: `SEO importado para ${data.imported} posts` });
+        queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.includes("/api/posts") });
+      }
+    },
+    onError: (err: any) => {
+      toast({ title: "Erro ao importar SEO", description: err.message, variant: "destructive" });
+    },
+  });
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -271,6 +291,109 @@ export default function CrawlPage() {
           )}
         </>
       )}
+      <Card className="p-4 mt-8" data-testid="seo-import-card">
+        <div className="flex items-center gap-2 mb-3">
+          <Search className="h-4 w-4 text-primary" />
+          <h2 className="font-semibold text-lg">Importar dados de SEO do WordPress (Yoast)</h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Importa o título SEO e a meta descrição de cada post diretamente do Yoast SEO no WordPress.
+          Posts que já possuem dados de SEO serão mantidos sem alteração.
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => seoImportMutation.mutate(true)}
+            disabled={seoImportMutation.isPending}
+            data-testid="button-seo-dry-run"
+          >
+            {seoImportMutation.isPending && seoImportResult?.dryRun !== false ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : null}
+            Pré-visualizar
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => seoImportMutation.mutate(false)}
+            disabled={seoImportMutation.isPending}
+            data-testid="button-seo-execute"
+          >
+            {seoImportMutation.isPending && seoImportResult?.dryRun === false ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : null}
+            Importar SEO
+          </Button>
+        </div>
+
+        {seoImportResult && (
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center gap-4 text-sm">
+              <span className="flex items-center gap-1.5">
+                <Check className="h-4 w-4 text-green-600" />
+                {seoImportResult.imported} para importar
+              </span>
+              <span className="text-muted-foreground">
+                {seoImportResult.skipped} já possuem SEO
+              </span>
+              {seoImportResult.errors > 0 && (
+                <span className="flex items-center gap-1.5 text-red-600">
+                  <AlertCircle className="h-4 w-4" />
+                  {seoImportResult.errors} erro(s)
+                </span>
+              )}
+              <span className="text-muted-foreground">
+                Total: {seoImportResult.totalPosts}
+              </span>
+              {seoImportResult.dryRun && (
+                <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded dark:bg-amber-900/30 dark:text-amber-300">
+                  Pré-visualização
+                </span>
+              )}
+              {!seoImportResult.dryRun && (
+                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded dark:bg-green-900/30 dark:text-green-300">
+                  Importado
+                </span>
+              )}
+            </div>
+
+            {seoImportResult.results && seoImportResult.results.length > 0 && (
+              <div className="max-h-60 overflow-y-auto space-y-1">
+                {seoImportResult.results.map((r: any) => (
+                  <div key={r.id} className="text-xs border rounded p-2 bg-muted/20">
+                    <p className="font-medium truncate">{r.title}</p>
+                    {r.seoTitle && (
+                      <p className="text-muted-foreground mt-0.5">
+                        <span className="font-medium text-foreground">Título SEO:</span> {r.seoTitle}
+                      </p>
+                    )}
+                    {r.metaDescription && (
+                      <p className="text-muted-foreground mt-0.5">
+                        <span className="font-medium text-foreground">Meta:</span> {r.metaDescription}
+                      </p>
+                    )}
+                  </div>
+                ))}
+                {seoImportResult.imported > seoImportResult.results.length && (
+                  <p className="text-xs text-muted-foreground text-center py-1">
+                    ...e mais {seoImportResult.imported - seoImportResult.results.length} posts
+                  </p>
+                )}
+              </div>
+            )}
+
+            {seoImportResult.errorDetails && seoImportResult.errorDetails.length > 0 && (
+              <div className="max-h-40 overflow-y-auto space-y-1">
+                {seoImportResult.errorDetails.map((e: any) => (
+                  <div key={e.id} className="text-xs text-red-600 border border-red-200 rounded p-2 bg-red-50 dark:bg-red-950/20">
+                    {e.slug}: {e.error}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
     </div>
   );
 }
