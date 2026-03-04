@@ -74,18 +74,18 @@ export function analyzeReadability(content: string): SeoCheck[] {
     highlightTexts: longParagraphs.length > 0 ? longParagraphs.map(p => p.text.slice(0, 100)) : undefined,
   });
 
-  const longSentences = getLongSentences(plainText, 25);
+  const longSentences = getLongSentences(plainText, 20);
   const longPercent = sentences.length > 0 ? (longSentences.length / sentences.length) * 100 : 0;
   checks.push({
     id: "sentence-length",
     label: "Extensão das frases",
-    status: longPercent < 25 ? "good" : longPercent < 40 ? "warning" : "problem",
+    status: longPercent < 25 ? "good" : longPercent <= 30 ? "warning" : "problem",
     message:
       longPercent < 25
-        ? `${longPercent.toFixed(0)}% de frases longas (> 25 palavras). Ótimo!`
-        : longPercent < 40
-          ? `${longPercent.toFixed(0)}% de frases longas. Tente simplificar algumas (ideal: < 25%).`
-          : `${longPercent.toFixed(0)}% de frases longas. Muitas frases complexas dificultam a compreensão.`,
+        ? `${longPercent.toFixed(0)}% de frases longas (> 20 palavras). Ótimo!`
+        : longPercent <= 30
+          ? `${longPercent.toFixed(0)}% de frases longas (> 20 palavras). Tente simplificar algumas (ideal: < 25%).`
+          : `${longPercent.toFixed(0)}% de frases longas (> 20 palavras). Muitas frases complexas dificultam a compreensão.`,
     highlightTexts: longSentences.length > 0 ? longSentences.map(s => s.sentence) : undefined,
   });
 

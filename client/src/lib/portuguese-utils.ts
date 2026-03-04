@@ -10,7 +10,7 @@ export function countWords(text: string): number {
 }
 
 export function splitIntoSentences(text: string): string[] {
-  const sentences = text.split(/(?<=[.!?…;])\s+/);
+  const sentences = text.split(/(?<=[.!?…])\s+/);
   return sentences.map(s => s.trim()).filter(s => s.length > 2);
 }
 
