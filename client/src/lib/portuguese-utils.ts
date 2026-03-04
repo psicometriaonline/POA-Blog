@@ -14,6 +14,23 @@ export function splitIntoSentences(text: string): string[] {
   return sentences.map(s => s.trim()).filter(s => s.length > 2);
 }
 
+export function extractSentencesFromHtml(html: string): string[] {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const blocks = doc.querySelectorAll("p, li");
+  const allSentences: string[] = [];
+  blocks.forEach(block => {
+    const text = (block.textContent || "").trim();
+    if (!text) return;
+    const sentences = text.split(/(?<=[.!?…])\s+/).map(s => s.trim()).filter(s => s.length > 2);
+    if (sentences.length > 0) {
+      allSentences.push(...sentences);
+    } else if (text.length > 2) {
+      allSentences.push(text);
+    }
+  });
+  return allSentences;
+}
+
 const PASSIVE_AUX = /\b(é|são|foi|foram|era|eram|será|serão|seria|seriam|seja|sejam|fosse|fossem|está|estão|estava|estavam|esteve|estiveram|ficou|ficaram|fica|ficam|ficava|ficavam|fora|forem|for|sendo|sido|ser|estar|ficar)\b/i;
 
 const PARTICIPLE_PATTERN = /\b\w{3,}(ado|ada|ados|adas|ido|ida|idos|idas)\b/i;

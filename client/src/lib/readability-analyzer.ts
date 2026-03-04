@@ -7,7 +7,7 @@ import {
   findConsecutiveSameStart,
   extractTextSections,
   extractParagraphs,
-  getLongSentences,
+  extractSentencesFromHtml,
 } from "./portuguese-utils";
 import type { SeoCheck } from "./seo-analyzer";
 
@@ -74,8 +74,11 @@ export function analyzeReadability(content: string): SeoCheck[] {
     highlightTexts: longParagraphs.length > 0 ? longParagraphs.map(p => p.text.slice(0, 100)) : undefined,
   });
 
-  const longSentences = getLongSentences(plainText, 20);
-  const longPercent = sentences.length > 0 ? (longSentences.length / sentences.length) * 100 : 0;
+  const htmlSentences = extractSentencesFromHtml(content);
+  const longSentences = htmlSentences
+    .map(s => ({ sentence: s, wordCount: countWords(s) }))
+    .filter(s => s.wordCount > 20);
+  const longPercent = htmlSentences.length > 0 ? (longSentences.length / htmlSentences.length) * 100 : 0;
   checks.push({
     id: "sentence-length",
     label: "Extensão das frases",
