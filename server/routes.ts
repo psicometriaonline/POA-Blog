@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema, insertMediaSchema, postCategories, postTags } from "@shared/schema";
+import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema, insertMediaSchema, postCategories, postTags, posts } from "@shared/schema";
+import { eq, and, lte } from "drizzle-orm";
 import { db } from "./db";
 import { crawlMultipleUrls } from "./crawler";
 import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
@@ -51,6 +52,22 @@ export async function registerRoutes(
 ): Promise<Server> {
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      const scheduled = await db.select({ id: posts.id }).from(posts)
+        .where(and(eq(posts.status, "scheduled"), lte(posts.publishedAt, now)));
+      for (const post of scheduled) {
+        await db.update(posts).set({ status: "published" }).where(eq(posts.id, post.id));
+      }
+      if (scheduled.length > 0) {
+        console.log(`Auto-published ${scheduled.length} scheduled post(s)`);
+      }
+    } catch (err) {
+      console.error("Scheduler error:", err);
+    }
+  }, 60000);
 
   app.use("/uploads", (await import("express")).default.static(uploadsDir));
 
@@ -756,6 +773,9 @@ export async function registerRoutes(
       if (!Array.isArray(tagIds) || tagIds.length === 0) {
         return res.status(400).json({ message: "Você precisa definir pelo menos uma tag para salvar o post." });
       }
+      if (postData.status === "scheduled" && !postData.publishedAt) {
+        return res.status(400).json({ message: "Defina a data e hora de publicação para agendar o post." });
+      }
       if (postData.publishedAt) {
         postData.publishedAt = new Date(postData.publishedAt);
       }
@@ -776,6 +796,9 @@ export async function registerRoutes(
       }
       if (!Array.isArray(tagIds) || tagIds.length === 0) {
         return res.status(400).json({ message: "Você precisa definir pelo menos uma tag para salvar o post." });
+      }
+      if (postData.status === "scheduled" && !postData.publishedAt) {
+        return res.status(400).json({ message: "Defina a data e hora de publicação para agendar o post." });
       }
       if (postData.publishedAt) {
         postData.publishedAt = new Date(postData.publishedAt);
@@ -810,6 +833,181 @@ export async function registerRoutes(
       const success = await storage.deletePost(parseInt(req.params.id));
       if (!success) return res.status(404).json({ message: "Post not found" });
       res.json({ message: "Post deleted" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/posts/:id/check-links", isAuthenticated, async (req, res) => {
+    try {
+      const post = await storage.getPost(parseInt(req.params.id));
+      if (!post) return res.status(404).json({ message: "Post not found" });
+
+      const content = post.content || "";
+      const linkRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+      const links: { url: string; text: string; status: "ok" | "broken" | "error"; statusCode?: number; reason?: string }[] = [];
+      const seen = new Set<string>();
+      let match;
+
+      while ((match = linkRegex.exec(content)) !== null) {
+        const url = match[1];
+        const text = match[2].replace(/<[^>]*>/g, "").trim();
+        if (seen.has(url)) continue;
+        seen.add(url);
+        if (url.startsWith("#") || url.startsWith("mailto:") || url.startsWith("tel:")) continue;
+        links.push({ url, text, status: "ok" });
+      }
+
+      const DOMAIN = "blog.psicometriaonline.com.br";
+
+      await Promise.all(links.map(async (link) => {
+        try {
+          const isInternal = link.url.startsWith("/") || link.url.includes(DOMAIN);
+          if (isInternal) {
+            let slug = link.url;
+            if (slug.startsWith("/")) {
+              slug = slug.replace(/^\/+/, "").replace(/\/+$/, "");
+            } else {
+              try {
+                const parsed = new URL(link.url);
+                slug = parsed.pathname.replace(/^\/+/, "").replace(/\/+$/, "");
+              } catch {
+                link.status = "error";
+                link.reason = "URL inválida";
+                return;
+              }
+            }
+            if (!slug) {
+              link.status = "ok";
+              return;
+            }
+            const found = await storage.getPostBySlug(slug);
+            if (found) {
+              link.status = "ok";
+            } else {
+              link.status = "broken";
+              link.reason = "Slug não encontrado";
+            }
+          } else {
+            try {
+              const parsed = new URL(link.url);
+              if (!["http:", "https:"].includes(parsed.protocol)) {
+                link.status = "error";
+                link.reason = "Protocolo não suportado";
+                return;
+              }
+              const hostname = parsed.hostname.toLowerCase();
+              if (hostname === "localhost" || hostname.endsWith(".local") || hostname === "metadata.google.internal" || /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|0\.)/.test(hostname) || hostname === "[::1]") {
+                link.status = "error";
+                link.reason = "URL interna bloqueada";
+                return;
+              }
+            } catch {
+              link.status = "error";
+              link.reason = "URL inválida";
+              return;
+            }
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 8000);
+            try {
+              const response = await fetch(link.url, {
+                method: "HEAD",
+                signal: controller.signal,
+                redirect: "follow",
+                headers: { "User-Agent": "Mozilla/5.0 (compatible; LinkChecker/1.0)" },
+              });
+              clearTimeout(timeout);
+              link.statusCode = response.status;
+              if (response.ok) {
+                link.status = "ok";
+              } else if (response.status === 405) {
+                const getResponse = await fetch(link.url, {
+                  method: "GET",
+                  signal: AbortSignal.timeout(8000),
+                  redirect: "follow",
+                  headers: { "User-Agent": "Mozilla/5.0 (compatible; LinkChecker/1.0)" },
+                });
+                link.statusCode = getResponse.status;
+                link.status = getResponse.ok ? "ok" : "broken";
+                if (!getResponse.ok) link.reason = `HTTP ${getResponse.status}`;
+              } else {
+                link.status = "broken";
+                link.reason = `HTTP ${response.status}`;
+              }
+            } catch (e: any) {
+              clearTimeout(timeout);
+              link.status = "error";
+              link.reason = e.name === "AbortError" ? "Timeout" : (e.message || "Erro de conexão");
+            }
+          }
+        } catch (e: any) {
+          link.status = "error";
+          link.reason = e.message || "Erro desconhecido";
+        }
+      }));
+
+      res.json({ links, total: links.length, broken: links.filter(l => l.status !== "ok").length });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/posts/:id/link-suggestions", isAuthenticated, async (req, res) => {
+    try {
+      const postId = parseInt(req.params.id);
+      const post = await storage.getPost(postId);
+      if (!post) return res.status(404).json({ message: "Post not found" });
+
+      const postContent = post.content || "";
+      const focusKeyword = (post.focusKeyword || "").toLowerCase().trim();
+
+      const postCategoryIds = post.categories.map(c => c.id);
+      const postTagIds = post.tags.map(t => t.id);
+
+      const allPublished = await storage.getPosts({ status: "published", limit: 500 });
+      const candidates = allPublished.filter(p => p.id !== postId);
+
+      const suggestions: { title: string; slug: string; reason: string }[] = [];
+      const alreadyLinked = new Set<string>();
+
+      const hrefRegex = /href=["'](?:https?:\/\/[^"']*?)?\/([^"'#?]+)/gi;
+      let match;
+      while ((match = hrefRegex.exec(postContent)) !== null) {
+        alreadyLinked.add(match[1].replace(/\/$/, ""));
+      }
+
+      for (const candidate of candidates) {
+        if (alreadyLinked.has(candidate.slug)) continue;
+        if (postContent.includes(`/${candidate.slug}`)) continue;
+
+        const reasons: string[] = [];
+
+        const sharedCats = candidate.categories.filter(c => postCategoryIds.includes(c.id));
+        if (sharedCats.length > 0) {
+          reasons.push(`Mesma categoria: ${sharedCats.map(c => c.name).join(", ")}`);
+        }
+
+        const sharedTags = candidate.tags.filter(t => postTagIds.includes(t.id));
+        if (sharedTags.length > 0) {
+          reasons.push(`Mesma tag: ${sharedTags.map(t => t.name).join(", ")}`);
+        }
+
+        if (focusKeyword && candidate.title.toLowerCase().includes(focusKeyword)) {
+          reasons.push("Palavra-chave no titulo");
+        }
+
+        if (reasons.length > 0) {
+          suggestions.push({
+            title: candidate.title,
+            slug: candidate.slug,
+            reason: reasons.join("; "),
+          });
+        }
+
+        if (suggestions.length >= 10) break;
+      }
+
+      res.json(suggestions);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

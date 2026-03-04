@@ -1,173 +1,31 @@
 # Psicometria Online Blog - CMS & Content Migration System
 
 ## Overview
-A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quantitative research blog. Features a complete content management system with automated WordPress content migration via crawling. Built with Express + React + PostgreSQL. Home page has a magazine-style layout with 11 configurable sections.
-
-## Project Architecture
-- **Backend**: Express.js with Drizzle ORM (PostgreSQL)
-- **Frontend**: React with Vite, TanStack Query, Wouter routing
-- **Auth**: Replit Auth integration for admin access
-- **Styling**: Tailwind CSS with shadcn/ui components, blue/academic theme
-- **Rich Text**: TipTap editor for post editing
-- **Crawling**: Cheerio-based WordPress/Elementor post extraction + WP REST API for categories/tags
-
-## Key Files
-- `shared/schema.ts` - Database schema (posts, categories, tags, banners, free_materials, site_settings, comments, post_views)
-- `server/storage.ts` - Database CRUD operations + home page data aggregation
-- `server/routes.ts` - API endpoints (public + admin)
-- `server/crawler.ts` - WordPress post crawler using Cheerio
-- `client/src/pages/home.tsx` - Magazine-style home page with 11 configurable sections
-- `client/src/pages/post.tsx` - Individual post page (two-column layout, breadcrumb, social sharing, comments)
-- `client/src/components/hero-bar.tsx` - Reusable hero section (headline, email signup) - rendered in App.tsx shared layout
-- `client/src/components/section-free-materials.tsx` - Free materials carousel section - rendered in App.tsx shared layout
-- `client/src/pages/category.tsx` - Category listing page
-- `client/src/pages/tag.tsx` - Tag listing page
-- `client/src/pages/search.tsx` - Search results page
-- `client/src/pages/admin/dashboard.tsx` - Admin CMS dashboard
-- `client/src/pages/admin/post-editor.tsx` - Post editor with TipTap + MediaLibrary + SEO assistant integration
-- `client/src/components/media-library-modal.tsx` - Reusable media library modal (browse/upload/select images)
-- `client/src/pages/admin/manage-media.tsx` - Media library management page (stats, search, usage, duplicates)
-- `client/src/pages/admin/manage-categories.tsx` - Category management
-- `client/src/pages/admin/manage-tags.tsx` - Tag management
-- `client/src/pages/admin/crawl.tsx` - WordPress import tool
-- `client/src/pages/admin/home-settings.tsx` - Home page section configuration
-- `client/src/pages/admin/manage-authors.tsx` - Author management
-- `client/src/pages/admin/analytics.tsx` - Post views analytics with charts and filters
-- `client/src/pages/admin/containers.tsx` - Container management (image groups, rules, preview)
-- `client/src/components/seo-panel.tsx` - SEO assistant panel (Google preview, SEO/readability analysis, keyword fields)
-- `client/src/lib/seo-analyzer.ts` - SEO analysis engine (16 checks: keyword placement, density, meta description, links, images)
-- `client/src/lib/readability-analyzer.ts` - Readability analysis engine (6 checks: passive voice, sections, paragraphs, sentences, transitions)
-- `client/src/lib/portuguese-utils.ts` - Portuguese text utilities (passive voice detection, transition words, sentence splitting)
-
-## Database Schema
-- `authors` - Author profiles (name, photo, bio) - linked to posts via authorId
-- `posts` - Blog posts with title, slug, content, status, featured image, viewCount, authorId, disabledContainers (JSON array of heading indices to skip container images), seoTitle, metaDescription, focusKeyword
-- `categories` - Post categories with slug
-- `tags` - Post tags with slug
-- `post_categories` - Many-to-many junction table
-- `post_tags` - Many-to-many junction table
-- `banners` - Configurable banner ads (sidebar/horizontal slots)
-- `free_materials` - Downloadable materials section
-- `comments` - Post comments (authorName, authorEmail, content, isApproved)
-- `post_views` - Individual post view events with timestamps (for analytics)
-- `image_groups` - Groups of images for container system (name, description)
-- `image_bank_items` - Individual images in groups (groupId, imageUrl, altText, title, isActive, sortOrder)
-- `container_rules` - Rules mapping image groups to containers based on criteria (containerType, criteriaType, criteriaValue, imageGroupId, maxImages, priority, linkUrl)
-- `media_library` - Centralized image library (filename, url, altText, title, mimeType, source, fileSize, createdAt)
-- `site_settings` - Key-value store for home page configuration
-- Auth tables from Replit Auth integration
-
-## Home Page Sections (configurable from admin)
-1. Hero banner with headline, subtitle, email signup
-2. Recent posts grid (4 posts) + sidebar banners
-3. Horizontal banner
-4. Featured category section (admin-selected)
-5. Newsletter signup
-6. Most read posts (by viewCount) + category navigation
-7. Diverse categories (up to 3 admin-selected)
-8. "You may also like" random posts
-9. Row category sections (2 admin-selected)
-10. Free materials download section
-
-## Routes
-### Public
-- `/` - Home page with magazine layout
-- `/:slug` - Individual post (SEO-friendly, no /post/ prefix, matches original WP URLs)
-- `/categoria/:slug` - Posts by category
-- `/tag/:slug` - Posts by tag
-- `/busca` - Search page with simple/advanced modes (filter by title/content, category, tag, date range; sort by relevance/A-Z/Z-A/newest/oldest)
-- `/termos-de-uso` - Terms of Use static page
-- `/politicas-de-privacidade` - Privacy Policy static page
-- `/quem-somos` - About Us static page
-
-### Admin (requires Replit Auth)
-- `/admin` - Dashboard with post management
-- `/admin/post/:id` - Post editor (new or edit)
-- `/admin/categorias` - Category management
-- `/admin/tags` - Tag management
-- `/admin/crawl` - WordPress content importer
-- `/admin/home` - Home page section configuration
-- `/admin/autores` - Author management
-- `/admin/metricas` - Post views analytics dashboard
-- `/admin/conteineres` - Container management (image groups, rules with matching posts display)
-- `/admin/midias` - Media library management (stats, search, usage, duplicates)
-
-### API
-- `GET /api/home` - Aggregated home page data (all sections in one request)
-- `GET /api/banners?slot=` - Public banners (active only)
-- `GET /api/posts/:id/most-read-category?categoryId=` - Top 3 most-read in category
-- `GET /api/posts/:id/comments` - Comments for a post
-- `POST /api/posts/:id/comments` - Create comment (authorName, authorEmail, content)
-- `GET/POST/PUT/DELETE /api/admin/banners` - Banner CRUD
-- `GET/POST/PUT/DELETE /api/admin/materials` - Free materials CRUD
-- `GET /api/authors` - Public authors list
-- `POST/PUT/DELETE /api/admin/authors` - Author CRUD
-- `GET/PUT /api/admin/settings` - Site settings (key-value)
-- `GET /api/admin/analytics/timeseries?start=&end=&granularity=` - View time series (hourly/daily/monthly)
-- `GET /api/admin/analytics/posts?start=&end=&sort=` - Post views summary
-- `GET/POST/PUT/DELETE /api/admin/image-groups` - Image group CRUD
-- `GET/POST/PUT/DELETE /api/admin/image-bank` - Image bank item CRUD
-- `GET/POST/PUT/DELETE /api/admin/container-rules` - Container rule CRUD
-- `GET /api/admin/container-rules/:id/matching-posts` - Posts matching a rule's criteria
-- `GET /api/posts/:id/container-images` - Resolved container images for a post (returns images from ALL matching rules sorted by priority, with per-rule linkUrl)
-  - Container placement rules: skip heading index 0 (first), skip "Como citar" headings, skip sections ending with figure/table/pre, skip sections with <2 paragraphs, `disabledContainers` toggle; images distributed evenly across eligible slots (not sequential)
-- `POST /api/admin/media/remove-manual-banners` - Remove manual banners from post content (figure>a>img without figcaption, excludes jasp-stats.org). Query: `?dryRun=true|false`
-- `POST /api/admin/media/remove-bare-banners` - Remove bare promotional banners (img tags matching 1024x240, banner-naopare, glossario-afe-banner patterns, not inside figure+figcaption). Query: `?dryRun=true|false`
-- `GET/POST/PUT/DELETE /api/admin/media` - Media library CRUD
-- `GET /api/admin/media/stats` - Media storage overview
-- `GET /api/admin/media/duplicates` - Duplicate media detection
-- `GET /api/admin/media/:id/usage` - Posts using a media item
-- `POST /api/admin/media/import-from-posts` - Import images from existing posts
-- `POST /api/admin/media/migrate-images` - Download original WordPress images only (skips size variants), replace all WP URLs with local paths, strip srcset/sizes attributes from HTML
-- `POST /api/admin/media/refresh-sizes` - Populate file sizes (local fs.stat or remote HEAD), loops until all done
-- `PATCH /api/admin/media/:id` - Rename media item (with duplicate filename validation, returns 409 on conflict)
-- `POST /api/admin/media/fix-citations` - Mass-update all posts: wrap "Como citar" paragraph in `<div class="citation-box">` + fix proper noun capitalization in citations (comprehensive list of statistician names, software names, acronyms)
-- `GET /api/admin/posts/check-keyword?keyword=&excludeId=` - Check if focus keyword is already used by another post
-- `POST /api/admin/upload` - File upload (multipart, stores in uploads/ dir, returns URL)
-- `POST /api/admin/crawl/import-seo?dryRun=true|false` - Import Yoast SEO data (seoTitle, metaDescription, focusKeyword derived from SEO title) from WordPress REST API for all posts
-- `POST /api/admin/crawl/import-seo-csv?dryRun=true|false` - Import SEO data from CSV spreadsheet (focusKeyword, seoTitle); includes slug mapping for renamed posts; "—" seoTitle uses post title as fallback; cleans "Título SEO: " prefix
-
-## Editor Features
-- TipTap rich text editor with: bold, italic, underline, strikethrough, headings, lists, blockquotes, code blocks, links, images (via MediaLibrary), math (KaTeX), tables (insert/add/remove rows/cols), citation box
-- Table extension: `@tiptap/extension-table` (includes Table, TableRow, TableCell, TableHeader)
-- Citation box: Custom TipTap extension `CitationBox` (`client/src/lib/tiptap-citation.ts`) preserves `<div class="citation-box">` on editor re-saves; styled with light blue background and blue left border
-- Code blocks: Copy button (clipboard icon) appears on hover in top-right corner of `<pre>` blocks on post pages; changes to checkmark for 2s after copying
-- publishedAt is preserved on re-saves (only set on first publish)
+This project is a custom Content Management System (CMS) for the Psicometria Online Blog, dedicated to psychometrics and quantitative research. It aims to replicate and enhance the functionality of the original WordPress site, blog.psicometrionline.com.br, providing a robust platform for content creation, management, and automated migration from WordPress. The blog features a dynamic, magazine-style home page with configurable sections, comprehensive SEO tools, and analytics, striving to be a leading resource in its niche.
 
 ## User Preferences
 - Portuguese language throughout the UI
 - Blue/academic color scheme matching original WordPress blog
 - Content in psychometrics and quantitative research domain
 
-## Home Page Design Details
-- Category badges: standardized across all sections as `bg-accent-bright/10 text-accent-bright text-[10px] font-bold tracking-tight` sentence case (exception: main featured post uses `bg-white/90` for readability on image)
-- Mais Lidos ranking numbers: `text-primary/30` opacity for legibility
-- PostCardCompact shows first category badge next to date
-- SectionMostReadAndCategories: uses `sidebarBanners[2]` as below-categories banner slot
-- Date format: dd/MM/yyyy throughout home page
-- Header nav: responsive — full menu at xl+ breakpoint, hamburger menu below xl
+## System Architecture
+The project utilizes a full-stack architecture. The backend is built with **Express.js** and **Drizzle ORM** for PostgreSQL, handling data storage, API endpoints, and content crawling. The frontend is a **React** application, developed with **Vite**, **TanStack Query** for data fetching, and **Wouter** for routing. **Tailwind CSS** with **shadcn/ui** components ensures a consistent and academic-themed user interface.
 
-## Post Validation Rules
-- Posts must have at least 1 category and 1 tag to be saved (frontend toast + backend 400)
-- Deleting a category/tag triggers orphan check: posts that would lose their only category/tag get reassigned to "Indefinida" (auto-created if needed)
-- "Indefinida" category/tag is automatically deleted when it has 0 posts (checked after post edits and category/tag deletions)
-- Confirmation dialog before deleting categories/tags in CMS
+Key features include:
+- **Content Management:** A comprehensive admin dashboard for managing posts, categories, tags, authors, media, and site settings.
+- **Rich Text Editing:** Integration of **TipTap** editor with custom extensions for mathematical equations (KaTeX) and a specialized citation box.
+- **WordPress Migration:** A custom **Cheerio**-based crawler extracts posts from WordPress/Elementor, supplemented by the WP REST API for categories and tags.
+- **SEO & Readability:** An integrated SEO assistant, similar to Yoast, provides real-time analysis for focus keywords, meta descriptions, and content optimization (16 SEO checks, 6 readability checks). It includes a Google search preview and a Portuguese grammar/spelling checker using the LanguageTool API.
+- **Dynamic Home Page:** A magazine-style home page with 11 configurable sections, allowing administrators to curate content display.
+- **Media Management:** A centralized media library supports image browsing, uploading, and management, including duplicate detection and usage tracking.
+- **Analytics:** A dashboard provides post view analytics with charts and filters.
+- **Container System:** A flexible system for embedding images within post content, allowing for rules-based image group assignment and intelligent placement.
+- **Authentication:** Admin access is secured via Replit Auth integration.
+- **Post Structure & Validation:** Posts require at least one category and tag. Deletion of categories/tags triggers an orphan check, reassigning affected posts to an "Indefinida" category/tag if necessary.
 
-## SEO Data Status
-- All 321 posts have seoTitle, focusKeyword (from CSV spreadsheet), and metaDescription (from WordPress Yoast API)
-- CSV slug mapping handles 11 posts with different slugs between WP and local DB
-- 1 published CSV row unmatched: "afe-nao-e-horoscopo-o-fim-do-olhometro-na-analise-fatorial" (not in DB)
-
-## Pending Items
-1. SEO tasks (robots.txt, sitemap.xml, SSR meta tags)
-
-## SEO Assistant (Yoast-like)
-- Integrated into post editor below the TipTap content area
-- Fields: Focus keyword, SEO title (with char counter, ≤65), Meta description (with char counter, 100-155)
-- Google search preview: live preview of how the post appears in Google results
-- SEO analysis (16 checks): keyword in title, SEO title, slug, meta description, introduction, headings (some but not all), image alt texts, keyword density (0.5-2.5%), text length (≥300 words), internal/external links, images, unique H1
-- Readability analysis (6 checks): passive voice (<10%), consecutive same-start sentences, section length (≤300 words), paragraph length (≤150 words), sentence length (<25% over 25 words), transition words (≥30%)
-- Results grouped by severity: Problems (red), Improvements (amber), Good results (green)
-- Keyword uniqueness: real-time API check to prevent duplicate focus keywords across posts
-- Click-to-highlight: clicking an issue scrolls to and selects the offending text in the editor
-- All labels and messages in Portuguese
+## External Dependencies
+- **PostgreSQL:** Primary database for all application data.
+- **Replit Auth:** For secure administrator authentication.
+- **WordPress REST API:** Used for importing categories and tags during content migration.
+- **LanguageTool API:** Utilized for Portuguese grammar and spelling checks within the post editor.
+- **KaTeX:** For rendering mathematical equations in the rich text editor.

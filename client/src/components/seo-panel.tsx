@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronUp, Search, BookOpen, Eye, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, BookOpen, Eye, AlertTriangle, CheckCircle2, XCircle, SpellCheck2 } from "lucide-react";
 import { analyzeSEO, type SeoCheck } from "@/lib/seo-analyzer";
 import { analyzeReadability } from "@/lib/readability-analyzer";
+import { GrammarChecker } from "@/components/grammar-checker";
 
 interface SeoPanelProps {
   title: string;
@@ -25,7 +26,7 @@ interface SeoPanelProps {
   onHighlight?: (texts: string[]) => void;
 }
 
-type Tab = "seo" | "readability";
+type Tab = "seo" | "readability" | "grammar";
 
 function CheckItem({ check, onHighlight }: { check: SeoCheck; onHighlight?: (texts: string[]) => void }) {
   const icon =
@@ -164,7 +165,7 @@ export function SeoPanel({
               excerpt={excerpt}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="space-y-3">
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <Label className="text-xs">Palavra-chave de foco</Label>
@@ -197,15 +198,15 @@ export function SeoPanel({
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <Label className="text-xs">Meta descrição</Label>
+                  <Label className="text-xs">Metadescrição</Label>
                   <CharCounter value={metaDescription} min={100} max={155} />
                 </div>
                 <Textarea
                   value={metaDescription}
                   onChange={(e) => onMetaDescriptionChange(e.target.value)}
                   placeholder="Descrição concisa para os mecanismos de busca..."
-                  className="text-sm resize-none h-8 min-h-[32px]"
-                  rows={1}
+                  className="text-sm resize-none"
+                  rows={4}
                   data-testid="input-meta-description"
                 />
               </div>
@@ -240,9 +241,25 @@ export function SeoPanel({
                 <BookOpen className="h-3 w-3" />
                 Legibilidade
               </button>
+              <button
+                type="button"
+                className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition-colors ${
+                  tab === "grammar"
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => setTab("grammar")}
+                data-testid="tab-grammar"
+              >
+                <SpellCheck2 className="h-3 w-3" />
+                Gramática
+              </button>
             </div>
 
-            <div className="p-4 space-y-1 max-h-80 overflow-y-auto">
+            {tab === "grammar" ? (
+              <GrammarChecker content={content} onHighlight={onHighlight} />
+            ) : (
+            <div className="p-4 space-y-1">
               {problems.length > 0 && (
                 <div className="mb-2">
                   <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-1">Problemas ({problems.length})</p>
@@ -262,6 +279,7 @@ export function SeoPanel({
                 </div>
               )}
             </div>
+            )}
           </div>
         </div>
       )}

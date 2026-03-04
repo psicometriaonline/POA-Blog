@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Code, Sigma, Plus, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Save, Code, Sigma, Plus, Image as ImageIcon, Link2, CheckCircle, XCircle, AlertTriangle, Loader2, ChevronDown, ChevronRight, Copy } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { MediaLibraryModal } from "@/components/media-library-modal";
 import { SeoPanel } from "@/components/seo-panel";
@@ -67,7 +67,7 @@ const LANGUAGES = [
   { value: "latex", label: "LaTeX" },
 ];
 
-function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef }: { content: string; onChange: (html: string) => void; onOpenMediaLib?: () => void; editorRef?: React.MutableRefObject<any> }) {
+function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, getAuthorName, getSlug }: { content: string; onChange: (html: string) => void; onOpenMediaLib?: () => void; editorRef?: React.MutableRefObject<any>; getTitle?: () => string; getAuthorName?: () => string; getSlug?: () => string }) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -301,11 +301,9 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef }: { conten
             if (editor.isActive("citationBox")) {
               (editor.commands as any).toggleCitationBox();
             } else {
-              const title = form.getValues("title") || "";
-              const authorId = form.getValues("authorId");
-              const selectedAuthor = authors?.find(a => a.id.toString() === authorId);
-              const authorName = selectedAuthor?.name || "Autor";
-              const slug = form.getValues("slug") || "";
+              const title = getTitle?.() || "";
+              const authorName = getAuthorName?.() || "Autor";
+              const slug = getSlug?.() || "";
               
               const now = new Date();
               const months = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
@@ -339,7 +337,99 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef }: { conten
       <div className="border border-t-0 rounded-b-md p-4">
         <EditorContent editor={editor} className="prose dark:prose-invert max-w-none" />
       </div>
+      <div className="flex justify-end px-2 py-1 text-xs text-muted-foreground border border-t-0 rounded-b-md bg-muted/20" data-testid="text-word-count">
+        {(() => {
+          const text = editor.getText();
+          const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+          return `${words} palavra${words !== 1 ? "s" : ""}`;
+        })()}
+      </div>
     </div>
+  );
+}
+
+function LinkSuggestionsPanel({ postId, toast }: { postId: number; toast: any }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const { data: suggestions, isLoading, refetch, isFetching } = useQuery<{ title: string; slug: string; reason: string }[]>({
+    queryKey: ["/api/admin/posts", postId, "link-suggestions"],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/posts/${postId}/link-suggestions`, { credentials: "include" });
+      if (!res.ok) throw new Error("Falha ao buscar sugestões");
+      return res.json();
+    },
+    enabled: expanded,
+  });
+
+  const copyUrl = (slug: string) => {
+    const url = `/${slug}`;
+    navigator.clipboard.writeText(url).then(() => {
+      toast({ title: "URL copiada", description: url });
+    });
+  };
+
+  return (
+    <Card className="p-4">
+      <button
+        type="button"
+        className="flex items-center justify-between gap-2 w-full text-left"
+        onClick={() => setExpanded(!expanded)}
+        data-testid="button-toggle-link-suggestions"
+      >
+        <Label className="cursor-pointer flex items-center gap-1">
+          <Link2 className="h-4 w-4" />
+          Sugestões de links internos
+        </Label>
+        {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </button>
+      {expanded && (
+        <div className="mt-3 space-y-2">
+          {(isLoading || isFetching) && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Buscando sugestões...
+            </div>
+          )}
+          {!isLoading && !isFetching && suggestions && suggestions.length === 0 && (
+            <p className="text-xs text-muted-foreground italic" data-testid="text-no-suggestions">Nenhuma sugestão encontrada.</p>
+          )}
+          {!isLoading && !isFetching && suggestions && suggestions.length > 0 && (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {suggestions.map((s, idx) => (
+                <div key={idx} className="flex items-start justify-between gap-2 py-1 border-b last:border-b-0" data-testid={`link-suggestion-${idx}`}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" title={s.title} data-testid={`text-suggestion-title-${idx}`}>{s.title}</p>
+                    <p className="text-xs text-muted-foreground" data-testid={`text-suggestion-reason-${idx}`}>{s.reason}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => copyUrl(s.slug)}
+                    title="Copiar URL"
+                    data-testid={`button-copy-suggestion-${idx}`}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          {!isLoading && !isFetching && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              className="w-full mt-2"
+              data-testid="button-refresh-suggestions"
+            >
+              Atualizar sugestões
+            </Button>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -357,6 +447,7 @@ export default function PostEditor() {
   const [featuredImage, setFeaturedImage] = useState("");
   const [authorId, setAuthorId] = useState<string>("");
   const [status, setStatus] = useState("draft");
+  const [scheduledAt, setScheduledAt] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
   const [selectedTags, setSelectedTags] = useState<number[]>([]);
   const [slugManual, setSlugManual] = useState(false);
@@ -369,6 +460,8 @@ export default function PostEditor() {
   const [mediaLibOpen, setMediaLibOpen] = useState(false);
   const [mediaLibTarget, setMediaLibTarget] = useState<"inline" | "featured">("inline");
   const editorInstanceRef = useRef<any>(null);
+  const [linkCheckResults, setLinkCheckResults] = useState<{ url: string; text: string; status: "ok" | "broken" | "error"; statusCode?: number; reason?: string }[] | null>(null);
+  const [linkCheckLoading, setLinkCheckLoading] = useState(false);
 
   const { data: post, isLoading: postLoading } = useQuery<PostWithRelations>({
     queryKey: [`/api/posts/${params.id}`],
@@ -433,6 +526,11 @@ export default function PostEditor() {
       setFeaturedImage(post.featuredImage || "");
       setAuthorId(post.authorId ? String(post.authorId) : "");
       setStatus(post.status);
+      if (post.status === "scheduled" && post.publishedAt) {
+        const d = new Date(post.publishedAt);
+        const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        setScheduledAt(local);
+      }
       setSelectedCategories(post.categories.map(c => c.id));
       setSelectedTags(post.tags.map(t => t.id));
       setSlugManual(true);
@@ -460,6 +558,10 @@ export default function PostEditor() {
       toast({ title: "Erro", description: "Você precisa definir pelo menos uma tag para salvar o post.", variant: "destructive" });
       return;
     }
+    if (status === "scheduled" && !scheduledAt) {
+      toast({ title: "Erro", description: "Defina a data e hora de publicação para agendar o post.", variant: "destructive" });
+      return;
+    }
     saveMutation.mutate();
   };
 
@@ -480,7 +582,9 @@ export default function PostEditor() {
         focusKeyword: focusKeyword || null,
         publishedAt: status === "published"
           ? (post?.publishedAt ? post.publishedAt : new Date().toISOString())
-          : null,
+          : status === "scheduled" && scheduledAt
+            ? new Date(scheduledAt).toISOString()
+            : null,
         categoryIds: selectedCategories,
         tagIds: selectedTags,
         disabledContainers: JSON.stringify(disabledContainers),
@@ -585,7 +689,7 @@ export default function PostEditor() {
 
           <div>
             <Label>Conteudo</Label>
-            <TiptapEditor content={content} onChange={setContent} onOpenMediaLib={() => { setMediaLibTarget("inline"); setMediaLibOpen(true); }} editorRef={editorInstanceRef} />
+            <TiptapEditor content={content} onChange={setContent} onOpenMediaLib={() => { setMediaLibTarget("inline"); setMediaLibOpen(true); }} editorRef={editorInstanceRef} getTitle={() => title} getAuthorName={() => { const a = allAuthors?.find(a => a.id === parseInt(authorId)); return a?.name || "Autor"; }} getSlug={() => slug} />
           </div>
 
           <SeoPanel
@@ -658,15 +762,37 @@ export default function PostEditor() {
         <div className="space-y-4">
           <Card className="p-4">
             <Label className="mb-2 block">Status</Label>
-            <Select value={status} onValueChange={setStatus}>
+            <Select value={status} onValueChange={(v) => {
+              setStatus(v);
+              if (v === "scheduled" && !scheduledAt) {
+                const now = new Date();
+                now.setHours(now.getHours() + 1);
+                now.setMinutes(0);
+                const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                setScheduledAt(local);
+              }
+            }}>
               <SelectTrigger data-testid="select-status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="draft">Rascunho</SelectItem>
                 <SelectItem value="published">Publicado</SelectItem>
+                <SelectItem value="scheduled">Agendado</SelectItem>
               </SelectContent>
             </Select>
+            {status === "scheduled" && (
+              <div className="mt-2">
+                <Label className="text-xs mb-1 block">Publicar em</Label>
+                <Input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={(e) => setScheduledAt(e.target.value)}
+                  className="h-8 text-sm"
+                  data-testid="input-scheduled-at"
+                />
+              </div>
+            )}
           </Card>
 
           <Card className="p-4">
@@ -807,6 +933,10 @@ export default function PostEditor() {
             </div>
           </Card>
 
+          {!isNew && (
+            <LinkSuggestionsPanel postId={parseInt(params.id!)} toast={toast} />
+          )}
+
           <Card className="p-4">
             <Label className="mb-2 block">
               <ImageIcon className="h-4 w-4 inline mr-1" />
@@ -848,6 +978,82 @@ export default function PostEditor() {
                 });
               })()}
             </div>
+          </Card>
+
+          <Card className="p-4">
+            <Label className="mb-2 block">
+              <Link2 className="h-4 w-4 inline mr-1" />
+              Verificador de Links
+            </Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full"
+              disabled={isNew || linkCheckLoading}
+              onClick={async () => {
+                setLinkCheckLoading(true);
+                setLinkCheckResults(null);
+                try {
+                  const res = await apiRequest("GET", `/api/admin/posts/${params.id}/check-links`);
+                  const data = await res.json();
+                  setLinkCheckResults(data.links);
+                } catch (e: any) {
+                  toast({ title: "Erro ao verificar links", description: e.message, variant: "destructive" });
+                } finally {
+                  setLinkCheckLoading(false);
+                }
+              }}
+              data-testid="button-check-links"
+            >
+              {linkCheckLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  Verificando...
+                </>
+              ) : (
+                "Verificar links"
+              )}
+            </Button>
+            {isNew && (
+              <p className="text-xs text-muted-foreground mt-2">Salve o post primeiro para verificar links.</p>
+            )}
+            {linkCheckResults && (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs text-muted-foreground" data-testid="text-link-check-summary">
+                  {linkCheckResults.length} link{linkCheckResults.length !== 1 ? "s" : ""} encontrado{linkCheckResults.length !== 1 ? "s" : ""} &mdash; {linkCheckResults.filter(l => l.status !== "ok").length} com problema
+                </p>
+                <div className="space-y-1 max-h-64 overflow-y-auto">
+                  {linkCheckResults.map((link, idx) => (
+                    <div key={idx} className="flex items-start gap-2 py-1 text-xs" data-testid={`link-result-${idx}`}>
+                      {link.status === "ok" ? (
+                        <CheckCircle className="h-3.5 w-3.5 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
+                      ) : link.status === "broken" ? (
+                        <XCircle className="h-3.5 w-3.5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertTriangle className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium" title={link.text}>{link.text || "(sem texto)"}</p>
+                        <a
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="truncate block text-muted-foreground hover:underline"
+                          title={link.url}
+                          data-testid={`link-url-${idx}`}
+                        >
+                          {link.url}
+                        </a>
+                        {link.reason && (
+                          <p className="text-destructive">{link.reason}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </Card>
         </div>
       </div>
