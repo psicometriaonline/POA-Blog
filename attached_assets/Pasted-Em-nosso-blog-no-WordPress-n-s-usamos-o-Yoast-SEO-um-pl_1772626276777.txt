@@ -1,0 +1,147 @@
+Em nosso blog no WordPress, nós usamos o Yoast SEO, um plugin que nos auxilia a escrever posts otimizados para os mecanismos de busca do Google. Todo post tem:
+- uma frase-chave de foco (e elas nunca se repetem entre posts);
+- um título de post contendo a palavra-chave;
+- um Título SEO que, geralmente, é mais curto, diferente do título do post, e contém a palavra-chave mais ao início dele;
+- um slug personalizado, que contém a palavra chave (e.g., no post O que é correlação de Pearson, o slug poderia ser /o-que-e-correlacao-de-pearson);
+- uma metadescrição (até ~130 chr, com a palavra-chave nele);
+
+Análise de SEO: avalia alguns pontos do post, classificando-os em:
+1. Problemas:
+- Links externos: Não há links externos nesta página. Adicione alguns!
+- Palavra-chave nos atributos alt das imagens: Esta página não possui imagens, uma palavra-chave ou ambos. Adicione algumas imagens com atributos alt que incluam a palavra-chave ou sinônimos!
+- Imagens: Não há imagens nesta página. Adicione algumas!
+- Links internos: Não há links internos nesta página. Certifique-se de adicionar alguns!
+- Palavra-chave na introdução: Adicione uma palavra-chave e uma introdução que a contenha.
+- Palavra-chave no título SEO: Adicione uma palavra-chave e um título SEO que comece com a palavra-chave.
+- Comprimento da palavra-chave: Nenhuma palavra-chave principal foi definida para esta página. Defina uma palavra-chave para calcular sua pontuação de SEO.
+- Palavra-chave na meta descrição: Adicione uma palavra-chave e uma meta descrição que a contenha.
+- Comprimento da meta descrição: Nenhuma meta descrição foi especificada. Os mecanismos de busca exibirão o conteúdo da página. Certifique-se de escrever uma!
+- Palavra-chave usada anteriormente: Nenhuma palavra-chave principal foi definida para esta página. Adicione uma palavra-chave principal que você não tenha usado em outros conteúdos.
+- Comprimento do texto: O texto contém 0 palavras. Isso está muito abaixo do mínimo recomendado de 300 palavras. Adicione mais conteúdo.
+2. Bons resultados:
+- Título único: Você não tem vários títulos H1, parabéns!
+- Links concorrentes: Não há links que usem sua palavra-chave ou sinônimo como texto âncora. Ótimo!
+- Largura do título SEO: Bom trabalho!
+
+Além disso, os títulos H2 e H3 devem usar a palavra-chave na maioria das vezes, mas também não sempre, senão isso configurará otimizar demais. As imagens devem ter uma metadescrição, em sua maioria, com a palavra-chave. As seções não devem exceder 300 palavras. Além disso:
+
+- Voz passiva: Você não está usando muita voz passiva. Ótimo! (deve ser < 10%).
+- Frases consecutivas: Não há repetições no início das frases. Ótimo! (não deve ter 3 ou mais frases seguidas começando com a mesma palavra).
+- Distribuição de subtítulos: Você não está usando subtítulos, mas seu texto é curto o suficiente e provavelmente não precisa deles. (seções <= 300 palavras).
+- Extensão dos parágrafos: Não há parágrafos muito longos. Excelente! (ideias longas devem ser quebradas em ideias curtas).
+- Extensão das frases: Ótimo! (frases longas são mais difíceis de compreender).
+Palavras de transição: Você não está usando palavras de transição, mas seu texto é curto o suficiente e provavelmente não precisa delas.
+
+Eis algumas palavras de transição:
+
+Introdução
+Antecipadamente;
+Antes de mais nada;
+Antes de tudo;
+A princípio;
+De antemão;
+Acima de tudo;
+À primeira vista;
+Desde já;
+Primeiramente;
+Antes de tudo;
+Sobretudo;
+Primordialmente;
+Principalmente;
+Em primeiro lugar.
+Exemplos:
+
+Continuação
+Ainda mais;
+Assim como;
+Do mesmo modo;
+Bem como;
+Contudo;
+Juntamente com;
+Apesar disso;
+Em outras palavras;
+Nesse sentido;
+Por exemplo;
+Seja como for;
+Todavia;
+Ainda assim;
+Porém;
+Além disso;
+Em outras palavras;
+Ou seja.
+
+Tempo
+Agora;
+Apenas;
+Constantemente;
+Depois que;
+Desde que;
+Enquanto;
+Em seguida;
+Logo depois;
+Imediatamente;
+Frequentemente;
+Ao mesmo tempo;
+Posteriormente;
+Então;
+Eventualmente;
+Finalmente;
+Anteriormente;
+Nesse ínterim;
+Simultaneamente;
+Atualmente;
+Nesse meio tempo;
+Ao passo que;
+Antes que;
+Às vezes;
+Por vezes;
+Pouco antes;
+Pouco depois;
+Ocasionalmente;
+Raramente;
+Sempre que;
+Todas as vezes que.
+
+Semelhança ou comparação:
+Analogamente;
+Da mesma forma;
+De acordo com;
+Desse modo;
+Igualmente;
+Sob o mesmo ponto de vista;
+Assim também;
+Bem como;
+Conforme;
+De maneira idêntica;
+Segundo;
+Tanto quanto;
+Tal qual;
+Por outro lado;
+Assim como;
+Em contrapartida;
+Igualmente;
+Ao contrário;
+Do contrário;
+Do mesmo modo;
+Por analogia;
+Similarmente.
+
+Conclusão:
+Enfim;
+Em síntese;
+Em suma;
+Definitivamente;
+Afinal;
+Dessa forma;
+Assim;
+Logo;
+Por fim;
+Acima de tudo;
+Como resultado;
+Por último;
+Portanto;
+Em conclusão.
+
+Nesse plugin, quando marco uma opção de foco (e.g., frases na voz passiva), o texto fica salientado em todas as frases que têm voz passiva, a fim de me ajudar a identificar quais frases precisam ser mexidas. Quando passo ela para a voz ativa, o highlight some, mostrando que minha mudança foi eficiente em melhorar esse indicador.
+
+Pergunto: é possível fazer algo semelhante com um assistente de texto para SEO no nosso blog? Se sim, sugira outras funcionalidades úteis (e.g., indicação de erros de digitação, concordância etc.; sugestões de melhorias no texto), para melhorar a experiência do escritor do blog.
