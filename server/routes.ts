@@ -1403,13 +1403,29 @@ export async function registerRoutes(
       const dryRun = req.query.dryRun !== "false";
       const WP_BASE = "https://blog.psicometriaonline.com.br";
       const allPosts = await storage.getPosts({ limit: 1000, offset: 0 });
-      const results: { id: number; slug: string; title: string; seoTitle: string | null; metaDescription: string | null }[] = [];
+      const results: { id: number; slug: string; title: string; seoTitle: string | null; metaDescription: string | null; focusKeyword: string | null }[] = [];
       const skipped: { id: number; slug: string; reason: string }[] = [];
       const errors: { id: number; slug: string; error: string }[] = [];
       let actuallyUpdated = 0;
 
+      function deriveFocusKeyword(seoTitle: string): string {
+        let keyword = seoTitle;
+        const separators = [': ', ' - ', ' – ', ' | '];
+        for (const sep of separators) {
+          const idx = keyword.indexOf(sep);
+          if (idx > 0) {
+            keyword = keyword.substring(0, idx);
+            break;
+          }
+        }
+        if (keyword.endsWith(':') || keyword.endsWith('|')) {
+          keyword = keyword.slice(0, -1);
+        }
+        return keyword.trim().toLowerCase();
+      }
+
       for (const post of allPosts) {
-        if (post.seoTitle && post.metaDescription) {
+        if (post.seoTitle && post.metaDescription && post.focusKeyword) {
           skipped.push({ id: post.id, slug: post.slug, reason: "already has SEO data" });
           continue;
         }
@@ -1435,6 +1451,7 @@ export async function registerRoutes(
 
           const seoTitle = yoast.title || null;
           const metaDesc = yoast.description || null;
+          const focusKeyword = seoTitle ? deriveFocusKeyword(seoTitle) : null;
 
           if (!seoTitle && !metaDesc) {
             skipped.push({ id: post.id, slug: post.slug, reason: "empty Yoast data" });
@@ -1447,12 +1464,14 @@ export async function registerRoutes(
             title: post.title,
             seoTitle,
             metaDescription: metaDesc,
+            focusKeyword,
           });
 
           if (!dryRun) {
             const updateData: any = {};
             if (seoTitle && !post.seoTitle) updateData.seoTitle = seoTitle;
             if (metaDesc && !post.metaDescription) updateData.metaDescription = metaDesc;
+            if (focusKeyword && !post.focusKeyword) updateData.focusKeyword = focusKeyword;
             if (Object.keys(updateData).length > 0) {
               await storage.updatePost(post.id, updateData);
               actuallyUpdated++;

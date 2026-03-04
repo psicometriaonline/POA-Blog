@@ -297,7 +297,7 @@ export default function CrawlPage() {
           <h2 className="font-semibold text-lg">Importar dados de SEO do WordPress (Yoast)</h2>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Importa o título SEO e a meta descrição de cada post diretamente do Yoast SEO no WordPress.
+          Importa o título SEO, a meta descrição e a palavra-chave de foco (derivada do título SEO) de cada post diretamente do Yoast SEO no WordPress.
           Posts que já possuem dados de SEO serão mantidos sem alteração.
         </p>
         <div className="flex items-center gap-2">
@@ -370,6 +370,11 @@ export default function CrawlPage() {
                     {r.metaDescription && (
                       <p className="text-muted-foreground mt-0.5">
                         <span className="font-medium text-foreground">Meta:</span> {r.metaDescription}
+                      </p>
+                    )}
+                    {r.focusKeyword && (
+                      <p className="text-muted-foreground mt-0.5">
+                        <span className="font-medium text-foreground">Palavra-chave:</span> {r.focusKeyword}
                       </p>
                     )}
                   </div>
