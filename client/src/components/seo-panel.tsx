@@ -185,7 +185,7 @@ export function SeoPanel({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <Label className="text-xs">Título SEO</Label>
-                  <CharCounter value={seoTitle} min={1} max={60} />
+                  <CharCounter value={seoTitle} min={1} max={65} />
                 </div>
                 <Input
                   value={seoTitle}

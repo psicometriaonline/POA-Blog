@@ -163,7 +163,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 
 ## SEO Assistant (Yoast-like)
 - Integrated into post editor below the TipTap content area
-- Fields: Focus keyword, SEO title (with char counter, ≤60), Meta description (with char counter, 100-155)
+- Fields: Focus keyword, SEO title (with char counter, ≤65), Meta description (with char counter, 100-155)
 - Google search preview: live preview of how the post appears in Google results
 - SEO analysis (16 checks): keyword in title, SEO title, slug, meta description, introduction, headings (some but not all), image alt texts, keyword density (0.5-2.5%), text length (≥300 words), internal/external links, images, unique H1
 - Readability analysis (6 checks): passive voice (<10%), consecutive same-start sentences, section length (≤300 words), paragraph length (≤150 words), sentence length (<25% over 25 words), transition words (≥30%)

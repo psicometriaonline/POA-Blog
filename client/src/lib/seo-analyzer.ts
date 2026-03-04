@@ -236,12 +236,12 @@ export function analyzeSEO(input: SeoAnalysisInput): SeoCheck[] {
     checks.push({
       id: "seo-title-width",
       label: "Largura do título SEO",
-      status: len > 0 && len <= 60 ? "good" : len > 60 && len <= 70 ? "warning" : "problem",
+      status: len > 0 && len <= 65 ? "good" : len > 65 && len <= 70 ? "warning" : "problem",
       message:
-        len <= 60
+        len <= 65
           ? `Título SEO com ${len} caracteres. Bom tamanho!`
           : len <= 70
-            ? `Título SEO com ${len} caracteres. Um pouco longo — tente até 60 caracteres.`
+            ? `Título SEO com ${len} caracteres. Um pouco longo — tente até 65 caracteres.`
             : `Título SEO com ${len} caracteres. Muito longo — pode ser truncado nos resultados de busca.`,
     });
   } else {
