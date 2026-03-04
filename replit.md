@@ -125,6 +125,7 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - `GET /api/admin/posts/check-keyword?keyword=&excludeId=` - Check if focus keyword is already used by another post
 - `POST /api/admin/upload` - File upload (multipart, stores in uploads/ dir, returns URL)
 - `POST /api/admin/crawl/import-seo?dryRun=true|false` - Import Yoast SEO data (seoTitle, metaDescription, focusKeyword derived from SEO title) from WordPress REST API for all posts
+- `POST /api/admin/crawl/import-seo-csv?dryRun=true|false` - Import SEO data from CSV spreadsheet (focusKeyword, seoTitle); includes slug mapping for renamed posts; "—" seoTitle uses post title as fallback; cleans "Título SEO: " prefix
 
 ## Editor Features
 - TipTap rich text editor with: bold, italic, underline, strikethrough, headings, lists, blockquotes, code blocks, links, images (via MediaLibrary), math (KaTeX), tables (insert/add/remove rows/cols), citation box
@@ -151,6 +152,11 @@ A custom blog CMS recreating blog.psicometrionline.com.br, a psychometrics/quant
 - Deleting a category/tag triggers orphan check: posts that would lose their only category/tag get reassigned to "Indefinida" (auto-created if needed)
 - "Indefinida" category/tag is automatically deleted when it has 0 posts (checked after post edits and category/tag deletions)
 - Confirmation dialog before deleting categories/tags in CMS
+
+## SEO Data Status
+- All 321 posts have seoTitle, focusKeyword (from CSV spreadsheet), and metaDescription (from WordPress Yoast API)
+- CSV slug mapping handles 11 posts with different slugs between WP and local DB
+- 1 published CSV row unmatched: "afe-nao-e-horoscopo-o-fim-do-olhometro-na-analise-fatorial" (not in DB)
 
 ## Pending Items
 1. SEO tasks (robots.txt, sitemap.xml, SSR meta tags)

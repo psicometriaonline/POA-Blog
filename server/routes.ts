@@ -1498,5 +1498,152 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/crawl/import-seo-csv", isAuthenticated, async (req, res) => {
+    try {
+      const dryRun = req.query.dryRun !== "false";
+      const csvPath = path.resolve(process.cwd(), "attached_assets/posts-blog_1772631508691.csv");
+      const csvContent = fs.readFileSync(csvPath, "utf-8");
+
+      const lines = csvContent.split("\n");
+      const header = lines[0].replace(/^\uFEFF/, "");
+      const cols = header.split(";");
+
+      const rows: { focusKeyword: string; title: string; seoTitle: string; slug: string; status: string }[] = [];
+      let i = 1;
+      while (i < lines.length) {
+        let line = lines[i];
+        while (line && (line.split(";").length - 1) < (cols.length - 1) && i + 1 < lines.length) {
+          i++;
+          line += " " + lines[i];
+        }
+        i++;
+        if (!line || !line.trim()) continue;
+        const parts = line.split(";");
+        if (parts.length < 9) continue;
+
+        const status = parts[1]?.trim();
+        const focusKeyword = parts[5]?.trim();
+        const title = parts[6]?.trim();
+        let seoTitle = parts[7]?.trim();
+        const link = parts[8]?.trim();
+
+        if (!link) continue;
+
+        if (seoTitle?.startsWith("Título SEO:")) {
+          seoTitle = seoTitle.replace(/^Título SEO:\s*/, "").trim();
+        }
+        if (seoTitle === "—" || seoTitle === "-") {
+          seoTitle = title;
+        }
+
+        let slug = link
+          .replace(/^https?:\/\/(www\.)?blog\.psicometriaonline\.com\.br\//, "")
+          .replace(/\/$/, "")
+          .trim();
+
+        if (!slug) continue;
+
+        rows.push({ focusKeyword, title, seoTitle, slug, status });
+      }
+
+      const slugMapping: Record<string, string> = {
+        "como-testar-a-normalidade-da-amostra-com-kolgomorov-smirnov-e-shapiro-wilk": "como-testar-a-normalidade-da-amostra-com-kolmogorov-smirnov-e-shapiro-wilk",
+        "quando-utilizar-o-teste-t-de-amostras-independentes-e-analise-de-variancia-anova": "comparacao-entre-grupos-teste-t-e-anova",
+        "tutorial-quando-e-como-utilizar-analise-de-variancia-anova": "como-realizar-a-analise-de-variancia-anova-no-jasp",
+        "analise-fatorial-confirmatoria-2": "analise-fatorial-confirmatoria",
+        "diferenca-entre-as-regressoes-logisticas-binaria-ordinal-e-multinomial": "tipos-de-regressao-logistica",
+        "principais-metodos-de-retencao-de-fatores": "principais-metodos-de-retencao-fatorial",
+        "glossario-da-analise-fatorial-exploratoria": "termos-importantes-da-analise-fatorial-exploratoria",
+        "o-que-e-path-analysis": "path-analysis-conheca-essa-tecnica-de-analise-de-dados",
+        "tutorial-invariancia-de-medicao-mimic-no-jasp": "tutorial-analise-de-invariancia-de-medicao-mimic-no-jasp",
+        "como-calcular-o-escore-z-no-SPSS": "como-calcular-o-escore-z-no-spss",
+        "machine-learning-entenda-como-as-maquinas-aprendem": "aprendizado-de-maquina-entenda-como-as-maquinas-aprendem",
+      };
+
+      const allPosts = await storage.getPosts({ limit: 1000, offset: 0 });
+      const postsBySlug = new Map<string, typeof allPosts[0]>();
+      for (const post of allPosts) {
+        postsBySlug.set(post.slug, post);
+      }
+
+      const matched: { id: number; slug: string; title: string; seoTitle: string; focusKeyword: string; fieldsUpdated: string[] }[] = [];
+      const unmatchedCsv: { slug: string; title: string; status: string }[] = [];
+      let actuallyUpdated = 0;
+
+      for (const row of rows) {
+        const resolvedSlug = slugMapping[row.slug] || row.slug;
+        const post = postsBySlug.get(resolvedSlug);
+        if (!post) {
+          unmatchedCsv.push({ slug: row.slug, title: row.title, status: row.status });
+          continue;
+        }
+
+        const updateData: any = {};
+        const fieldsUpdated: string[] = [];
+
+        if (row.seoTitle && !post.seoTitle) {
+          updateData.seoTitle = row.seoTitle;
+          fieldsUpdated.push("seoTitle");
+        }
+        if (row.focusKeyword && !post.focusKeyword) {
+          updateData.focusKeyword = row.focusKeyword;
+          fieldsUpdated.push("focusKeyword");
+        }
+
+        if (Object.keys(updateData).length === 0) {
+          continue;
+        }
+
+        matched.push({
+          id: post.id,
+          slug: post.slug,
+          title: post.title,
+          seoTitle: row.seoTitle,
+          focusKeyword: row.focusKeyword,
+          fieldsUpdated,
+        });
+
+        if (!dryRun) {
+          await storage.updatePost(post.id, updateData);
+          actuallyUpdated++;
+        }
+      }
+
+      const postsStillMissing = allPosts.filter(p => {
+        const hasAllSeo = p.seoTitle && p.focusKeyword;
+        if (dryRun) {
+          const willBeUpdated = matched.find(m => m.id === p.id);
+          if (willBeUpdated) {
+            const willHaveSeoTitle = p.seoTitle || willBeUpdated.fieldsUpdated.includes("seoTitle");
+            const willHaveKeyword = p.focusKeyword || willBeUpdated.fieldsUpdated.includes("focusKeyword");
+            return !(willHaveSeoTitle && willHaveKeyword);
+          }
+        }
+        return !hasAllSeo;
+      });
+
+      res.json({
+        dryRun,
+        csvRows: rows.length,
+        matched: matched.length,
+        actuallyUpdated: dryRun ? matched.length : actuallyUpdated,
+        unmatchedFromCsv: unmatchedCsv.length,
+        unmatchedCsvDetails: unmatchedCsv,
+        matchedDetails: matched.slice(0, 30),
+        postsStillMissingSeo: postsStillMissing.length,
+        postsStillMissingSeoDetails: postsStillMissing.map(p => ({
+          id: p.id,
+          slug: p.slug,
+          title: p.title,
+          hasSeoTitle: !!p.seoTitle,
+          hasFocusKeyword: !!p.focusKeyword,
+          hasMetaDescription: !!p.metaDescription,
+        })),
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }
