@@ -12,10 +12,10 @@ This project is a custom Content Management System (CMS) for the Psicometria Onl
 The project utilizes a full-stack architecture. The backend is built with **Express.js** and **Drizzle ORM** for PostgreSQL, handling data storage, API endpoints, and content crawling. The frontend is a **React** application, developed with **Vite**, **TanStack Query** for data fetching, and **Wouter** for routing. **Tailwind CSS** with **shadcn/ui** components ensures a consistent and academic-themed user interface.
 
 Key features include:
-- **Content Management:** A comprehensive admin dashboard for managing posts, categories, tags, authors, media, and site settings.
+- **Content Management:** A comprehensive admin dashboard with a sortable table view for managing posts (columns: Título, Autor, Categorias, Tags, Data, Links Recebidos, Links Enviados, Ações). Internal link metrics track how many other blog posts link to/from each post. All columns support ascending/descending sort, including server-side sorting for link counts.
 - **Rich Text Editing:** Integration of **TipTap** editor with custom extensions for mathematical equations (KaTeX) and a specialized citation box.
 - **WordPress Migration:** A custom **Cheerio**-based crawler extracts posts from WordPress/Elementor, supplemented by the WP REST API for categories and tags.
-- **SEO & Readability:** An integrated SEO assistant, similar to Yoast, provides real-time analysis for focus keywords, meta descriptions, and content optimization (16 SEO checks, 6 readability checks). It includes a Google search preview and a Portuguese grammar/spelling checker using the LanguageTool API.
+- **SEO & Readability:** An integrated SEO assistant, similar to Yoast, provides real-time analysis for focus keywords, meta descriptions, and content optimization (16 SEO checks, 6 readability checks). It includes a Google search preview, a Portuguese grammar/spelling checker using the LanguageTool API, and **Yoast-style inline highlighting** — clicking any readability check (passive voice, sentence length, paragraph length, etc.) highlights all problematic text in the editor with a lilac background using `@tiptap/extension-highlight`.
 - **Dynamic Home Page:** A magazine-style home page with 11 configurable sections, allowing administrators to curate content display.
 - **Media Management:** A centralized media library supports image browsing, uploading, and management, including duplicate detection and usage tracking.
 - **Analytics:** A dashboard provides post view analytics with charts and filters.

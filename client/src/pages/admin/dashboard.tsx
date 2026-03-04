@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2, Settings, Users, BarChart3, Layers, ImageIcon, Search, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2, Settings, Users, BarChart3, Layers, ImageIcon, Search, ChevronLeft, ChevronRight, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import type { PostWithRelations, Category, Tag as TagType } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -16,12 +16,36 @@ import { ptBR } from "date-fns/locale";
 
 const POSTS_PER_PAGE = 20;
 
+type SortField = "title" | "authorName" | "publishedAt" | "inboundLinks" | "outboundLinks";
+type SortOrder = "asc" | "desc";
+
+function SortHeader({ label, field, currentSort, currentOrder, onSort }: { label: string; field: SortField; currentSort: SortField | null; currentOrder: SortOrder; onSort: (f: SortField) => void }) {
+  const isActive = currentSort === field;
+  return (
+    <button
+      type="button"
+      className="flex items-center gap-1 hover:text-foreground transition-colors text-left"
+      onClick={() => onSort(field)}
+      data-testid={`sort-${field}`}
+    >
+      <span>{label}</span>
+      {isActive ? (
+        currentOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+      ) : (
+        <ArrowUpDown className="h-3 w-3 opacity-40" />
+      )}
+    </button>
+  );
+}
+
 export default function AdminDashboard() {
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
+  const [sortBy, setSortBy] = useState<SortField | null>(null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -32,13 +56,25 @@ export default function AdminDashboard() {
   }, [searchInput]);
 
   const offset = page * POSTS_PER_PAGE;
+
+  const sortByParam = sortBy ? `&sortBy=${sortBy}&sortOrder=${sortOrder}` : "";
   const searchParam = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : "";
 
   const { data: postsData, isLoading: postsLoading } = useQuery<{ posts: PostWithRelations[]; total: number }>({
-    queryKey: ["/api/admin/posts", { search: searchTerm, limit: POSTS_PER_PAGE, offset }],
+    queryKey: ["/api/admin/posts", { search: searchTerm, limit: POSTS_PER_PAGE, offset, sortBy, sortOrder }],
     queryFn: async () => {
-      const res = await fetch(`/api/admin/posts?limit=${POSTS_PER_PAGE}&offset=${offset}${searchParam}`, { credentials: "include" });
+      const res = await fetch(`/api/admin/posts?limit=${POSTS_PER_PAGE}&offset=${offset}${searchParam}${sortByParam}`, { credentials: "include" });
       if (!res.ok) throw new Error("Erro ao carregar posts");
+      return res.json();
+    },
+    enabled: !!user,
+  });
+
+  const { data: linkCounts } = useQuery<Record<number, { inbound: number; outbound: number }>>({
+    queryKey: ["/api/admin/posts/link-counts"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/posts/link-counts", { credentials: "include" });
+      if (!res.ok) throw new Error("Erro ao carregar contagem de links");
       return res.json();
     },
     enabled: !!user,
@@ -54,9 +90,21 @@ export default function AdminDashboard() {
     enabled: !!user,
   });
 
+  const displayPosts = postsData?.posts || [];
+
+  const handleSort = (field: SortField) => {
+    if (sortBy === field) {
+      setSortOrder(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(field);
+      setSortOrder(field === "publishedAt" ? "desc" : "asc");
+    }
+    setPage(0);
+  };
+
   if (authLoading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         <Skeleton className="h-8 w-64 mb-8" />
         <div className="space-y-4">
           <Skeleton className="h-24 w-full" />
@@ -68,7 +116,7 @@ export default function AdminDashboard() {
 
   if (!user) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-16 text-center">
+      <div className="max-w-7xl mx-auto px-4 py-16 text-center">
         <h1 className="text-2xl font-bold mb-4">Acesso Restrito</h1>
         <p className="text-muted-foreground mb-6">
           Faça login para acessar o painel administrativo.
@@ -84,6 +132,7 @@ export default function AdminDashboard() {
     try {
       await apiRequest("DELETE", `/api/admin/posts/${id}`);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/posts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/posts/link-counts"] });
       toast({ title: "Post excluido com sucesso" });
     } catch (error: any) {
       toast({ title: "Erro ao excluir post", description: error.message, variant: "destructive" });
@@ -92,8 +141,24 @@ export default function AdminDashboard() {
 
   const totalPages = postsData ? Math.ceil(postsData.total / POSTS_PER_PAGE) : 0;
 
+  const statusLabel = (s: string) => {
+    switch (s) {
+      case "published": return "Publicado";
+      case "scheduled": return "Agendado";
+      default: return "Rascunho";
+    }
+  };
+
+  const statusVariant = (s: string): "default" | "secondary" | "outline" => {
+    switch (s) {
+      case "published": return "default";
+      case "scheduled": return "outline";
+      default: return "secondary";
+    }
+  };
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between gap-4 flex-wrap mb-8">
         <h1 className="font-serif text-3xl font-bold" data-testid="text-admin-title">
           Painel Administrativo
@@ -216,7 +281,7 @@ export default function AdminDashboard() {
       {postsLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
+            <Skeleton key={i} className="h-12 w-full" />
           ))}
         </div>
       ) : postsData?.posts.length === 0 ? (
@@ -235,51 +300,114 @@ export default function AdminDashboard() {
         </Card>
       ) : (
         <>
-          <div className="space-y-2">
-            {postsData?.posts.map((post) => (
-              <Card key={post.id} className="p-4" data-testid={`admin-post-${post.id}`}>
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <h3 className="font-medium truncate">{post.title}</h3>
-                      <Badge
-                        variant={post.status === "published" ? "default" : "secondary"}
-                        className="text-xs"
-                      >
-                        {post.status === "published" ? "Publicado" : "Rascunho"}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {post.publishedAt
-                        ? format(new Date(post.publishedAt), "dd/MM/yyyy", { locale: ptBR })
-                        : "Sem data"}
-                      {post.categories.length > 0 && ` | ${post.categories.map(c => c.name).join(", ")}`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <a href={`/${post.slug}`} target="_blank" rel="noopener noreferrer">
-                      <Button size="icon" variant="ghost" title="Ir para" data-testid={`button-goto-post-${post.id}`}>
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    </a>
-                    <Link href={`/admin/post/${post.id}`}>
-                      <Button size="icon" variant="ghost" title="Editar" data-testid={`button-edit-post-${post.id}`}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      title="Excluir"
-                      onClick={() => handleDeletePost(post.id)}
-                      data-testid={`button-delete-post-${post.id}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
+          <div className="border rounded-lg overflow-x-auto">
+            <table className="w-full text-sm" data-testid="table-posts">
+              <thead>
+                <tr className="border-b bg-muted/50 text-muted-foreground">
+                  <th className="text-left p-3 font-medium min-w-[250px]">
+                    <SortHeader label="Título" field="title" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="text-left p-3 font-medium min-w-[120px]">
+                    <SortHeader label="Autor" field="authorName" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="text-left p-3 font-medium min-w-[140px]">Categorias</th>
+                  <th className="text-left p-3 font-medium min-w-[140px]">Tags</th>
+                  <th className="text-left p-3 font-medium min-w-[100px]">
+                    <SortHeader label="Data" field="publishedAt" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="text-center p-3 font-medium min-w-[50px]" title="Links recebidos de outros posts">
+                    <SortHeader label="↓ Rec." field="inboundLinks" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="text-center p-3 font-medium min-w-[50px]" title="Links enviados para outros posts">
+                    <SortHeader label="↑ Env." field="outboundLinks" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} />
+                  </th>
+                  <th className="text-right p-3 font-medium min-w-[100px]">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {displayPosts.map((post) => {
+                  const lc = linkCounts?.[post.id];
+                  return (
+                    <tr key={post.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors" data-testid={`admin-post-${post.id}`}>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Link href={`/admin/post/${post.id}`}>
+                            <span className="font-medium text-primary hover:underline cursor-pointer" data-testid={`link-title-${post.id}`}>
+                              {post.title}
+                            </span>
+                          </Link>
+                          <Badge variant={statusVariant(post.status)} className="text-[10px] px-1.5 py-0">
+                            {statusLabel(post.status)}
+                          </Badge>
+                        </div>
+                      </td>
+                      <td className="p-3 text-muted-foreground" data-testid={`text-author-${post.id}`}>
+                        {post.authorName || post.author?.name || "—"}
+                      </td>
+                      <td className="p-3">
+                        <div className="flex flex-wrap gap-1">
+                          {post.categories.length > 0
+                            ? post.categories.map(c => (
+                                <span key={c.id} className="text-xs text-muted-foreground">{c.name}</span>
+                              ))
+                            : <span className="text-xs text-muted-foreground">—</span>
+                          }
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <div className="flex flex-wrap gap-1">
+                          {post.tags.length > 0
+                            ? post.tags.map(t => (
+                                <span key={t.id} className="text-xs text-muted-foreground">{t.name}</span>
+                              ))
+                            : <span className="text-xs text-muted-foreground">—</span>
+                          }
+                        </div>
+                      </td>
+                      <td className="p-3 text-muted-foreground whitespace-nowrap" data-testid={`text-date-${post.id}`}>
+                        {post.publishedAt
+                          ? format(new Date(post.publishedAt), "dd/MM/yyyy", { locale: ptBR })
+                          : "Sem data"}
+                      </td>
+                      <td className="p-3 text-center" data-testid={`text-inbound-${post.id}`}>
+                        <span className={`text-xs font-medium ${lc && lc.inbound > 0 ? "text-green-600" : "text-muted-foreground"}`}>
+                          {lc?.inbound ?? "—"}
+                        </span>
+                      </td>
+                      <td className="p-3 text-center" data-testid={`text-outbound-${post.id}`}>
+                        <span className={`text-xs font-medium ${lc && lc.outbound > 0 ? "text-blue-600" : "text-muted-foreground"}`}>
+                          {lc?.outbound ?? "—"}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <a href={`/${post.slug}`} target="_blank" rel="noopener noreferrer">
+                            <Button size="icon" variant="ghost" title="Ir para" className="h-7 w-7" data-testid={`button-goto-post-${post.id}`}>
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Button>
+                          </a>
+                          <Link href={`/admin/post/${post.id}`}>
+                            <Button size="icon" variant="ghost" title="Editar" className="h-7 w-7" data-testid={`button-edit-post-${post.id}`}>
+                              <Edit className="h-3.5 w-3.5" />
+                            </Button>
+                          </Link>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="Excluir"
+                            className="h-7 w-7"
+                            onClick={() => handleDeletePost(post.id)}
+                            data-testid={`button-delete-post-${post.id}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
 
           {totalPages > 1 && (

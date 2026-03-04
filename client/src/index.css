@@ -333,6 +333,12 @@ div:hover > .copy-code-btn,
   min-height: 300px;
 }
 
+.tiptap mark[data-color="#E8D0FF"] {
+  background-color: #E8D0FF;
+  border-radius: 2px;
+  padding: 1px 0;
+}
+
 .tiptap p.is-editor-empty:first-child::before {
   color: hsl(var(--muted-foreground));
   content: attr(data-placeholder);

@@ -288,8 +288,26 @@ export class DatabaseStorage implements IStorage {
     return (result.rows as any[]).map(r => r.post_id);
   }
 
-  async getPosts(options?: { status?: string; limit?: number; offset?: number; search?: string }): Promise<PostWithRelations[]> {
-    let query = db.select().from(posts).orderBy(desc(posts.publishedAt), desc(posts.createdAt)).$dynamic();
+  async getPosts(options?: { status?: string; limit?: number; offset?: number; search?: string; sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<PostWithRelations[]> {
+    const sortOrder = options?.sortOrder || "desc";
+    const orderFn = sortOrder === "asc" ? asc : desc;
+
+    let orderClauses: any[];
+    switch (options?.sortBy) {
+      case "title":
+        orderClauses = [orderFn(posts.title)];
+        break;
+      case "authorName":
+        orderClauses = [orderFn(posts.authorName)];
+        break;
+      case "publishedAt":
+        orderClauses = [orderFn(posts.publishedAt)];
+        break;
+      default:
+        orderClauses = [desc(posts.publishedAt), desc(posts.createdAt)];
+    }
+
+    let query = db.select().from(posts).orderBy(...orderClauses).$dynamic();
 
     const conditions = [];
     if (options?.status) conditions.push(eq(posts.status, options.status));

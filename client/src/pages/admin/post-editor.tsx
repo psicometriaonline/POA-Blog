@@ -27,6 +27,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
+import Highlight from "@tiptap/extension-highlight";
 import { MathInline, MathBlock } from "@/lib/tiptap-math";
 import { CitationBox } from "@/lib/tiptap-citation";
 import katex from "katex";
@@ -87,6 +88,7 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
       CitationBox,
       MathInline,
       MathBlock,
+      Highlight.configure({ multicolor: true }),
     ],
     content,
     onUpdate: ({ editor }) => {
@@ -707,47 +709,73 @@ export default function PostEditor() {
             onHighlight={(texts) => {
               const editor = editorInstanceRef.current;
               if (!editor) return;
-              const { doc } = editor.state;
-              const textNodes: { pos: number; text: string }[] = [];
+              const { doc, tr } = editor.state;
+              const highlightType = editor.schema.marks.highlight;
+              if (!highlightType) return;
+
+              let newTr = tr;
               doc.descendants((node: any, pos: number) => {
+                if (node.isText) {
+                  const marks = node.marks?.filter((m: any) => m.type === highlightType) || [];
+                  for (const mark of marks) {
+                    newTr = newTr.removeMark(pos, pos + node.nodeSize, mark);
+                  }
+                }
+              });
+              editor.view.dispatch(newTr);
+
+              const textNodes: { pos: number; text: string }[] = [];
+              editor.state.doc.descendants((node: any, pos: number) => {
                 if (node.isText) {
                   textNodes.push({ pos, text: node.text || "" });
                 }
               });
-              for (const t of texts) {
-                const snippet = t.slice(0, 80);
-                let matchFrom = -1;
-                let matchTo = -1;
-                const fullText = textNodes.map(n => n.text).join("");
-                const matchIdx = fullText.indexOf(snippet);
-                if (matchIdx < 0) continue;
-                let charsSoFar = 0;
+              const fullText = textNodes.map(n => n.text).join("");
+              let firstFrom = -1;
+              let searchStartIdx = 0;
+
+              const resolvePositions = (idx: number, len: number) => {
+                let from = -1, to = -1, chars = 0;
                 for (const tn of textNodes) {
-                  const nodeStart = charsSoFar;
-                  const nodeEnd = charsSoFar + tn.text.length;
-                  if (matchFrom === -1 && matchIdx < nodeEnd) {
-                    matchFrom = tn.pos + (matchIdx - nodeStart);
-                  }
-                  if (matchTo === -1 && matchIdx + snippet.length <= nodeEnd) {
-                    matchTo = tn.pos + (matchIdx + snippet.length - nodeStart);
-                  }
-                  charsSoFar = nodeEnd;
-                  if (matchFrom >= 0 && matchTo >= 0) break;
+                  const nStart = chars, nEnd = chars + tn.text.length;
+                  if (from === -1 && idx < nEnd) from = tn.pos + (idx - nStart);
+                  if (to === -1 && idx + len <= nEnd) to = tn.pos + (idx + len - nStart);
+                  chars = nEnd;
+                  if (from >= 0 && to >= 0) break;
                 }
+                return { from, to };
+              };
+
+              for (const t of texts) {
+                const snippet = t.slice(0, 120);
+                let idx = fullText.indexOf(snippet, searchStartIdx);
+                if (idx < 0) idx = fullText.indexOf(snippet);
+                if (idx < 0) continue;
+
+                const { from: matchFrom, to: matchTo } = resolvePositions(idx, t.length);
                 if (matchFrom === -1) continue;
-                if (matchTo === -1) matchTo = Math.min(matchFrom + snippet.length, doc.content.size);
-                editor.chain().focus().setTextSelection({ from: matchFrom, to: matchTo }).run();
+                const resolvedTo = matchTo === -1 ? Math.min(matchFrom + t.length, editor.state.doc.content.size) : matchTo;
+
+                editor.chain()
+                  .setTextSelection({ from: matchFrom, to: resolvedTo })
+                  .setHighlight({ color: "#E8D0FF" })
+                  .run();
+
+                if (firstFrom === -1) firstFrom = matchFrom;
+                searchStartIdx = idx + t.length;
+              }
+
+              if (firstFrom >= 0) {
+                editor.chain().focus().setTextSelection(firstFrom).run();
                 setTimeout(() => {
-                  const selection = window.getSelection();
-                  if (selection && selection.rangeCount > 0) {
-                    const range = selection.getRangeAt(0);
-                    const rect = range.getBoundingClientRect();
+                  const sel = window.getSelection();
+                  if (sel && sel.rangeCount > 0) {
+                    const rect = sel.getRangeAt(0).getBoundingClientRect();
                     if (rect.top < 0 || rect.bottom > window.innerHeight) {
-                      range.startContainer.parentElement?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      sel.getRangeAt(0).startContainer.parentElement?.scrollIntoView({ behavior: "smooth", block: "center" });
                     }
                   }
                 }, 50);
-                break;
               }
             }}
           />

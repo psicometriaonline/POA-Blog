@@ -740,9 +740,49 @@ export async function registerRoutes(
       const offset = parseInt(req.query.offset as string) || 0;
       const status = req.query.status as string | undefined;
       const search = req.query.search as string | undefined;
-      const posts = await storage.getPosts({ status, limit, offset, search });
-      const total = await storage.getPostCount(status, search);
-      res.json({ posts, total, limit, offset });
+      const sortBy = req.query.sortBy as string | undefined;
+      const sortOrder = (req.query.sortOrder as string) === "asc" ? "asc" : "desc";
+
+      if (sortBy === "inboundLinks" || sortBy === "outboundLinks") {
+        const allFiltered = await storage.getPosts({ status, limit: 5000, offset: 0, search });
+        const total = allFiltered.length;
+
+        const slugToId = new Map<string, number>();
+        for (const p of allFiltered) slugToId.set(p.slug, p.id);
+
+        const internalDomains = ["blog.psicometriaonline.com.br", "www.blog.psicometriaonline.com.br", "blog-academy.replit.app"];
+        const hrefRegex = /<a[^>]+href=["']([^"'#?]+)["'][^>]*>/gi;
+        const outboundMap: Record<number, number> = {};
+        const inboundMap: Record<number, number> = {};
+        for (const p of allFiltered) { outboundMap[p.id] = 0; inboundMap[p.id] = 0; }
+
+        for (const p of allFiltered) {
+          const content = p.content || "";
+          let match;
+          hrefRegex.lastIndex = 0;
+          const seenSlugs = new Set<string>();
+          while ((match = hrefRegex.exec(content)) !== null) {
+            let href = match[1];
+            let slug: string | null = null;
+            if (href.startsWith("http://") || href.startsWith("https://")) {
+              try { const url = new URL(href); if (!internalDomains.includes(url.hostname)) continue; slug = url.pathname.replace(/^\//, "").replace(/\/$/, ""); } catch { continue; }
+            } else { slug = href.replace(/^\//, "").replace(/\/$/, ""); }
+            if (!slug || seenSlugs.has(slug)) continue;
+            seenSlugs.add(slug);
+            const targetId = slugToId.get(slug);
+            if (targetId && targetId !== p.id) { outboundMap[p.id]++; inboundMap[targetId]++; }
+          }
+        }
+
+        const sortMap = sortBy === "inboundLinks" ? inboundMap : outboundMap;
+        allFiltered.sort((a, b) => sortOrder === "asc" ? (sortMap[a.id] || 0) - (sortMap[b.id] || 0) : (sortMap[b.id] || 0) - (sortMap[a.id] || 0));
+        const paginated = allFiltered.slice(offset, offset + limit);
+        res.json({ posts: paginated, total, limit, offset });
+      } else {
+        const fetchedPosts = await storage.getPosts({ status, limit, offset, search, sortBy, sortOrder });
+        const total = await storage.getPostCount(status, search);
+        res.json({ posts: fetchedPosts, total, limit, offset });
+      }
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -1008,6 +1048,75 @@ export async function registerRoutes(
       }
 
       res.json(suggestions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/posts/link-counts", isAuthenticated, async (req, res) => {
+    try {
+      const allPosts = await storage.getPosts({ limit: 2000, offset: 0 });
+      const slugToId = new Map<string, number>();
+      for (const p of allPosts) {
+        slugToId.set(p.slug, p.id);
+      }
+
+      const hrefRegex = /<a[^>]+href=["']([^"'#?]+)["'][^>]*>/gi;
+      const outbound: Record<number, Set<number>> = {};
+      const inbound: Record<number, Set<number>> = {};
+
+      for (const p of allPosts) {
+        outbound[p.id] = new Set();
+        if (!inbound[p.id]) inbound[p.id] = new Set();
+      }
+
+      const internalDomains = [
+        "blog.psicometriaonline.com.br",
+        "www.blog.psicometriaonline.com.br",
+        "blog-academy.replit.app",
+      ];
+
+      for (const p of allPosts) {
+        const content = p.content || "";
+        let match;
+        hrefRegex.lastIndex = 0;
+        const seenSlugs = new Set<string>();
+        while ((match = hrefRegex.exec(content)) !== null) {
+          let href = match[1];
+          let slug: string | null = null;
+
+          if (href.startsWith("http://") || href.startsWith("https://")) {
+            try {
+              const url = new URL(href);
+              if (!internalDomains.includes(url.hostname)) continue;
+              slug = url.pathname.replace(/^\//, "").replace(/\/$/, "");
+            } catch {
+              continue;
+            }
+          } else {
+            slug = href.replace(/^\//, "").replace(/\/$/, "");
+          }
+
+          if (!slug || seenSlugs.has(slug)) continue;
+          seenSlugs.add(slug);
+          const targetId = slugToId.get(slug);
+          if (targetId && targetId !== p.id) {
+            outbound[p.id].add(targetId);
+            if (!inbound[targetId]) inbound[targetId] = new Set();
+            inbound[targetId].add(p.id);
+          }
+        }
+      }
+
+      const result: Record<number, { inbound: number; outbound: number }> = {};
+      for (const p of allPosts) {
+        result[p.id] = {
+          inbound: inbound[p.id]?.size || 0,
+          outbound: outbound[p.id]?.size || 0,
+        };
+      }
+
+      res.json(result);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
