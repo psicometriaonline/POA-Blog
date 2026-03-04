@@ -707,41 +707,47 @@ export default function PostEditor() {
             onHighlight={(texts) => {
               const editor = editorInstanceRef.current;
               if (!editor) return;
-              const { state } = editor;
-              const { doc } = state;
-              const textContent = doc.textContent;
-              for (const t of texts) {
-                const snippet = t.slice(0, 60);
-                const idx = textContent.indexOf(snippet);
-                if (idx >= 0) {
-                  let resolvedFrom = -1;
-                  doc.descendants((node: any, nodePos: number) => {
-                    if (node.isText && resolvedFrom === -1) {
-                      const nodeText = node.text || "";
-                      const localIdx = nodeText.indexOf(snippet);
-                      if (localIdx >= 0) {
-                        resolvedFrom = nodePos + localIdx;
-                      }
-                    }
-                  });
-                  if (resolvedFrom >= 0) {
-                    editor.chain().focus().setTextSelection({ from: resolvedFrom, to: Math.min(resolvedFrom + snippet.length, doc.content.size) }).run();
-                    setTimeout(() => {
-                      const editorEl = document.querySelector(".ProseMirror");
-                      if (editorEl) {
-                        const selection = window.getSelection();
-                        if (selection && selection.rangeCount > 0) {
-                          const range = selection.getRangeAt(0);
-                          const rect = range.getBoundingClientRect();
-                          if (rect.top < 0 || rect.bottom > window.innerHeight) {
-                            range.startContainer.parentElement?.scrollIntoView({ behavior: "smooth", block: "center" });
-                          }
-                        }
-                      }
-                    }, 50);
-                    break;
-                  }
+              const { doc } = editor.state;
+              const textNodes: { pos: number; text: string }[] = [];
+              doc.descendants((node: any, pos: number) => {
+                if (node.isText) {
+                  textNodes.push({ pos, text: node.text || "" });
                 }
+              });
+              for (const t of texts) {
+                const snippet = t.slice(0, 80);
+                let matchFrom = -1;
+                let matchTo = -1;
+                const fullText = textNodes.map(n => n.text).join("");
+                const matchIdx = fullText.indexOf(snippet);
+                if (matchIdx < 0) continue;
+                let charsSoFar = 0;
+                for (const tn of textNodes) {
+                  const nodeStart = charsSoFar;
+                  const nodeEnd = charsSoFar + tn.text.length;
+                  if (matchFrom === -1 && matchIdx < nodeEnd) {
+                    matchFrom = tn.pos + (matchIdx - nodeStart);
+                  }
+                  if (matchTo === -1 && matchIdx + snippet.length <= nodeEnd) {
+                    matchTo = tn.pos + (matchIdx + snippet.length - nodeStart);
+                  }
+                  charsSoFar = nodeEnd;
+                  if (matchFrom >= 0 && matchTo >= 0) break;
+                }
+                if (matchFrom === -1) continue;
+                if (matchTo === -1) matchTo = Math.min(matchFrom + snippet.length, doc.content.size);
+                editor.chain().focus().setTextSelection({ from: matchFrom, to: matchTo }).run();
+                setTimeout(() => {
+                  const selection = window.getSelection();
+                  if (selection && selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    const rect = range.getBoundingClientRect();
+                    if (rect.top < 0 || rect.bottom > window.innerHeight) {
+                      range.startContainer.parentElement?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }
+                  }
+                }, 50);
+                break;
               }
             }}
           />
