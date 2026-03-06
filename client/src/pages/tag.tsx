@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { PostCard } from "@/components/post-card";
 import { PaginationControls } from "@/components/pagination-controls";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SidebarAcademyForm, SidebarMostRead, SidebarRecentPosts, DiverseSections } from "@/components/sidebar-widgets";
+import { SidebarAcademyForm, SidebarMostRead, DiverseSections } from "@/components/sidebar-widgets";
 import type { PostWithRelations, Tag } from "@shared/schema";
 
 export default function TagPage() {
@@ -72,8 +72,7 @@ export default function TagPage() {
         <aside>
           <div className="sticky top-24 space-y-6">
             <SidebarAcademyForm slot="academy_form_listing" />
-            <SidebarMostRead limit={4} />
-            <SidebarRecentPosts limit={4} />
+            <SidebarMostRead limit={5} />
           </div>
         </aside>
       </div>
