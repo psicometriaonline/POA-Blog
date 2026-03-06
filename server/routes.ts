@@ -537,7 +537,27 @@ export async function registerRoutes(
     try {
       const post = await storage.getPostBySlug(req.params.slug);
       if (!post) return res.status(404).json({ message: "Post not found" });
-      storage.incrementViewCount(post.id).catch(() => {});
+
+      let visitorId = (req as any).cookies?.visitor_id;
+      if (!visitorId) {
+        const { randomUUID } = await import("crypto");
+        visitorId = randomUUID();
+        res.cookie("visitor_id", visitorId, { maxAge: 365 * 24 * 60 * 60 * 1000, httpOnly: true, sameSite: "lax" });
+      }
+
+      let referrer: string | undefined;
+      const refHeader = req.headers.referer || req.headers.referrer;
+      if (refHeader) {
+        try {
+          const refUrl = new URL(refHeader as string);
+          const ownHosts = ["blog-academy.replit.app", "blog.psicometriaonline.com.br", "localhost"];
+          if (!ownHosts.some(h => refUrl.hostname.includes(h))) {
+            referrer = refUrl.hostname.replace(/^www\./, "");
+          }
+        } catch {}
+      }
+
+      storage.incrementViewCount(post.id, visitorId, referrer).catch(() => {});
       res.json(post);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1798,7 +1818,8 @@ export async function registerRoutes(
       }
 
       const total = await storage.getTotalViews(startDate, endDate, postId);
-      res.json({ data, total });
+      const totalVisitors = await storage.getTotalVisitors(startDate, endDate, postId);
+      res.json({ data, total, totalVisitors });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -1809,12 +1830,34 @@ export async function registerRoutes(
       const startDate = new Date(req.query.start as string);
       const endDate = new Date(req.query.end as string);
       const sortDir = (req.query.sort as string) === "asc" ? "asc" as const : "desc" as const;
+      const search = req.query.search as string | undefined;
+      const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined;
+      const tagId = req.query.tagId ? parseInt(req.query.tagId as string) : undefined;
+      const postId = req.query.postId ? parseInt(req.query.postId as string) : undefined;
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
 
       if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
         return res.status(400).json({ message: "Invalid date range" });
       }
 
-      const data = await storage.getPostViewsSummary(startDate, endDate, sortDir);
+      const result = await storage.getPostViewsSummary(startDate, endDate, { sortDir, search, categoryId, tagId, postId, page, limit });
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/analytics/referrers", isAuthenticated, async (req, res) => {
+    try {
+      const startDate = new Date(req.query.start as string);
+      const endDate = new Date(req.query.end as string);
+
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return res.status(400).json({ message: "Invalid date range" });
+      }
+
+      const data = await storage.getReferrerStats(startDate, endDate);
       res.json(data);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

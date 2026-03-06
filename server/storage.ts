@@ -56,7 +56,7 @@ export interface IStorage {
   createPost(data: InsertPost, categoryIds?: number[], tagIds?: number[]): Promise<PostWithRelations>;
   updatePost(id: number, data: Partial<InsertPost>, categoryIds?: number[], tagIds?: number[]): Promise<PostWithRelations | undefined>;
   deletePost(id: number): Promise<boolean>;
-  incrementViewCount(id: number): Promise<void>;
+  incrementViewCount(id: number, visitorId?: string, referrer?: string): Promise<void>;
 
   getBanners(slot?: string): Promise<Banner[]>;
   getBanner(id: number): Promise<Banner | undefined>;
@@ -573,12 +573,12 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
-  async incrementViewCount(id: number): Promise<void> {
+  async incrementViewCount(id: number, visitorId?: string, referrer?: string): Promise<void> {
     await db.update(posts).set({ viewCount: sql`${posts.viewCount} + 1` }).where(eq(posts.id, id));
-    await db.insert(postViews).values({ postId: id });
+    await db.insert(postViews).values({ postId: id, visitorId: visitorId || null, referrer: referrer || null });
   }
 
-  async getViewsTimeSeries(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]> {
+  async getViewsTimeSeries(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number; visitors: number }[]> {
     const conditions = [
       gte(postViews.viewedAt, startDate),
       lte(postViews.viewedAt, endDate),
@@ -588,6 +588,7 @@ export class DatabaseStorage implements IStorage {
     const rows = await db.select({
       date: sql<string>`date_trunc('day', ${postViews.viewedAt})::date::text`,
       views: sql<number>`count(*)::int`,
+      visitors: sql<number>`count(distinct ${postViews.visitorId})::int`,
     })
       .from(postViews)
       .where(and(...conditions))
@@ -597,7 +598,7 @@ export class DatabaseStorage implements IStorage {
     return rows;
   }
 
-  async getViewsTimeSeriesMonthly(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]> {
+  async getViewsTimeSeriesMonthly(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number; visitors: number }[]> {
     const conditions = [
       gte(postViews.viewedAt, startDate),
       lte(postViews.viewedAt, endDate),
@@ -607,6 +608,7 @@ export class DatabaseStorage implements IStorage {
     const rows = await db.select({
       date: sql<string>`to_char(date_trunc('month', ${postViews.viewedAt}), 'YYYY-MM')`,
       views: sql<number>`count(*)::int`,
+      visitors: sql<number>`count(distinct ${postViews.visitorId})::int`,
     })
       .from(postViews)
       .where(and(...conditions))
@@ -616,7 +618,7 @@ export class DatabaseStorage implements IStorage {
     return rows;
   }
 
-  async getViewsTimeSeriesHourly(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]> {
+  async getViewsTimeSeriesHourly(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number; visitors: number }[]> {
     const conditions = [
       gte(postViews.viewedAt, startDate),
       lte(postViews.viewedAt, endDate),
@@ -626,6 +628,7 @@ export class DatabaseStorage implements IStorage {
     const rows = await db.select({
       date: sql<string>`to_char(date_trunc('hour', ${postViews.viewedAt}), 'YYYY-MM-DD HH24:00')`,
       views: sql<number>`count(*)::int`,
+      visitors: sql<number>`count(distinct ${postViews.visitorId})::int`,
     })
       .from(postViews)
       .where(and(...conditions))
@@ -635,23 +638,66 @@ export class DatabaseStorage implements IStorage {
     return rows;
   }
 
-  async getPostViewsSummary(startDate: Date, endDate: Date, sortDir: 'asc' | 'desc' = 'desc'): Promise<{ postId: number; title: string; slug: string; views: number }[]> {
-    const rows = await db.select({
+  async getPostViewsSummary(startDate: Date, endDate: Date, options: {
+    sortDir?: 'asc' | 'desc';
+    search?: string;
+    categoryId?: number;
+    tagId?: number;
+    postId?: number;
+    page?: number;
+    limit?: number;
+  } = {}): Promise<{ data: { postId: number; title: string; slug: string; views: number; visitors: number }[]; total: number }> {
+    const { sortDir = 'desc', search, categoryId, tagId, postId: filterPostId, page = 1, limit = 30 } = options;
+
+    let query = db.select({
       postId: postViews.postId,
       title: posts.title,
       slug: posts.slug,
       views: sql<number>`count(*)::int`,
+      visitors: sql<number>`count(distinct ${postViews.visitorId})::int`,
+    })
+      .from(postViews)
+      .innerJoin(posts, eq(postViews.postId, posts.id));
+
+    const conditions: any[] = [
+      gte(postViews.viewedAt, startDate),
+      lte(postViews.viewedAt, endDate),
+    ];
+
+    if (filterPostId) conditions.push(eq(postViews.postId, filterPostId));
+    if (search) conditions.push(sql`lower(${posts.title}) like ${'%' + search.toLowerCase() + '%'}`);
+
+    if (categoryId) {
+      conditions.push(sql`${postViews.postId} in (select ${postCategories.postId} from ${postCategories} where ${postCategories.categoryId} = ${categoryId})`);
+    }
+    if (tagId) {
+      conditions.push(sql`${postViews.postId} in (select ${postTags.postId} from ${postTags} where ${postTags.tagId} = ${tagId})`);
+    }
+
+    const whereClause = and(...conditions);
+
+    const countQuery = db.select({
+      postId: postViews.postId,
     })
       .from(postViews)
       .innerJoin(posts, eq(postViews.postId, posts.id))
-      .where(and(
-        gte(postViews.viewedAt, startDate),
-        lte(postViews.viewedAt, endDate),
-      ))
-      .groupBy(postViews.postId, posts.title, posts.slug)
-      .orderBy(sortDir === 'desc' ? desc(sql`count(*)`) : asc(sql`count(*)`));
+      .where(whereClause)
+      .groupBy(postViews.postId);
 
-    return rows;
+    const countResult = await db.select({
+      total: sql<number>`count(*)::int`,
+    }).from(countQuery.as('grouped'));
+
+    const total = countResult[0]?.total || 0;
+
+    const offset = (page - 1) * limit;
+    const data = await query.where(whereClause)
+      .groupBy(postViews.postId, posts.title, posts.slug)
+      .orderBy(sortDir === 'desc' ? desc(sql`count(*)`) : asc(sql`count(*)`))
+      .limit(limit)
+      .offset(offset) as any;
+
+    return { data, total };
   }
 
   async getTotalViews(startDate: Date, endDate: Date, postId?: number): Promise<number> {
@@ -667,6 +713,39 @@ export class DatabaseStorage implements IStorage {
       .from(postViews)
       .where(and(...conditions));
     return result?.total || 0;
+  }
+
+  async getTotalVisitors(startDate: Date, endDate: Date, postId?: number): Promise<number> {
+    const conditions = [
+      gte(postViews.viewedAt, startDate),
+      lte(postViews.viewedAt, endDate),
+    ];
+    if (postId) conditions.push(eq(postViews.postId, postId));
+
+    const [result] = await db.select({
+      total: sql<number>`count(distinct ${postViews.visitorId})::int`,
+    })
+      .from(postViews)
+      .where(and(...conditions));
+    return result?.total || 0;
+  }
+
+  async getReferrerStats(startDate: Date, endDate: Date): Promise<{ referrer: string; visitors: number; pageviews: number }[]> {
+    const rows = await db.select({
+      referrer: postViews.referrer,
+      visitors: sql<number>`count(distinct ${postViews.visitorId})::int`,
+      pageviews: sql<number>`count(*)::int`,
+    })
+      .from(postViews)
+      .where(and(
+        gte(postViews.viewedAt, startDate),
+        lte(postViews.viewedAt, endDate),
+        sql`${postViews.referrer} is not null and ${postViews.referrer} != ''`,
+      ))
+      .groupBy(postViews.referrer)
+      .orderBy(desc(sql`count(*)`));
+
+    return rows.map(r => ({ referrer: r.referrer || '', visitors: r.visitors, pageviews: r.pageviews }));
   }
 
   async getBanners(slot?: string): Promise<Banner[]> {

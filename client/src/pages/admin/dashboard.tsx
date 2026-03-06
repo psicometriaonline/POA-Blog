@@ -465,6 +465,11 @@ export default function AdminDashboard() {
                               <ExternalLink className="h-3.5 w-3.5" />
                             </Button>
                           </a>
+                          <Link href={`/admin/metricas?postId=${post.id}`}>
+                            <Button size="icon" variant="ghost" title="Métricas" className="h-7 w-7" data-testid={`button-analytics-post-${post.id}`}>
+                              <BarChart3 className="h-3.5 w-3.5" />
+                            </Button>
+                          </Link>
                           <Link href={`/admin/post/${post.id}`}>
                             <Button size="icon" variant="ghost" title="Editar" className="h-7 w-7" data-testid={`button-edit-post-${post.id}`}>
                               <Edit className="h-3.5 w-3.5" />

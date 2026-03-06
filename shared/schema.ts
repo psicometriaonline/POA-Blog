@@ -124,6 +124,8 @@ export const postViews = pgTable("post_views", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
   viewedAt: timestamp("viewed_at").defaultNow().notNull(),
+  visitorId: text("visitor_id"),
+  referrer: text("referrer"),
 });
 
 export const imageGroups = pgTable("image_groups", {
