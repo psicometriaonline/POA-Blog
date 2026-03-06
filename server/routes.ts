@@ -214,17 +214,34 @@ export async function registerRoutes(
   app.patch("/api/admin/media/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { filename } = req.body;
+      const { filename, autoSuffix } = req.body;
       if (filename !== undefined) {
-        const trimmed = (filename || "").trim();
+        let trimmed = (filename || "").trim();
         if (!trimmed) {
           return res.status(400).json({ message: "Nome do arquivo não pode ser vazio" });
         }
         const existing = await storage.getMediaByFilename(trimmed, id);
         if (existing) {
-          return res.status(409).json({ message: `A imagem "${trimmed}" já existe` });
+          if (autoSuffix) {
+            const dotIdx = trimmed.lastIndexOf(".");
+            const baseName = dotIdx > 0 ? trimmed.substring(0, dotIdx) : trimmed;
+            const ext = dotIdx > 0 ? trimmed.substring(dotIdx) : "";
+            let suffix = 2;
+            let candidate = `${baseName}-${suffix}${ext}`;
+            while (await storage.getMediaByFilename(candidate, id)) {
+              suffix++;
+              candidate = `${baseName}-${suffix}${ext}`;
+              if (suffix > 100) {
+                return res.status(409).json({ message: `Não foi possível gerar um nome único para "${trimmed}"` });
+              }
+            }
+            trimmed = candidate;
+          } else {
+            return res.status(409).json({ message: `A imagem "${trimmed}" já existe` });
+          }
         }
         await storage.updateMediaFilename(id, trimmed);
+        return res.json({ success: true, filename: trimmed });
       }
       res.json({ success: true });
     } catch (error: any) {

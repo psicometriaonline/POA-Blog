@@ -138,9 +138,9 @@ export default function ManageMediaPage() {
   });
 
   const renameMutation = useMutation({
-    mutationFn: async ({ id, filename }: { id: number; filename: string }) => {
+    mutationFn: async ({ id, filename, autoSuffix }: { id: number; filename: string; autoSuffix?: boolean }) => {
       try {
-        const res = await apiRequest("PATCH", `/api/admin/media/${id}`, { filename });
+        const res = await apiRequest("PATCH", `/api/admin/media/${id}`, { filename, autoSuffix });
         return res.json();
       } catch (e: any) {
         const msg = e.message || "";
@@ -155,11 +155,11 @@ export default function ManageMediaPage() {
         throw e;
       }
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: (data, variables) => {
       toast({ title: "Arquivo renomeado" });
       setRenaming(false);
       if (selectedMedia) {
-        setSelectedMedia({ ...selectedMedia, filename: variables.filename });
+        setSelectedMedia({ ...selectedMedia, filename: data?.filename || variables.filename });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/media/duplicates"] });
@@ -432,7 +432,12 @@ export default function ManageMediaPage() {
                     size="sm"
                     variant="ghost"
                     className="text-xs"
-                    onClick={() => renameMutation.mutate({ id: group.items[1].id, filename: group.items[1].filename + "-2" })}
+                    onClick={() => {
+                      const fn = group.items[1].filename;
+                      const dotIdx = fn.lastIndexOf(".");
+                      const newName = dotIdx > 0 ? fn.substring(0, dotIdx) + "-2" + fn.substring(dotIdx) : fn + "-2";
+                      renameMutation.mutate({ id: group.items[1].id, filename: newName, autoSuffix: true });
+                    }}
                     data-testid={`button-not-duplicate-${idx}`}
                   >
                     Não são duplicatas
