@@ -963,22 +963,24 @@ export class DatabaseStorage implements IStorage {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+    const conditions = [gte(postViews.viewedAt, thirtyDaysAgo)];
+    if (excludePostId > 0) conditions.push(sql`${postViews.postId} != ${excludePostId}` as any);
+
     const topPosts = await db.select({
       postId: postViews.postId,
       views: sql<number>`count(*)::int`,
     })
       .from(postViews)
-      .where(and(
-        gte(postViews.viewedAt, thirtyDaysAgo),
-        sql`${postViews.postId} != ${excludePostId}`
-      ))
+      .where(and(...conditions))
       .groupBy(postViews.postId)
       .orderBy(desc(sql`count(*)`))
       .limit(20);
 
     if (topPosts.length === 0) {
+      const fallbackConditions = [eq(posts.status, "published")];
+      if (excludePostId > 0) fallbackConditions.push(sql`${posts.id} != ${excludePostId}` as any);
       const fallback = await db.select().from(posts)
-        .where(and(eq(posts.status, "published"), sql`${posts.id} != ${excludePostId}`))
+        .where(and(...fallbackConditions))
         .orderBy(desc(posts.viewCount))
         .limit(limit);
       return enrichPostsWithRelations(fallback);

@@ -65,7 +65,7 @@ export default function HomeSettings() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <h1 className="font-serif text-2xl font-bold" data-testid="text-page-title">Configurações da Home</h1>
+        <h1 className="font-serif text-2xl font-bold" data-testid="text-page-title">Configurações Gerais do Blog</h1>
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
@@ -191,6 +191,12 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
   const [diverseSlug3, setDiverseSlug3] = useState("");
   const [row1Slug, setRow1Slug] = useState("");
   const [row2Slug, setRow2Slug] = useState("");
+  const [catDiverse1, setCatDiverse1] = useState("");
+  const [catDiverse2, setCatDiverse2] = useState("");
+  const [catDiverse3, setCatDiverse3] = useState("");
+  const [tagDiverse1, setTagDiverse1] = useState("");
+  const [tagDiverse2, setTagDiverse2] = useState("");
+  const [tagDiverse3, setTagDiverse3] = useState("");
 
   useEffect(() => {
     setFeaturedSlug(settings["featured_category_slug"] || "");
@@ -200,6 +206,14 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
     setDiverseSlug3(diverseParts[2]?.trim() || "");
     setRow1Slug(settings["row_section_1_slug"] || "");
     setRow2Slug(settings["row_section_2_slug"] || "");
+    const catParts = (settings["category_page_diverse_slugs"] || "").split(",").filter(Boolean);
+    setCatDiverse1(catParts[0]?.trim() || "");
+    setCatDiverse2(catParts[1]?.trim() || "");
+    setCatDiverse3(catParts[2]?.trim() || "");
+    const tagParts = (settings["tag_page_diverse_slugs"] || "").split(",").filter(Boolean);
+    setTagDiverse1(tagParts[0]?.trim() || "");
+    setTagDiverse2(tagParts[1]?.trim() || "");
+    setTagDiverse3(tagParts[2]?.trim() || "");
   }, [settings]);
 
   const saveMutation = useMutation({
@@ -209,12 +223,27 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/home"] });
-      toast({ title: "Salvo", description: "Secoes atualizadas com sucesso." });
+      queryClient.invalidateQueries({ queryKey: ["/api/diverse-sections"] });
+      toast({ title: "Salvo", description: "Seções atualizadas com sucesso." });
     },
     onError: () => {
-      toast({ title: "Erro", description: "Falha ao salvar secoes.", variant: "destructive" });
+      toast({ title: "Erro", description: "Falha ao salvar seções.", variant: "destructive" });
     },
   });
+
+  const CategorySelect = ({ value, onChange, testId }: { value: string; onChange: (v: string) => void; testId: string }) => (
+    <Select value={value || "none"} onValueChange={(v) => onChange(v === "none" ? "" : v)}>
+      <SelectTrigger data-testid={testId}>
+        <SelectValue placeholder="Selecionar categoria" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="none">Nenhuma</SelectItem>
+        {categories.map((cat) => (
+          <SelectItem key={cat.id} value={cat.slug}>{cat.name}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 
   return (
     <Card className="p-6 space-y-6">
@@ -236,49 +265,58 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
       </div>
 
       <div>
-        <h3 className="font-semibold text-lg mb-4">Categorias Diversas (até 3)</h3>
+        <h3 className="font-semibold text-lg mb-4">Categorias Diversas — Home (até 3)</h3>
+        <p className="text-sm text-muted-foreground mb-3">Colunas de categorias exibidas na página inicial</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <Label>Categoria 1</Label>
-            <Select value={diverseSlug1 || "none"} onValueChange={(v) => setDiverseSlug1(v === "none" ? "" : v)}>
-              <SelectTrigger data-testid="select-diverse-1">
-                <SelectValue placeholder="Selecionar categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nenhuma</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.slug}>{cat.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CategorySelect value={diverseSlug1} onChange={setDiverseSlug1} testId="select-diverse-1" />
           </div>
           <div>
             <Label>Categoria 2</Label>
-            <Select value={diverseSlug2 || "none"} onValueChange={(v) => setDiverseSlug2(v === "none" ? "" : v)}>
-              <SelectTrigger data-testid="select-diverse-2">
-                <SelectValue placeholder="Selecionar categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nenhuma</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.slug}>{cat.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CategorySelect value={diverseSlug2} onChange={setDiverseSlug2} testId="select-diverse-2" />
           </div>
           <div>
             <Label>Categoria 3</Label>
-            <Select value={diverseSlug3 || "none"} onValueChange={(v) => setDiverseSlug3(v === "none" ? "" : v)}>
-              <SelectTrigger data-testid="select-diverse-3">
-                <SelectValue placeholder="Selecionar categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nenhuma</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.slug}>{cat.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CategorySelect value={diverseSlug3} onChange={setDiverseSlug3} testId="select-diverse-3" />
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="font-semibold text-lg mb-4">Categorias Diversas — Páginas de Categorias (até 3)</h3>
+        <p className="text-sm text-muted-foreground mb-3">Colunas de categorias exibidas nas páginas de categorias individuais</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <Label>Categoria 1</Label>
+            <CategorySelect value={catDiverse1} onChange={setCatDiverse1} testId="select-cat-diverse-1" />
+          </div>
+          <div>
+            <Label>Categoria 2</Label>
+            <CategorySelect value={catDiverse2} onChange={setCatDiverse2} testId="select-cat-diverse-2" />
+          </div>
+          <div>
+            <Label>Categoria 3</Label>
+            <CategorySelect value={catDiverse3} onChange={setCatDiverse3} testId="select-cat-diverse-3" />
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="font-semibold text-lg mb-4">Categorias Diversas — Páginas de Tags (até 3)</h3>
+        <p className="text-sm text-muted-foreground mb-3">Colunas de categorias exibidas nas páginas de tags individuais</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <Label>Categoria 1</Label>
+            <CategorySelect value={tagDiverse1} onChange={setTagDiverse1} testId="select-tag-diverse-1" />
+          </div>
+          <div>
+            <Label>Categoria 2</Label>
+            <CategorySelect value={tagDiverse2} onChange={setTagDiverse2} testId="select-tag-diverse-2" />
+          </div>
+          <div>
+            <Label>Categoria 3</Label>
+            <CategorySelect value={tagDiverse3} onChange={setTagDiverse3} testId="select-tag-diverse-3" />
           </div>
         </div>
       </div>
@@ -288,31 +326,11 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label>Seção 1</Label>
-            <Select value={row1Slug} onValueChange={setRow1Slug}>
-              <SelectTrigger data-testid="select-row1-category">
-                <SelectValue placeholder="Selecionar categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nenhuma</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.slug}>{cat.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CategorySelect value={row1Slug} onChange={setRow1Slug} testId="select-row1-category" />
           </div>
           <div>
             <Label>Seção 2</Label>
-            <Select value={row2Slug} onValueChange={setRow2Slug}>
-              <SelectTrigger data-testid="select-row2-category">
-                <SelectValue placeholder="Selecionar categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nenhuma</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.slug}>{cat.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CategorySelect value={row2Slug} onChange={setRow2Slug} testId="select-row2-category" />
           </div>
         </div>
       </div>
@@ -321,6 +339,8 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
         onClick={() => saveMutation.mutate({
           featured_category_slug: featuredSlug,
           diverse_category_slugs: [diverseSlug1, diverseSlug2, diverseSlug3].filter(Boolean).join(","),
+          category_page_diverse_slugs: [catDiverse1, catDiverse2, catDiverse3].filter(Boolean).join(","),
+          tag_page_diverse_slugs: [tagDiverse1, tagDiverse2, tagDiverse3].filter(Boolean).join(","),
           row_section_1_slug: row1Slug === "none" ? "" : row1Slug,
           row_section_2_slug: row2Slug === "none" ? "" : row2Slug,
         })}
@@ -402,6 +422,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
       queryClient.invalidateQueries({ queryKey: ["/api/admin/banners"] });
       queryClient.invalidateQueries({ queryKey: ["/api/home"] });
       queryClient.invalidateQueries({ queryKey: ["/api/banners?slot=academy_form"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/banners?slot=academy_form_listing"] });
       queryClient.invalidateQueries({ queryKey: ["/api/banners?slot=sidebar"] });
       resetForm();
       toast({ title: editingBanner ? "Banner atualizado" : "Banner criado" });
@@ -473,7 +494,8 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
               <SelectContent>
                 <SelectItem value="sidebar">Sidebar</SelectItem>
                 <SelectItem value="horizontal">Horizontal</SelectItem>
-                <SelectItem value="academy_form">Academy Form</SelectItem>
+                <SelectItem value="academy_form">Academy Form (Posts)</SelectItem>
+                <SelectItem value="academy_form_listing">Academy Form (Categorias/Tags)</SelectItem>
               </SelectContent>
             </Select>
           </div>

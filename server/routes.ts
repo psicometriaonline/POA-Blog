@@ -533,6 +533,26 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/posts/most-read-global", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 4;
+      const mostRead = await storage.getMostReadGlobal(0, limit);
+      res.json(mostRead);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/posts/recent", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 4;
+      const recentPosts = await storage.getPosts({ status: "published", limit });
+      res.json(recentPosts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/posts/slug/:slug", async (req, res) => {
     try {
       const post = await storage.getPostBySlug(req.params.slug);
@@ -824,8 +844,32 @@ export async function registerRoutes(
   app.get("/api/posts/:id/most-read", async (req, res) => {
     try {
       const postId = parseInt(req.params.id);
-      const mostRead = await storage.getMostReadGlobal(postId, 3);
+      const limit = parseInt(req.query.limit as string) || 3;
+      const mostRead = await storage.getMostReadGlobal(postId, limit);
       res.json(mostRead);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/diverse-sections", async (req, res) => {
+    try {
+      const context = (req.query.context as string) || "home";
+      const settings = await storage.getAllSettings();
+      let settingKey = "diverse_category_slugs";
+      if (context === "category") settingKey = "category_page_diverse_slugs";
+      else if (context === "tag") settingKey = "tag_page_diverse_slugs";
+
+      const slugs = (settings[settingKey] || settings["diverse_category_slugs"] || "").split(",").filter(Boolean);
+      const sections: { category: any; posts: any[] }[] = [];
+      for (const slug of slugs.slice(0, 3)) {
+        const cat = await storage.getCategoryBySlug(slug.trim());
+        if (cat) {
+          const catPosts = await storage.getPostsByCategory(slug.trim(), { limit: 4 });
+          sections.push({ category: cat, posts: catPosts });
+        }
+      }
+      res.json(sections);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

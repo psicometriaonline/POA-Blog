@@ -252,7 +252,7 @@ export default function AdminDashboard() {
           <Link href="/admin/home">
             <Button variant="outline" data-testid="button-home-settings">
               <Settings className="h-4 w-4 mr-1" />
-              Config. Home
+              Config. Geral
             </Button>
           </Link>
         </div>

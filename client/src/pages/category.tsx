@@ -5,6 +5,7 @@ import { PostCard } from "@/components/post-card";
 import { PaginationControls } from "@/components/pagination-controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SidebarAcademyForm, SidebarMostRead, SidebarRecentPosts, DiverseSections } from "@/components/sidebar-widgets";
 import type { PostWithRelations, Category } from "@shared/schema";
 
 export default function CategoryPage() {
@@ -26,7 +27,7 @@ export default function CategoryPage() {
   });
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-8">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -65,39 +66,53 @@ export default function CategoryPage() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="space-y-3">
-              <Skeleton className="h-48 w-full rounded-md" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-10">
+        <div>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="space-y-3">
+                  <Skeleton className="h-48 w-full rounded-md" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      ) : data?.posts.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-muted-foreground text-lg" data-testid="text-no-posts">
-            Nenhum post encontrado nesta categoria.
-          </p>
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data?.posts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
-          </div>
-          {data && (
-            <PaginationControls
-              total={data.total}
-              limit={limit}
-              offset={offset}
-              onPageChange={setOffset}
-            />
+          ) : data?.posts.length === 0 ? (
+            <div className="text-center py-16">
+              <p className="text-muted-foreground text-lg" data-testid="text-no-posts">
+                Nenhum post encontrado nesta categoria.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {data?.posts.map((post) => (
+                  <PostCard key={post.id} post={post} />
+                ))}
+              </div>
+              {data && (
+                <PaginationControls
+                  total={data.total}
+                  limit={limit}
+                  offset={offset}
+                  onPageChange={setOffset}
+                />
+              )}
+            </>
           )}
-        </>
-      )}
+        </div>
+
+        <aside>
+          <div className="sticky top-24 space-y-6">
+            <SidebarAcademyForm slot="academy_form_listing" />
+            <SidebarMostRead limit={4} />
+            <SidebarRecentPosts limit={4} />
+          </div>
+        </aside>
+      </div>
+
+      <DiverseSections context="category" />
     </div>
   );
 }
