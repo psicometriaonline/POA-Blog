@@ -503,10 +503,15 @@ export default function AnalyticsPage() {
                       <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="text-sm font-semibold tabular-nums">{item.views.toLocaleString("pt-BR")}</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-sm tabular-nums text-muted-foreground">{item.visitors.toLocaleString("pt-BR")}</span>
-                    </div>
+                    <button
+                      className="flex items-center gap-1 hover:text-[#31D5FF] transition-colors cursor-pointer"
+                      onClick={() => setFilterPostId(String(item.postId))}
+                      title={`Filtrar métricas para "${item.title}"`}
+                      data-testid={`button-filter-post-${item.postId}`}
+                    >
+                      <Users className="h-3.5 w-3.5" />
+                      <span className="text-sm tabular-nums">{item.visitors.toLocaleString("pt-BR")}</span>
+                    </button>
                   </div>
                 </div>
               ))}
