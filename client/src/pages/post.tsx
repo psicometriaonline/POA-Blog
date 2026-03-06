@@ -620,9 +620,18 @@ function TableOfContents({ contentRef, postId }: { contentRef: React.RefObject<H
   if (headings.length === 0) return null;
 
   const handleClick = (id: string) => {
-    const el = document.getElementById(id);
+    let el = document.getElementById(id);
+    if (!el && contentRef.current) {
+      const nodes = contentRef.current.querySelectorAll("h1, h2, h3");
+      const idx = parseInt(id.replace("heading-", ""), 10);
+      if (!isNaN(idx) && nodes[idx]) {
+        el = nodes[idx] as HTMLElement;
+        el.id = id;
+      }
+    }
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      const top = el.getBoundingClientRect().top + window.scrollY - 100;
+      window.scrollTo({ top, behavior: "smooth" });
     }
   };
 
