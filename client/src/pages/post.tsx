@@ -379,24 +379,24 @@ function MostReadSidebar({ postId }: { postId: number }) {
       <div className="space-y-4">
         {mostRead.map((p) => (
           <Link key={p.id} href={`/${p.slug}`} data-testid={`card-most-read-${p.id}`}>
-            <Card className="overflow-visible hover-elevate cursor-pointer">
-              <div className="flex gap-3 p-3">
-                {p.featuredImage && (
+            <Card className="overflow-hidden hover-elevate cursor-pointer">
+              {p.featuredImage && (
+                <div className="aspect-video overflow-hidden">
                   <img
                     src={p.featuredImage}
                     alt={p.title}
-                    className="w-20 h-20 object-cover rounded-md flex-shrink-0"
+                    className="w-full h-full object-cover"
                     loading="lazy"
                   />
-                )}
-                <div className="flex flex-col justify-center min-w-0">
-                  {p.categories[0] && (
-                    <Badge variant="secondary" className="self-start mb-1 text-xs bg-accent-bright/15 text-accent-bright border-0">
-                      {p.categories[0].name}
-                    </Badge>
-                  )}
-                  <h4 className="text-sm font-semibold leading-snug line-clamp-3">{p.title}</h4>
                 </div>
+              )}
+              <div className="p-3">
+                {p.categories[0] && (
+                  <Badge variant="secondary" className="mb-1.5 text-xs bg-accent-bright/15 text-accent-bright border-0">
+                    {p.categories[0].name}
+                  </Badge>
+                )}
+                <h4 className="text-sm font-semibold leading-snug line-clamp-3">{p.title}</h4>
               </div>
             </Card>
           </Link>
@@ -928,6 +928,8 @@ export default function PostPage() {
             )}
 
             <CommentsSection postId={post.id} />
+
+            <SuggestedPosts postId={post.id} />
           </article>
 
           <aside>
@@ -939,8 +941,6 @@ export default function PostPage() {
             </div>
           </aside>
         </div>
-
-        <SuggestedPosts postId={post.id} />
       </div>
     </>
   );
