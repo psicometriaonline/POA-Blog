@@ -205,6 +205,78 @@ export async function crawlWordPressPost(url: string): Promise<CrawledPost> {
   };
 }
 
+export interface WpComment {
+  wpPostId: number;
+  wpPostSlug: string;
+  authorName: string;
+  authorEmail: string;
+  content: string;
+  date: string;
+  parentWpId: number;
+  wpCommentId: number;
+}
+
+export async function crawlWordPressComments(
+  baseUrl: string = "https://www.blog.psicometriaonline.com.br"
+): Promise<{ comments: WpComment[]; errors: string[] }> {
+  const allComments: WpComment[] = [];
+  const errors: string[] = [];
+  let page = 1;
+  const perPage = 100;
+
+  const postSlugCache: Record<number, string> = {};
+
+  while (true) {
+    try {
+      const res = await axios.get(`${baseUrl}/wp-json/wp/v2/comments`, {
+        params: { per_page: perPage, page, orderby: "date", order: "asc" },
+        timeout: 30000,
+      });
+
+      if (!res.data || res.data.length === 0) break;
+
+      for (const c of res.data) {
+        let postSlug = postSlugCache[c.post];
+        if (!postSlug && c.post) {
+          try {
+            const postRes = await axios.get(`${baseUrl}/wp-json/wp/v2/posts/${c.post}`, {
+              params: { _fields: "slug" },
+              timeout: 10000,
+            });
+            postSlug = postRes.data?.slug || "";
+            postSlugCache[c.post] = postSlug;
+          } catch {
+            postSlug = "";
+            postSlugCache[c.post] = "";
+          }
+        }
+
+        let content = c.content?.rendered || c.content || "";
+        content = content.replace(/<\/?p>/g, "\n").replace(/<br\s*\/?>/g, "\n").replace(/<[^>]+>/g, "").trim();
+
+        allComments.push({
+          wpPostId: c.post,
+          wpPostSlug: postSlug || "",
+          authorName: c.author_name || "Anônimo",
+          authorEmail: c.author_email || "",
+          content,
+          date: c.date || new Date().toISOString(),
+          parentWpId: c.parent || 0,
+          wpCommentId: c.id,
+        });
+      }
+
+      if (res.data.length < perPage) break;
+      page++;
+    } catch (err: any) {
+      errors.push(`Page ${page}: ${err.message}`);
+      break;
+    }
+  }
+
+  return { comments: allComments, errors };
+}
+
 export async function crawlMultipleUrls(urls: string[]): Promise<{ success: CrawledPost[]; errors: { url: string; error: string }[] }> {
   const success: CrawledPost[] = [];
   const errors: { url: string; error: string }[] = [];

@@ -342,10 +342,14 @@ function SocialShare({ post }: { post: PostWithRelations }) {
   );
 }
 
-function MostReadSidebar({ postId, categoryId }: { postId: number; categoryId: number }) {
+function MostReadSidebar({ postId }: { postId: number }) {
   const { data: mostRead, isLoading } = useQuery<PostWithRelations[]>({
-    queryKey: [`/api/posts/${postId}/most-read-category?categoryId=${categoryId}`],
-    enabled: !!categoryId,
+    queryKey: ["/api/posts", postId, "most-read"],
+    queryFn: async () => {
+      const res = await fetch(`/api/posts/${postId}/most-read`);
+      if (!res.ok) throw new Error("Erro ao carregar mais lidos");
+      return res.json();
+    },
   });
 
   if (isLoading) {
@@ -706,11 +710,12 @@ function PostCardLarge({ post }: { post: PostWithRelations }) {
   );
 }
 
-function SuggestedPosts({ postId, categoryId }: { postId: number; categoryId: number }) {
+function SuggestedPosts({ postId }: { postId: number }) {
   const { data: suggested } = useQuery<PostWithRelations[]>({
-    queryKey: [`/api/posts/${postId}/most-read-category?categoryId=${categoryId}`, 4],
+    queryKey: ["/api/posts", postId, "suggested"],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/posts/${postId}/most-read-category?categoryId=${categoryId}&limit=4`);
+      const res = await fetch(`/api/posts/${postId}/suggested`);
+      if (!res.ok) throw new Error("Erro ao carregar sugestões");
       return res.json();
     }
   });
@@ -720,7 +725,7 @@ function SuggestedPosts({ postId, categoryId }: { postId: number; categoryId: nu
   return (
     <section className="mt-16 pt-8 border-t" data-testid="section-suggested-posts">
       <SectionTitle>Posts Sugeridos</SectionTitle>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {suggested.map((p) => (
           <PostCardLarge key={p.id} post={p} />
         ))}
@@ -730,26 +735,45 @@ function SuggestedPosts({ postId, categoryId }: { postId: number; categoryId: nu
 }
 
 function AcademyForm() {
+  const { data: banners } = useQuery<Banner[]>({
+    queryKey: ["/api/banners?slot=academy_form"],
+  });
+  const banner = (banners || []).sort((a, b) => a.sortOrder - b.sortOrder)[0];
+
+  if (!banner) return null;
+
   return (
     <Card className="p-5 bg-primary/5 border-primary/20" data-testid="card-academy-form">
-      <div className="aspect-[1400/788] overflow-hidden rounded-md mb-4">
-        <img 
-          src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=800" 
-          alt="Psicometria Online Academy" 
-          className="w-full h-full object-cover"
-          loading="lazy"
-        />
-      </div>
+      {banner.imageUrl && (
+        <div className="aspect-[1400/788] overflow-hidden rounded-md mb-4">
+          <img
+            src={banner.imageUrl}
+            alt={banner.title}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </div>
+      )}
       <div className="text-center mb-4">
-        <h3 className="font-bold text-lg leading-tight">Psicometria Online Academy</h3>
-        <p className="text-xs text-muted-foreground mt-1">Cadastro gratuito na melhor plataforma de psicometria</p>
+        <h3 className="font-bold text-lg leading-tight" data-testid="text-academy-title">{banner.title}</h3>
+        {banner.description && (
+          <p className="text-xs text-muted-foreground mt-1" data-testid="text-academy-description">{banner.description}</p>
+        )}
       </div>
       <div className="space-y-3">
-        <Input placeholder="Seu nome" className="h-9 text-sm" />
-        <Input type="email" placeholder="Seu melhor e-mail" className="h-9 text-sm" />
-        <Button className="w-full bg-accent-bright text-accent-bright-foreground hover:bg-accent-bright/90" data-testid="button-academy-signup">
-          Quero me cadastrar
-        </Button>
+        <Input placeholder="Seu nome" className="h-9 text-sm" data-testid="input-academy-name" />
+        <Input type="email" placeholder="Seu melhor e-mail" className="h-9 text-sm" data-testid="input-academy-email" />
+        {banner.linkUrl ? (
+          <a href={banner.linkUrl} target="_blank" rel="noopener noreferrer">
+            <Button className="w-full bg-accent-bright text-accent-bright-foreground hover:bg-accent-bright/90" data-testid="button-academy-signup">
+              {banner.buttonText || "Quero me cadastrar"}
+            </Button>
+          </a>
+        ) : (
+          <Button className="w-full bg-accent-bright text-accent-bright-foreground hover:bg-accent-bright/90" data-testid="button-academy-signup">
+            {banner.buttonText || "Quero me cadastrar"}
+          </Button>
+        )}
       </div>
     </Card>
   );
@@ -904,23 +928,19 @@ export default function PostPage() {
             )}
 
             <CommentsSection postId={post.id} />
-
-            {primaryCategory && (
-              <SuggestedPosts postId={post.id} categoryId={primaryCategory.id} />
-            )}
           </article>
 
           <aside>
             <div className="sticky top-24 space-y-6">
               <SidebarBanner />
               <TableOfContents contentRef={contentRef} postId={post?.id} />
-              {primaryCategory && (
-                <MostReadSidebar postId={post.id} categoryId={primaryCategory.id} />
-              )}
+              <MostReadSidebar postId={post.id} />
               <AcademyForm />
             </div>
           </aside>
         </div>
+
+        <SuggestedPosts postId={post.id} />
       </div>
     </>
   );

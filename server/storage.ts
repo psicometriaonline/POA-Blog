@@ -16,7 +16,7 @@ import {
   imageGroups, imageBankItems, containerRules, mediaLibrary,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, ne, ilike, or, desc, sql, inArray, and, asc, gte, lte, count, isNull } from "drizzle-orm";
+import { eq, ne, ilike, or, desc, sql, inArray, notInArray, and, asc, gte, lte, count, isNull } from "drizzle-orm";
 
 export interface IStorage {
   getAuthors(): Promise<Author[]>;
@@ -71,10 +71,17 @@ export interface IStorage {
   deleteFreeMaterial(id: number): Promise<boolean>;
 
   getMostReadByCategory(categoryId: number, excludePostId: number, limit?: number): Promise<PostWithRelations[]>;
+  getSuggestedPosts(postId: number, tagIds: number[], categoryIds: number[], limit?: number): Promise<PostWithRelations[]>;
+  getMostReadGlobal(excludePostId: number, limit?: number): Promise<PostWithRelations[]>;
 
   getCommentsByPost(postId: number): Promise<Comment[]>;
   createComment(data: InsertComment): Promise<Comment>;
   deleteComment(id: number): Promise<boolean>;
+  getAllComments(options?: { status?: string; search?: string; page?: number; limit?: number }): Promise<{ data: any[]; total: number; counts: { all: number; pending: number; approved: number; spam: number } }>;
+  approveComment(id: number): Promise<Comment | undefined>;
+  markCommentAsSpam(id: number): Promise<Comment | undefined>;
+  unmarkCommentSpam(id: number): Promise<Comment | undefined>;
+  bulkCommentAction(ids: number[], action: 'approve' | 'spam' | 'delete'): Promise<number>;
 
   getSetting(key: string): Promise<string | undefined>;
   setSetting(key: string, value: string): Promise<void>;
@@ -899,6 +906,92 @@ export class DatabaseStorage implements IStorage {
     return enrichPostsWithRelations(rawPosts);
   }
 
+  async getSuggestedPosts(postId: number, tagIds: number[], categoryIds: number[], limit = 3): Promise<PostWithRelations[]> {
+    const collected: number[] = [];
+
+    if (tagIds.length > 0) {
+      const fromTags = await db.select({ postId: postTags.postId })
+        .from(postTags)
+        .where(inArray(postTags.tagId, tagIds));
+      const tagPostIds = [...new Set(fromTags.map(r => r.postId))].filter(id => id !== postId);
+      if (tagPostIds.length > 0) {
+        const fromTagPosts = await db.select({ id: posts.id })
+          .from(posts)
+          .where(and(inArray(posts.id, tagPostIds), eq(posts.status, "published")))
+          .orderBy(sql`random()`)
+          .limit(limit);
+        collected.push(...fromTagPosts.map(p => p.id));
+      }
+    }
+
+    if (collected.length < limit && categoryIds.length > 0) {
+      const fromCats = await db.select({ postId: postCategories.postId })
+        .from(postCategories)
+        .where(inArray(postCategories.categoryId, categoryIds));
+      const catPostIds = [...new Set(fromCats.map(r => r.postId))].filter(id => id !== postId && !collected.includes(id));
+      if (catPostIds.length > 0) {
+        const remaining = limit - collected.length;
+        const fromCatPosts = await db.select({ id: posts.id })
+          .from(posts)
+          .where(and(inArray(posts.id, catPostIds), eq(posts.status, "published")))
+          .orderBy(sql`random()`)
+          .limit(remaining);
+        collected.push(...fromCatPosts.map(p => p.id));
+      }
+    }
+
+    if (collected.length < limit) {
+      const remaining = limit - collected.length;
+      const excludeIds = [postId, ...collected];
+      const randomPosts = await db.select({ id: posts.id })
+        .from(posts)
+        .where(and(
+          eq(posts.status, "published"),
+          notInArray(posts.id, excludeIds)
+        ))
+        .orderBy(sql`random()`)
+        .limit(remaining);
+      collected.push(...randomPosts.map(p => p.id));
+    }
+
+    if (collected.length === 0) return [];
+    const rawPosts = await db.select().from(posts).where(inArray(posts.id, collected));
+    return enrichPostsWithRelations(rawPosts);
+  }
+
+  async getMostReadGlobal(excludePostId: number, limit = 3): Promise<PostWithRelations[]> {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const topPosts = await db.select({
+      postId: postViews.postId,
+      views: sql<number>`count(*)::int`,
+    })
+      .from(postViews)
+      .where(and(
+        gte(postViews.viewedAt, thirtyDaysAgo),
+        sql`${postViews.postId} != ${excludePostId}`
+      ))
+      .groupBy(postViews.postId)
+      .orderBy(desc(sql`count(*)`))
+      .limit(20);
+
+    if (topPosts.length === 0) {
+      const fallback = await db.select().from(posts)
+        .where(and(eq(posts.status, "published"), sql`${posts.id} != ${excludePostId}`))
+        .orderBy(desc(posts.viewCount))
+        .limit(limit);
+      return enrichPostsWithRelations(fallback);
+    }
+
+    const shuffled = topPosts.sort(() => Math.random() - 0.5);
+    const selectedIds = shuffled.slice(0, limit).map(p => p.postId);
+
+    const rawPosts = await db.select().from(posts)
+      .where(and(inArray(posts.id, selectedIds), eq(posts.status, "published")));
+    return enrichPostsWithRelations(rawPosts);
+  }
+
   async getCommentsByPost(postId: number): Promise<Comment[]> {
     return db.select().from(comments)
       .where(and(eq(comments.postId, postId), eq(comments.isApproved, true)))
@@ -913,6 +1006,102 @@ export class DatabaseStorage implements IStorage {
   async deleteComment(id: number): Promise<boolean> {
     const result = await db.delete(comments).where(eq(comments.id, id)).returning();
     return result.length > 0;
+  }
+
+  async getAllComments(options: { status?: string; search?: string; page?: number; limit?: number } = {}): Promise<{ data: any[]; total: number; counts: { all: number; pending: number; approved: number; spam: number } }> {
+    const { status = 'all', search, page = 1, limit = 30 } = options;
+
+    const countAll = await db.select({ count: sql<number>`count(*)::int` }).from(comments);
+    const countPending = await db.select({ count: sql<number>`count(*)::int` }).from(comments).where(and(eq(comments.isApproved, false), eq(comments.isSpam, false)));
+    const countApproved = await db.select({ count: sql<number>`count(*)::int` }).from(comments).where(eq(comments.isApproved, true));
+    const countSpam = await db.select({ count: sql<number>`count(*)::int` }).from(comments).where(eq(comments.isSpam, true));
+
+    const counts = {
+      all: countAll[0]?.count || 0,
+      pending: countPending[0]?.count || 0,
+      approved: countApproved[0]?.count || 0,
+      spam: countSpam[0]?.count || 0,
+    };
+
+    const conditions: any[] = [];
+    if (status === 'pending') {
+      conditions.push(eq(comments.isApproved, false));
+      conditions.push(eq(comments.isSpam, false));
+    } else if (status === 'approved') {
+      conditions.push(eq(comments.isApproved, true));
+    } else if (status === 'spam') {
+      conditions.push(eq(comments.isSpam, true));
+    }
+
+    if (search) {
+      conditions.push(or(
+        sql`lower(${comments.authorName}) like ${'%' + search.toLowerCase() + '%'}`,
+        sql`lower(${comments.authorEmail}) like ${'%' + search.toLowerCase() + '%'}`,
+        sql`lower(${comments.content}) like ${'%' + search.toLowerCase() + '%'}`
+      ));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const totalResult = await db.select({ count: sql<number>`count(*)::int` })
+      .from(comments)
+      .where(whereClause);
+    const total = totalResult[0]?.count || 0;
+
+    const offset = (page - 1) * limit;
+    const rows = await db.select({
+      id: comments.id,
+      postId: comments.postId,
+      authorName: comments.authorName,
+      authorEmail: comments.authorEmail,
+      content: comments.content,
+      isApproved: comments.isApproved,
+      isSpam: comments.isSpam,
+      parentId: comments.parentId,
+      createdAt: comments.createdAt,
+      postTitle: posts.title,
+      postSlug: posts.slug,
+    })
+      .from(comments)
+      .leftJoin(posts, eq(comments.postId, posts.id))
+      .where(whereClause)
+      .orderBy(desc(comments.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return { data: rows, total, counts };
+  }
+
+  async approveComment(id: number): Promise<Comment | undefined> {
+    const [c] = await db.update(comments).set({ isApproved: true, isSpam: false }).where(eq(comments.id, id)).returning();
+    return c;
+  }
+
+  async markCommentAsSpam(id: number): Promise<Comment | undefined> {
+    const [c] = await db.update(comments).set({ isSpam: true, isApproved: false }).where(eq(comments.id, id)).returning();
+    return c;
+  }
+
+  async unmarkCommentSpam(id: number): Promise<Comment | undefined> {
+    const [c] = await db.update(comments).set({ isSpam: false, isApproved: false }).where(eq(comments.id, id)).returning();
+    return c;
+  }
+
+  async bulkCommentAction(ids: number[], action: 'approve' | 'spam' | 'delete'): Promise<number> {
+    if (ids.length === 0) return 0;
+    if (action === 'delete') {
+      const result = await db.delete(comments).where(inArray(comments.id, ids)).returning();
+      return result.length;
+    }
+    if (action === 'approve') {
+      const result = await db.update(comments).set({ isApproved: true, isSpam: false }).where(inArray(comments.id, ids)).returning();
+      return result.length;
+    }
+    if (action === 'spam') {
+      const result = await db.update(comments).set({ isSpam: true, isApproved: false }).where(inArray(comments.id, ids)).returning();
+      return result.length;
+    }
+    return 0;
   }
 
   async getImageGroups(): Promise<ImageGroup[]> {

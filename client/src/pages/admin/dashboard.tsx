@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2, Settings, Users, BarChart3, Layers, ImageIcon, Search, ChevronLeft, ChevronRight, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown, Loader2 } from "lucide-react";
+import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2, Settings, Users, BarChart3, Layers, ImageIcon, Search, ChevronLeft, ChevronRight, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown, Loader2, MessageSquare } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import type { PostWithRelations, Category, Tag as TagType } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -241,6 +241,12 @@ export default function AdminDashboard() {
             <Button variant="outline" data-testid="button-analytics">
               <BarChart3 className="h-4 w-4 mr-1" />
               Métricas
+            </Button>
+          </Link>
+          <Link href="/admin/comentarios">
+            <Button variant="outline" data-testid="button-comments">
+              <MessageSquare className="h-4 w-4 mr-1" />
+              Comentários
             </Button>
           </Link>
           <Link href="/admin/home">

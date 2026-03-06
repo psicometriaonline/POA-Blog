@@ -339,6 +339,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
   
   const [title, setTitle] = useState("");
+  const [bannerDescription, setBannerDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [slot, setSlot] = useState("sidebar");
@@ -357,6 +358,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
   const resetForm = () => {
     setEditingBanner(null);
     setTitle("");
+    setBannerDescription("");
     setImageUrl("");
     setLinkUrl("");
     setSlot("sidebar");
@@ -376,6 +378,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
     mutationFn: async () => {
       const data = {
         title,
+        description: bannerDescription,
         imageUrl,
         linkUrl,
         slot,
@@ -398,6 +401,8 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/banners"] });
       queryClient.invalidateQueries({ queryKey: ["/api/home"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/banners?slot=academy_form"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/banners?slot=sidebar"] });
       resetForm();
       toast({ title: editingBanner ? "Banner atualizado" : "Banner criado" });
     },
@@ -409,6 +414,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
   const handleEdit = (banner: Banner) => {
     setEditingBanner(banner);
     setTitle(banner.title || "");
+    setBannerDescription(banner.description || "");
     setImageUrl(banner.imageUrl);
     setLinkUrl(banner.linkUrl || "");
     setSlot(banner.slot);
@@ -455,6 +461,10 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
             <Input id="banner-title" value={title} onChange={(e) => setTitle(e.target.value)} data-testid="input-banner-title" />
           </div>
           <div>
+            <Label htmlFor="banner-description">Descrição</Label>
+            <Input id="banner-description" value={bannerDescription} onChange={(e) => setBannerDescription(e.target.value)} data-testid="input-banner-description" placeholder="Descrição curta (opcional)" />
+          </div>
+          <div>
             <Label htmlFor="banner-slot">Local</Label>
             <Select value={slot} onValueChange={setSlot}>
               <SelectTrigger data-testid="select-banner-slot">
@@ -463,6 +473,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
               <SelectContent>
                 <SelectItem value="sidebar">Sidebar</SelectItem>
                 <SelectItem value="horizontal">Horizontal</SelectItem>
+                <SelectItem value="academy_form">Academy Form</SelectItem>
               </SelectContent>
             </Select>
           </div>

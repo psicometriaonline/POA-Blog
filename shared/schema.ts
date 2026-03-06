@@ -83,6 +83,7 @@ export const postTagsRelations = relations(postTags, ({ one }) => ({
 export const banners = pgTable("banners", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   title: text("title").notNull(),
+  description: text("description"),
   imageUrl: text("image_url").notNull(),
   linkUrl: text("link_url"),
   slot: text("slot").notNull(),
@@ -116,7 +117,10 @@ export const comments = pgTable("comments", {
   authorName: text("author_name").notNull(),
   authorEmail: text("author_email").notNull(),
   content: text("content").notNull(),
-  isApproved: boolean("is_approved").notNull().default(true),
+  isApproved: boolean("is_approved").notNull().default(false),
+  isSpam: boolean("is_spam").notNull().default(false),
+  parentId: integer("parent_id"),
+  sourceUrl: text("source_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

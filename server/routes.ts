@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema, insertMediaSchema, postCategories, postTags, posts } from "@shared/schema";
+import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema, insertMediaSchema, postCategories, postTags, posts, comments } from "@shared/schema";
 import { eq, and, lte, sql } from "drizzle-orm";
 import { db } from "./db";
 import { crawlMultipleUrls } from "./crawler";
@@ -807,6 +807,30 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/posts/:id/suggested", async (req, res) => {
+    try {
+      const postId = parseInt(req.params.id);
+      const post = await storage.getPost(postId);
+      if (!post) return res.json([]);
+      const tagIds = post.tags.map((t: any) => t.id);
+      const categoryIds = post.categories.map((c: any) => c.id);
+      const suggested = await storage.getSuggestedPosts(postId, tagIds, categoryIds, 3);
+      res.json(suggested);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/posts/:id/most-read", async (req, res) => {
+    try {
+      const postId = parseInt(req.params.id);
+      const mostRead = await storage.getMostReadGlobal(postId, 3);
+      res.json(mostRead);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/posts/:id/comments", async (req, res) => {
     try {
       const postId = parseInt(req.params.id);
@@ -820,11 +844,88 @@ export async function registerRoutes(
   app.post("/api/posts/:id/comments", async (req, res) => {
     try {
       const postId = parseInt(req.params.id);
-      const parsed = insertCommentSchema.parse({ ...req.body, postId });
+      const { isLikelySpam } = await import("./spam-filter");
+      const spamCheck = isLikelySpam(req.body.authorName || "", req.body.authorEmail || "", req.body.content || "");
+      const parsed = insertCommentSchema.parse({
+        ...req.body,
+        postId,
+        isApproved: false,
+        isSpam: spamCheck.isSpam,
+      });
       const comment = await storage.createComment(parsed);
       res.json(comment);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/comments", isAuthenticated, async (req, res) => {
+    try {
+      const status = (req.query.status as string) || 'all';
+      const search = req.query.search as string | undefined;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 30;
+      const result = await storage.getAllComments({ status, search, page, limit });
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/comments/:id/approve", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const comment = await storage.approveComment(id);
+      if (!comment) return res.status(404).json({ message: "Comentário não encontrado" });
+      res.json(comment);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/comments/:id/spam", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const comment = await storage.markCommentAsSpam(id);
+      if (!comment) return res.status(404).json({ message: "Comentário não encontrado" });
+      res.json(comment);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/admin/comments/:id/unspam", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const comment = await storage.unmarkCommentSpam(id);
+      if (!comment) return res.status(404).json({ message: "Comentário não encontrado" });
+      res.json(comment);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/comments/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteComment(id);
+      if (!deleted) return res.status(404).json({ message: "Comentário não encontrado" });
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/comments/bulk", isAuthenticated, async (req, res) => {
+    try {
+      const { action, ids } = req.body;
+      if (!action || !ids || !Array.isArray(ids)) {
+        return res.status(400).json({ message: "action e ids são obrigatórios" });
+      }
+      const affected = await storage.bulkCommentAction(ids, action);
+      res.json({ affected });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 
@@ -2091,6 +2192,68 @@ export async function registerRoutes(
         skippedDetails: skipped.slice(0, 10),
         errorDetails: errors,
       });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/crawl/import-comments", isAuthenticated, async (req, res) => {
+    try {
+      const { crawlWordPressComments } = await import("./crawler");
+      const { comments: wpComments, errors } = await crawlWordPressComments();
+
+      const allPosts = await storage.getPosts({ limit: 10000 });
+      const slugToPostId: Record<string, number> = {};
+      for (const p of allPosts.data) {
+        slugToPostId[p.slug] = p.id;
+        if (p.sourceUrl) {
+          const match = p.sourceUrl.match(/\/([^\/]+)\/?$/);
+          if (match) slugToPostId[match[1]] = p.id;
+        }
+      }
+
+      const wpIdToLocalParent: Record<number, number> = {};
+      let imported = 0;
+      let skipped = 0;
+
+      const existingComments = await db.select({ sourceUrl: comments.sourceUrl })
+        .from(comments)
+        .where(sql`${comments.sourceUrl} like 'wp-comment-%'`);
+      const existingSourceUrls = new Set(existingComments.map(c => c.sourceUrl));
+
+      for (const wc of wpComments) {
+        const localPostId = slugToPostId[wc.wpPostSlug];
+        if (!localPostId) {
+          skipped++;
+          continue;
+        }
+
+        const sourceUrl = `wp-comment-${wc.wpCommentId}`;
+        if (existingSourceUrls.has(sourceUrl)) {
+          skipped++;
+          continue;
+        }
+
+        try {
+          const comment = await storage.createComment({
+            postId: localPostId,
+            authorName: wc.authorName,
+            authorEmail: wc.authorEmail,
+            content: wc.content,
+            isApproved: true,
+            isSpam: false,
+            parentId: wc.parentWpId ? (wpIdToLocalParent[wc.parentWpId] || null) : null,
+            sourceUrl,
+          });
+
+          wpIdToLocalParent[wc.wpCommentId] = comment.id;
+          imported++;
+        } catch (err: any) {
+          skipped++;
+        }
+      }
+
+      res.json({ imported, skipped, totalFetched: wpComments.length, errors });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
