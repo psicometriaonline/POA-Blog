@@ -2203,6 +2203,8 @@ export async function registerRoutes(
       const { comments: wpComments, errors } = await crawlWordPressComments();
 
       const allPosts = await storage.getPosts({ limit: 10000 });
+      console.log(`[Import] Buscados ${Array.isArray(allPosts) ? allPosts.length : "erro"} posts para mapeamento`);
+      
       const slugToPostId: Record<string, number> = {};
       for (const p of allPosts) {
         slugToPostId[p.slug] = p.id;
