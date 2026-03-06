@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ export default function ManageTags() {
   const [slug, setSlug] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
+  const formRef = useRef<HTMLDivElement>(null);
 
   const { data: tags } = useQuery<Tag[]>({
     queryKey: ["/api/tags"],
@@ -104,6 +105,7 @@ export default function ManageTags() {
     setName(tag.name);
     setSlug(tag.slug);
     setIsAdding(false);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
   };
 
   if (!user) {
@@ -125,7 +127,7 @@ export default function ManageTags() {
       </div>
 
       {(isAdding || editingId !== null) && (
-        <Card className="p-4 mb-6">
+        <Card ref={formRef} className="p-4 mb-6">
           <div className="space-y-3">
             <div>
               <Label>Nome</Label>

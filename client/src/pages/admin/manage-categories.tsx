@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ export default function ManageCategories() {
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
 
   const { data: categories } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
@@ -75,6 +76,7 @@ export default function ManageCategories() {
     setSlug(cat.slug);
     setDescription(cat.description || "");
     setIsAdding(false);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
   };
 
   if (!user) {
@@ -96,7 +98,7 @@ export default function ManageCategories() {
       </div>
 
       {(isAdding || editingId !== null) && (
-        <Card className="p-4 mb-6">
+        <Card ref={formRef} className="p-4 mb-6">
           <div className="space-y-3">
             <div>
               <Label>Nome</Label>
