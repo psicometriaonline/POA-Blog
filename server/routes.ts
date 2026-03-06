@@ -2204,7 +2204,7 @@ export async function registerRoutes(
 
       const allPosts = await storage.getPosts({ limit: 10000 });
       const slugToPostId: Record<string, number> = {};
-      for (const p of allPosts.data) {
+      for (const p of allPosts) {
         slugToPostId[p.slug] = p.id;
         if (p.sourceUrl) {
           const match = p.sourceUrl.match(/\/([^\/]+)\/?$/);
