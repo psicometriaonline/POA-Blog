@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema, insertMediaSchema, postCategories, postTags, posts } from "@shared/schema";
-import { eq, and, lte } from "drizzle-orm";
+import { eq, and, lte, sql } from "drizzle-orm";
 import { db } from "./db";
 import { crawlMultipleUrls } from "./crawler";
 import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
@@ -1390,6 +1390,17 @@ export async function registerRoutes(
       }
       res.json({ message: "Category deleted", reassigned: postsWithOnlyThis.length });
 
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/tags/post-counts", isAuthenticated, async (req, res) => {
+    try {
+      const rows = await db.select({ tagId: postTags.tagId, count: sql<number>`count(*)::int` }).from(postTags).groupBy(postTags.tagId);
+      const result: Record<number, number> = {};
+      for (const row of rows) result[row.tagId] = row.count;
+      res.json(result);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
