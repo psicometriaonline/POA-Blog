@@ -35,7 +35,7 @@ export default function TagPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-10">
         <div>
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="space-y-3">
                   <Skeleton className="h-48 w-full rounded-md" />
@@ -52,7 +52,7 @@ export default function TagPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {data?.posts.map((post) => (
                   <PostCard key={post.id} post={post} />
                 ))}
