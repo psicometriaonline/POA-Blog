@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -637,7 +637,7 @@ function TableOfContents({ contentRef, postId }: { contentRef: React.RefObject<H
           <button
             key={h.id}
             onClick={() => handleClick(h.id)}
-            className={`block w-full text-left text-sm leading-snug py-1 transition-colors rounded-md cursor-pointer ${
+            className={`block w-full text-left text-sm leading-snug py-1 transition-colors rounded-md cursor-pointer hover:text-accent-bright hover:bg-accent-bright/5 ${
               h.level === 2 ? "pl-3" : h.level === 3 ? "pl-5" : "pl-1"
             } ${
               activeId === h.id
@@ -740,40 +740,36 @@ function AcademyForm() {
   });
   const banner = (banners || []).sort((a, b) => a.sortOrder - b.sortOrder)[0];
 
-  if (!banner) return null;
+  const title = banner?.title || "Psicometria Online Academy";
+  const description = banner?.description || "Estamos formando os pesquisadores mais competentes do país. Seja um deles.";
+  const buttonText = banner?.buttonText || "Saiba mais";
+  const linkUrl = banner?.linkUrl || "https://www.academy.psicometriaonline.com.br/blog";
+  const imageUrl = banner?.imageUrl;
 
   return (
     <Card className="p-5 bg-primary/5 border-primary/20" data-testid="card-academy-form">
-      {banner.imageUrl && (
+      {imageUrl && (
         <div className="aspect-[1400/788] overflow-hidden rounded-md mb-4">
           <img
-            src={banner.imageUrl}
-            alt={banner.title}
+            src={imageUrl}
+            alt={title}
             className="w-full h-full object-cover"
             loading="lazy"
           />
         </div>
       )}
       <div className="text-center mb-4">
-        <h3 className="font-bold text-lg leading-tight" data-testid="text-academy-title">{banner.title}</h3>
-        {banner.description && (
-          <p className="text-xs text-muted-foreground mt-1" data-testid="text-academy-description">{banner.description}</p>
-        )}
+        <h3 className="font-bold text-lg leading-tight" data-testid="text-academy-title">{title}</h3>
+        <p className="text-xs text-muted-foreground mt-1" data-testid="text-academy-description">{description}</p>
       </div>
       <div className="space-y-3">
         <Input placeholder="Seu nome" className="h-9 text-sm" data-testid="input-academy-name" />
         <Input type="email" placeholder="Seu melhor e-mail" className="h-9 text-sm" data-testid="input-academy-email" />
-        {banner.linkUrl ? (
-          <a href={banner.linkUrl} target="_blank" rel="noopener noreferrer">
-            <Button className="w-full bg-accent-bright text-accent-bright-foreground hover:bg-accent-bright/90" data-testid="button-academy-signup">
-              {banner.buttonText || "Quero me cadastrar"}
-            </Button>
-          </a>
-        ) : (
+        <a href={linkUrl} target="_blank" rel="noopener noreferrer">
           <Button className="w-full bg-accent-bright text-accent-bright-foreground hover:bg-accent-bright/90" data-testid="button-academy-signup">
-            {banner.buttonText || "Quero me cadastrar"}
+            {buttonText}
           </Button>
-        )}
+        </a>
       </div>
     </Card>
   );
@@ -781,7 +777,19 @@ function AcademyForm() {
 
 export default function PostPage() {
   const { slug } = useParams<{ slug: string }>();
+  const [location] = useLocation();
   const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    const t1 = setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }, 50);
+    const t2 = setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }, 150);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [location]);
 
   const { data: post, isLoading } = useQuery<PostWithRelations>({
     queryKey: [`/api/posts/slug/${slug}`],
