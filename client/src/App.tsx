@@ -25,6 +25,8 @@ import ManageAuthors from "@/pages/admin/manage-authors";
 import AnalyticsPage from "@/pages/admin/analytics";
 import ContainersPage from "@/pages/admin/containers";
 import ManageMediaPage from "@/pages/admin/manage-media";
+import CategoryDetailPage from "@/pages/admin/category-detail";
+import TagDetailPage from "@/pages/admin/tag-detail";
 import TermsPage from "@/pages/terms";
 import PrivacyPage from "@/pages/privacy";
 import AboutPage from "@/pages/about";
@@ -42,7 +44,9 @@ function Router() {
       <Route path="/busca" component={SearchPage} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/post/:id" component={PostEditor} />
+      <Route path="/admin/categorias/:slug" component={CategoryDetailPage} />
       <Route path="/admin/categorias" component={ManageCategories} />
+      <Route path="/admin/tags/:slug" component={TagDetailPage} />
       <Route path="/admin/tags" component={ManageTags} />
       <Route path="/admin/crawl" component={CrawlPage} />
       <Route path="/admin/home" component={HomeSettings} />

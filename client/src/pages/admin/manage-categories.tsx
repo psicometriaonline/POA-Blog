@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Edit, Trash2, Save, X } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, Save, X, BarChart3 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -140,6 +140,11 @@ export default function ManageCategories() {
                 <p className="text-xs text-muted-foreground">/{cat.slug}</p>
               </div>
               <div className="flex gap-1">
+                <Link href={`/admin/categorias/${cat.slug}`}>
+                  <Button size="icon" variant="ghost" title="Ver detalhes" data-testid={`button-details-category-${cat.id}`}>
+                    <BarChart3 className="h-4 w-4" />
+                  </Button>
+                </Link>
                 <Button size="icon" variant="ghost" onClick={() => startEdit(cat)} data-testid={`button-edit-category-${cat.id}`}>
                   <Edit className="h-4 w-4" />
                 </Button>

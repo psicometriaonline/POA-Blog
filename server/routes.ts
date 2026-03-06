@@ -609,6 +609,136 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/categories/:slug/details", isAuthenticated, async (req, res) => {
+    try {
+      const category = await storage.getCategoryBySlug(req.params.slug);
+      if (!category) return res.status(404).json({ message: "Categoria não encontrada" });
+
+      const allCatPosts = await storage.getPostsByCategory(req.params.slug, { limit: 5000, offset: 0 });
+      const totalViews = allCatPosts.reduce((sum, p) => sum + (p.viewCount || 0), 0);
+
+      const allPosts = await storage.getPosts({ limit: 5000, offset: 0 });
+      const slugToId = new Map<string, number>();
+      for (const p of allPosts) slugToId.set(p.slug, p.id);
+
+      const internalDomains = ["blog.psicometriaonline.com.br", "www.blog.psicometriaonline.com.br", "blog-academy.replit.app"];
+      const hrefRegex = /<a[^>]+href=["']([^"'#?]+)["'][^>]*>/gi;
+      const outboundMap: Record<number, number> = {};
+      const inboundMap: Record<number, number> = {};
+      for (const p of allPosts) { outboundMap[p.id] = 0; inboundMap[p.id] = 0; }
+
+      for (const p of allPosts) {
+        const content = p.content || "";
+        let match;
+        hrefRegex.lastIndex = 0;
+        const seenSlugs = new Set<string>();
+        while ((match = hrefRegex.exec(content)) !== null) {
+          let href = match[1];
+          let slug: string | null = null;
+          if (href.startsWith("http://") || href.startsWith("https://")) {
+            try { const url = new URL(href); if (!internalDomains.includes(url.hostname)) continue; slug = url.pathname.replace(/^\//, "").replace(/\/$/, ""); } catch { continue; }
+          } else { slug = href.replace(/^\//, "").replace(/\/$/, ""); }
+          if (!slug || seenSlugs.has(slug)) continue;
+          seenSlugs.add(slug);
+          const targetId = slugToId.get(slug);
+          if (targetId && targetId !== p.id) { outboundMap[p.id]++; inboundMap[targetId]++; }
+        }
+      }
+
+      const sortBy = req.query.sortBy as string || "publishedAt";
+      const sortOrder = (req.query.sortOrder as string) === "asc" ? "asc" : "desc";
+
+      const postsWithMetrics = allCatPosts.map(p => ({
+        id: p.id, title: p.title, slug: p.slug, status: p.status,
+        publishedAt: p.publishedAt, viewCount: p.viewCount || 0,
+        authorName: p.authorName || p.author?.name || null,
+        inboundLinks: inboundMap[p.id] || 0,
+        outboundLinks: outboundMap[p.id] || 0,
+      }));
+
+      postsWithMetrics.sort((a, b) => {
+        let cmp = 0;
+        switch (sortBy) {
+          case "title": cmp = a.title.localeCompare(b.title, "pt-BR"); break;
+          case "viewCount": cmp = a.viewCount - b.viewCount; break;
+          case "inboundLinks": cmp = a.inboundLinks - b.inboundLinks; break;
+          case "outboundLinks": cmp = a.outboundLinks - b.outboundLinks; break;
+          default: cmp = new Date(a.publishedAt || 0).getTime() - new Date(b.publishedAt || 0).getTime();
+        }
+        return sortOrder === "asc" ? cmp : -cmp;
+      });
+
+      res.json({ category, totalPosts: allCatPosts.length, totalViews, posts: postsWithMetrics });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/tags/:slug/details", isAuthenticated, async (req, res) => {
+    try {
+      const tag = await storage.getTagBySlug(req.params.slug);
+      if (!tag) return res.status(404).json({ message: "Tag não encontrada" });
+
+      const allTagPosts = await storage.getPostsByTag(req.params.slug, { limit: 5000, offset: 0 });
+      const totalViews = allTagPosts.reduce((sum, p) => sum + (p.viewCount || 0), 0);
+
+      const allPosts = await storage.getPosts({ limit: 5000, offset: 0 });
+      const slugToId = new Map<string, number>();
+      for (const p of allPosts) slugToId.set(p.slug, p.id);
+
+      const internalDomains = ["blog.psicometriaonline.com.br", "www.blog.psicometriaonline.com.br", "blog-academy.replit.app"];
+      const hrefRegex = /<a[^>]+href=["']([^"'#?]+)["'][^>]*>/gi;
+      const outboundMap: Record<number, number> = {};
+      const inboundMap: Record<number, number> = {};
+      for (const p of allPosts) { outboundMap[p.id] = 0; inboundMap[p.id] = 0; }
+
+      for (const p of allPosts) {
+        const content = p.content || "";
+        let match;
+        hrefRegex.lastIndex = 0;
+        const seenSlugs = new Set<string>();
+        while ((match = hrefRegex.exec(content)) !== null) {
+          let href = match[1];
+          let slug: string | null = null;
+          if (href.startsWith("http://") || href.startsWith("https://")) {
+            try { const url = new URL(href); if (!internalDomains.includes(url.hostname)) continue; slug = url.pathname.replace(/^\//, "").replace(/\/$/, ""); } catch { continue; }
+          } else { slug = href.replace(/^\//, "").replace(/\/$/, ""); }
+          if (!slug || seenSlugs.has(slug)) continue;
+          seenSlugs.add(slug);
+          const targetId = slugToId.get(slug);
+          if (targetId && targetId !== p.id) { outboundMap[p.id]++; inboundMap[targetId]++; }
+        }
+      }
+
+      const sortBy = req.query.sortBy as string || "publishedAt";
+      const sortOrder = (req.query.sortOrder as string) === "asc" ? "asc" : "desc";
+
+      const postsWithMetrics = allTagPosts.map(p => ({
+        id: p.id, title: p.title, slug: p.slug, status: p.status,
+        publishedAt: p.publishedAt, viewCount: p.viewCount || 0,
+        authorName: p.authorName || p.author?.name || null,
+        inboundLinks: inboundMap[p.id] || 0,
+        outboundLinks: outboundMap[p.id] || 0,
+      }));
+
+      postsWithMetrics.sort((a, b) => {
+        let cmp = 0;
+        switch (sortBy) {
+          case "title": cmp = a.title.localeCompare(b.title, "pt-BR"); break;
+          case "viewCount": cmp = a.viewCount - b.viewCount; break;
+          case "inboundLinks": cmp = a.inboundLinks - b.inboundLinks; break;
+          case "outboundLinks": cmp = a.outboundLinks - b.outboundLinks; break;
+          default: cmp = new Date(a.publishedAt || 0).getTime() - new Date(b.publishedAt || 0).getTime();
+        }
+        return sortOrder === "asc" ? cmp : -cmp;
+      });
+
+      res.json({ tag, totalPosts: allTagPosts.length, totalViews, posts: postsWithMetrics });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/authors", async (_req, res) => {
     try {
       const allAuthors = await storage.getAuthors();

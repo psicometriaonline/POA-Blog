@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Plus, Edit, Trash2, Save, X } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, Save, X, BarChart3 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -129,6 +129,11 @@ export default function ManageTags() {
           <Card key={tag.id} className="p-3" data-testid={`tag-item-${tag.id}`}>
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">{tag.name}</span>
+              <Link href={`/admin/tags/${tag.slug}`}>
+                <Button size="icon" variant="ghost" className="h-6 w-6" title="Ver detalhes" data-testid={`button-details-tag-${tag.id}`}>
+                  <BarChart3 className="h-3 w-3" />
+                </Button>
+              </Link>
               <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => startEdit(tag)} data-testid={`button-edit-tag-${tag.id}`}>
                 <Edit className="h-3 w-3" />
               </Button>

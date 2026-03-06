@@ -419,7 +419,7 @@ export default function AdminDashboard() {
                         <div className="flex flex-wrap gap-1">
                           {post.categories.length > 0
                             ? post.categories.map(c => (
-                                <Link key={c.id} href="/admin/categorias">
+                                <Link key={c.id} href={`/admin/categorias/${c.slug}`}>
                                   <span className="text-xs text-muted-foreground hover:text-foreground hover:underline cursor-pointer" data-testid={`link-category-${c.id}`}>{c.name}</span>
                                 </Link>
                               ))
@@ -431,7 +431,7 @@ export default function AdminDashboard() {
                         <div className="flex flex-wrap gap-1">
                           {post.tags.length > 0
                             ? post.tags.map(t => (
-                                <Link key={t.id} href="/admin/tags">
+                                <Link key={t.id} href={`/admin/tags/${t.slug}`}>
                                   <span className="text-xs text-muted-foreground hover:text-foreground hover:underline cursor-pointer" data-testid={`link-tag-${t.id}`}>{t.name}</span>
                                 </Link>
                               ))
