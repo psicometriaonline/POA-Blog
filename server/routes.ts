@@ -1754,6 +1754,65 @@ export async function registerRoutes(
     }
   });
 
+  // ===== SUBSCRIBER ROUTES =====
+
+  app.post("/api/subscribe", async (req, res) => {
+    try {
+      const { name, email, source } = req.body;
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ message: "E-mail inválido" });
+      }
+      const safeName = typeof name === "string" ? name.trim().slice(0, 200) : undefined;
+      const safeSource = ["hero", "newsletter"].includes(source) ? source : "hero";
+      const subscriber = await storage.createSubscriber({ name: safeName, email: email.trim().slice(0, 320), source: safeSource });
+      res.json({ message: "Inscrito com sucesso!", subscriber });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/subscribers", isAuthenticated, async (req, res) => {
+    try {
+      const search = req.query.search as string | undefined;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const result = await storage.getSubscribers({ search, page, limit });
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/subscribers/export", isAuthenticated, async (_req, res) => {
+    try {
+      const { data } = await storage.getSubscribers({ limit: 100000 });
+      const sanitizeCell = (val: string) => {
+        let v = val.replace(/"/g, '""');
+        if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
+        return `"${v}"`;
+      };
+      const csv = ["Nome,E-mail,Fonte,Data"];
+      for (const s of data) {
+        csv.push(`${sanitizeCell(s.name || '')},${sanitizeCell(s.email)},${sanitizeCell(s.source)},${sanitizeCell(s.createdAt ? new Date(s.createdAt).toISOString() : '')}`);
+      }
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", "attachment; filename=inscritos.csv");
+      res.send(csv.join("\n"));
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/subscribers/:id", isAuthenticated, async (req, res) => {
+    try {
+      const success = await storage.deleteSubscriber(parseInt(req.params.id));
+      if (!success) return res.status(404).json({ message: "Inscrito não encontrado" });
+      res.json({ message: "Inscrito removido" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ===== CONTAINER MANAGEMENT ROUTES (Protected) =====
 
   app.get("/api/admin/image-groups", isAuthenticated, async (_req, res) => {

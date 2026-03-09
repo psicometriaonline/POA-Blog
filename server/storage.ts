@@ -11,9 +11,10 @@ import {
   type ImageBankItem, type InsertImageBankItem,
   type ContainerRule, type InsertContainerRule, type ContainerRuleWithGroup,
   type MediaItem, type InsertMedia,
+  type Subscriber,
   authors, categories, tags, posts, postCategories, postTags,
   banners, freeMaterials, siteSettings, comments, postViews,
-  imageGroups, imageBankItems, containerRules, mediaLibrary,
+  imageGroups, imageBankItems, containerRules, mediaLibrary, subscribers,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, ne, ilike, or, desc, sql, inArray, notInArray, and, asc, gte, lte, count, isNull } from "drizzle-orm";
@@ -127,6 +128,10 @@ export interface IStorage {
   updateMediaUrl(id: number, url: string, fileSize?: number): Promise<void>;
   replaceUrlInAllPosts(oldUrl: string, newUrl: string): Promise<number>;
   unifyMediaInPosts(keepUrl: string, removeUrl: string): Promise<number>;
+
+  createSubscriber(data: { name?: string; email: string; source: string }): Promise<any>;
+  getSubscribers(options?: { search?: string; page?: number; limit?: number }): Promise<{ data: any[]; total: number }>;
+  deleteSubscriber(id: number): Promise<boolean>;
 
   getViewsTimeSeries(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]>;
   getViewsTimeSeriesMonthly(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]>;
@@ -839,10 +844,11 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
+    const mostReadCount = parseInt(settings["most_read_count"] || "9") || 9;
     const mostReadRaw = await db.select().from(posts)
       .where(eq(posts.status, "published"))
       .orderBy(desc(posts.viewCount), desc(posts.publishedAt))
-      .limit(9);
+      .limit(mostReadCount);
     const mostRead = await enrichPostsWithRelations(mostReadRaw);
 
     const diverseCatSlugs = (settings["diverse_category_slugs"] || "").split(",").filter(Boolean);
@@ -1583,6 +1589,45 @@ export class DatabaseStorage implements IStorage {
     }
 
     return { totalPosts: details.length, totalBanners, details };
+  }
+  async createSubscriber(data: { name?: string; email: string; source: string }): Promise<Subscriber> {
+    const [sub] = await db.insert(subscribers).values({
+      name: data.name || null,
+      email: data.email.toLowerCase().trim(),
+      source: data.source,
+    }).onConflictDoUpdate({
+      target: subscribers.email,
+      set: { name: data.name || sql`${subscribers.name}`, source: data.source },
+    }).returning();
+    return sub;
+  }
+
+  async getSubscribers(options?: { search?: string; page?: number; limit?: number }): Promise<{ data: Subscriber[]; total: number }> {
+    const page = options?.page || 1;
+    const limit = options?.limit || 20;
+    const offset = (page - 1) * limit;
+
+    let conditions: any[] = [];
+    if (options?.search) {
+      conditions.push(or(
+        ilike(subscribers.email, `%${options.search}%`),
+        ilike(subscribers.name, `%${options.search}%`),
+      ));
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [totalResult] = await db.select({ count: count() }).from(subscribers).where(where);
+    const data = await db.select().from(subscribers).where(where)
+      .orderBy(desc(subscribers.createdAt))
+      .limit(limit).offset(offset);
+
+    return { data, total: totalResult.count };
+  }
+
+  async deleteSubscriber(id: number): Promise<boolean> {
+    const result = await db.delete(subscribers).where(eq(subscribers.id, id)).returning();
+    return result.length > 0;
   }
 }
 

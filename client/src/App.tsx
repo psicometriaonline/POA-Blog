@@ -26,6 +26,7 @@ import AnalyticsPage from "@/pages/admin/analytics";
 import ContainersPage from "@/pages/admin/containers";
 import ManageMediaPage from "@/pages/admin/manage-media";
 import ManageComments from "@/pages/admin/manage-comments";
+import SubscribersPage from "@/pages/admin/subscribers";
 import CategoryDetailPage from "@/pages/admin/category-detail";
 import TagDetailPage from "@/pages/admin/tag-detail";
 import TermsPage from "@/pages/terms";
@@ -56,6 +57,7 @@ function Router() {
       <Route path="/admin/conteineres" component={ContainersPage} />
       <Route path="/admin/midias" component={ManageMediaPage} />
       <Route path="/admin/comentarios" component={ManageComments} />
+      <Route path="/admin/inscritos" component={SubscribersPage} />
       <Route path="/:slug" component={PostPage} />
       <Route component={NotFound} />
     </Switch>

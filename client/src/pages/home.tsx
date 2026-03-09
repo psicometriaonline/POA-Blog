@@ -26,7 +26,11 @@ import type { PostWithRelations, Category, Banner, FreeMaterial } from "@shared/
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { PostCard } from "@/components/post-card";
+import DOMPurify from "dompurify";
 
 interface HomeData {
   settings: Record<string, string>;
@@ -408,24 +412,64 @@ function SectionFeaturedCategory({ category, posts }: { category: Category | nul
 }
 
 function SectionNewsletter({ settings }: { settings: Record<string, string> }) {
-  const text = settings["newsletter_text"] || "Receba nossos conteudos diretamente no seu e-mail";
+  const { toast } = useToast();
+  const [email, setEmail] = useState("");
+  const enabled = settings["newsletter_enabled"] !== "false";
+  const title = settings["newsletter_title"] || "Newsletter";
+  const text = settings["newsletter_text"] || "Receba nossos conteúdos diretamente no seu e-mail";
+  const buttonText = settings["newsletter_button_text"] || "Inscrever-se";
+  const buttonColor = settings["newsletter_button_color"] || "#31D5FF";
+  const emailPlaceholder = settings["newsletter_email_placeholder"] || "Seu melhor e-mail";
+
+  const subscribeMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/subscribe", { email, source: "newsletter" });
+    },
+    onSuccess: () => {
+      toast({ title: "Inscrito com sucesso!", description: "Você receberá nossos conteúdos em breve." });
+      setEmail("");
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro", description: error.message || "Verifique o e-mail informado.", variant: "destructive" });
+    },
+  });
+
+  const handleSubmit = () => {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast({ title: "E-mail inválido", description: "Por favor, digite um e-mail válido.", variant: "destructive" });
+      return;
+    }
+    subscribeMutation.mutate();
+  };
+
+  if (!enabled) return null;
+
   return (
     <section className="bg-dark-bg" data-testid="section-newsletter">
       <div className="max-w-7xl mx-auto px-4 py-14">
         <div className="max-w-xl mx-auto text-center">
           <Mail className="h-10 w-10 text-accent-bright mx-auto mb-4" />
-          <h2 className="font-serif text-2xl font-bold mb-2 text-dark-bg-foreground">Newsletter</h2>
+          <h2 className="font-serif text-2xl font-bold mb-2 text-dark-bg-foreground">{title}</h2>
           <p className="text-dark-bg-foreground/70 mb-6">{text}</p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Input
               type="email"
-              placeholder="Seu melhor e-mail"
+              placeholder={emailPlaceholder}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
               className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50"
               data-testid="input-newsletter-email"
             />
-            <Button className="bg-accent-bright text-accent-bright-foreground border-accent-bright" data-testid="button-newsletter-subscribe">
+            <Button
+              className="text-white border-transparent"
+              style={{ backgroundColor: buttonColor }}
+              onClick={handleSubmit}
+              disabled={subscribeMutation.isPending}
+              data-testid="button-newsletter-subscribe"
+            >
               <Mail className="h-4 w-4 mr-1" />
-              Inscrever-se
+              {subscribeMutation.isPending ? "Enviando..." : buttonText}
             </Button>
           </div>
         </div>

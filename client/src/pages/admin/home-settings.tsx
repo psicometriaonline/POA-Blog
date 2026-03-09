@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Image as ImageLucide, BookOpen, Download, Plus, Trash2, Save, ArrowLeft, Menu, GripVertical, ChevronDown, Search, Edit } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Settings, Image as ImageLucide, BookOpen, Download, Plus, Trash2, Save, ArrowLeft, Menu, GripVertical, ChevronDown, Search, Edit, Home, FileText, FolderOpen, Tag } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -41,7 +43,7 @@ export default function HomeSettings() {
 
   if (authLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 py-8">
         <Skeleton className="h-8 w-64 mb-8" />
         <Skeleton className="h-96 w-full" />
       </div>
@@ -50,7 +52,7 @@ export default function HomeSettings() {
 
   if (!user) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8 text-center">
+      <div className="max-w-5xl mx-auto px-4 py-8 text-center">
         <h1 className="font-serif text-2xl font-bold mb-4">Acesso Restrito</h1>
         <p className="text-muted-foreground">Faça login para acessar esta página.</p>
       </div>
@@ -58,75 +60,130 @@ export default function HomeSettings() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="flex items-center gap-4 flex-wrap mb-8">
         <Link href="/admin">
           <Button variant="ghost" size="icon" data-testid="button-back-admin">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <h1 className="font-serif text-2xl font-bold" data-testid="text-page-title">Configurações Gerais do Blog</h1>
+        <h1 className="font-serif text-2xl font-bold" data-testid="text-page-title">Configurações do Blog</h1>
       </div>
 
-      <Tabs defaultValue="general" className="space-y-6">
-        <TabsList data-testid="tabs-home-settings">
-          <TabsTrigger value="general" data-testid="tab-general">
-            <Settings className="h-4 w-4 mr-1" />
-            Geral
+      <Tabs defaultValue="home" className="space-y-6">
+        <TabsList data-testid="tabs-page-settings">
+          <TabsTrigger value="home" data-testid="tab-home">
+            <Home className="h-4 w-4 mr-1" />
+            Home
           </TabsTrigger>
-          <TabsTrigger value="banners" data-testid="tab-banners">
-            <ImageLucide className="h-4 w-4 mr-1" />
-            Banners
+          <TabsTrigger value="post-page" data-testid="tab-post-page">
+            <FileText className="h-4 w-4 mr-1" />
+            Página de Posts
           </TabsTrigger>
-          <TabsTrigger value="sections" data-testid="tab-sections">
-            <BookOpen className="h-4 w-4 mr-1" />
-            Seções
+          <TabsTrigger value="category-page" data-testid="tab-category-page">
+            <FolderOpen className="h-4 w-4 mr-1" />
+            Página de Categorias
           </TabsTrigger>
-          <TabsTrigger value="materials" data-testid="tab-materials">
-            <Download className="h-4 w-4 mr-1" />
-            Materiais
-          </TabsTrigger>
-          <TabsTrigger value="menu" data-testid="tab-menu">
-            <Menu className="h-4 w-4 mr-1" />
-            Menu
+          <TabsTrigger value="tag-page" data-testid="tab-tag-page">
+            <Tag className="h-4 w-4 mr-1" />
+            Página de Tags
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="general">
-          <GeneralSettingsTab settings={settings || {}} categories={categories || []} />
+        <TabsContent value="home">
+          <HomePageTab
+            settings={settings || {}}
+            categories={categories || []}
+            banners={bannersList || []}
+            bannersLoading={bannersLoading}
+            materials={materialsList || []}
+            materialsLoading={materialsLoading}
+          />
         </TabsContent>
 
-        <TabsContent value="banners">
-          <BannersTab banners={bannersList || []} isLoading={bannersLoading} />
+        <TabsContent value="post-page">
+          <Card className="p-6">
+            <p className="text-muted-foreground text-center py-8">Configurações da página de posts — em breve.</p>
+          </Card>
         </TabsContent>
 
-        <TabsContent value="sections">
-          <SectionsTab settings={settings || {}} categories={categories || []} />
+        <TabsContent value="category-page">
+          <CategoryPageTab settings={settings || {}} categories={categories || []} />
         </TabsContent>
 
-        <TabsContent value="materials">
-          <MaterialsTab materials={materialsList || []} isLoading={materialsLoading} />
-        </TabsContent>
-
-        <TabsContent value="menu">
-          <MenuTab settings={settings || {}} />
+        <TabsContent value="tag-page">
+          <TagPageTab settings={settings || {}} categories={categories || []} />
         </TabsContent>
       </Tabs>
     </div>
   );
 }
 
-function GeneralSettingsTab({ settings, categories }: { settings: Record<string, string>; categories: Category[] }) {
-  const { toast } = useToast();
-  const [heroHeadline, setHeroHeadline] = useState("");
-  const [heroSubheadline, setHeroSubheadline] = useState("");
-  const [newsletterText, setNewsletterText] = useState("");
+function HomePageTab({ settings, categories, banners, bannersLoading, materials, materialsLoading }: {
+  settings: Record<string, string>;
+  categories: Category[];
+  banners: Banner[];
+  bannersLoading: boolean;
+  materials: FreeMaterial[];
+  materialsLoading: boolean;
+}) {
+  return (
+    <Tabs defaultValue="hero" className="space-y-6">
+      <TabsList className="flex flex-wrap h-auto gap-1" data-testid="tabs-home-sections">
+        <TabsTrigger value="hero" data-testid="tab-hero">Cabeçalho</TabsTrigger>
+        <TabsTrigger value="newsletter" data-testid="tab-newsletter">Newsletter</TabsTrigger>
+        <TabsTrigger value="most-read" data-testid="tab-most-read">Mais Lidos</TabsTrigger>
+        <TabsTrigger value="sections" data-testid="tab-sections">Seções</TabsTrigger>
+        <TabsTrigger value="banners" data-testid="tab-banners">Banners</TabsTrigger>
+        <TabsTrigger value="materials" data-testid="tab-materials">Materiais</TabsTrigger>
+        <TabsTrigger value="menu" data-testid="tab-menu">Menu</TabsTrigger>
+      </TabsList>
 
-  // Update local state when settings data changes
+      <TabsContent value="hero">
+        <HeroSettingsTab settings={settings} />
+      </TabsContent>
+      <TabsContent value="newsletter">
+        <NewsletterSettingsTab settings={settings} />
+      </TabsContent>
+      <TabsContent value="most-read">
+        <MostReadSettingsTab settings={settings} />
+      </TabsContent>
+      <TabsContent value="sections">
+        <HomeSectionsTab settings={settings} categories={categories} />
+      </TabsContent>
+      <TabsContent value="banners">
+        <BannersTab banners={banners} isLoading={bannersLoading} />
+      </TabsContent>
+      <TabsContent value="materials">
+        <MaterialsTab materials={materials} isLoading={materialsLoading} />
+      </TabsContent>
+      <TabsContent value="menu">
+        <MenuTab settings={settings} />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+function HeroSettingsTab({ settings }: { settings: Record<string, string> }) {
+  const { toast } = useToast();
+  const [heroHeadlineHtml, setHeroHeadlineHtml] = useState("");
+  const [heroSubheadline, setHeroSubheadline] = useState("");
+  const [heroFormEnabled, setHeroFormEnabled] = useState(true);
+  const [heroFormCtaText, setHeroFormCtaText] = useState("");
+  const [heroButtonText, setHeroButtonText] = useState("");
+  const [heroButtonColor, setHeroButtonColor] = useState("#31D5FF");
+  const [heroNamePlaceholder, setHeroNamePlaceholder] = useState("");
+  const [heroEmailPlaceholder, setHeroEmailPlaceholder] = useState("");
+
   useEffect(() => {
-    setHeroHeadline(settings["hero_headline"] || "Blog Psicometria Online");
+    setHeroHeadlineHtml(settings["hero_headline_html"] || 'O seu <span style="color:#31D5FF;font-weight:bold">Blog</span> de Psicometria');
     setHeroSubheadline(settings["hero_subheadline"] || "Recursos de aprendizagem em psicometria e análises quantitativas");
-    setNewsletterText(settings["newsletter_text"] || "Receba nossos conteúdos diretamente no seu e-mail");
+    setHeroFormEnabled(settings["hero_form_enabled"] !== "false");
+    setHeroFormCtaText(settings["hero_form_cta_text"] || 'Junte-se a mais de <span style="color:#31D5FF;font-weight:600">22.300</span> membros e receba conteúdos exclusivos e com prioridade');
+    setHeroButtonText(settings["hero_button_text"] || "Quero receber materiais gratuitos");
+    setHeroButtonColor(settings["hero_button_color"] || "#31D5FF");
+    setHeroNamePlaceholder(settings["hero_name_placeholder"] || "Seu primeiro nome");
+    setHeroEmailPlaceholder(settings["hero_email_placeholder"] || "Digite seu e-mail");
   }, [settings]);
 
   const saveMutation = useMutation({
@@ -136,54 +193,272 @@ function GeneralSettingsTab({ settings, categories }: { settings: Record<string,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/home"] });
-      toast({ title: "Salvo", description: "Configuracoes atualizadas com sucesso." });
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      toast({ title: "Salvo", description: "Configurações do cabeçalho atualizadas." });
     },
     onError: () => {
-      toast({ title: "Erro", description: "Falha ao salvar configuracoes.", variant: "destructive" });
+      toast({ title: "Erro", description: "Falha ao salvar.", variant: "destructive" });
     },
   });
 
   return (
     <Card className="p-6 space-y-6">
       <div>
-        <h3 className="font-semibold text-lg mb-4">Secao Hero</h3>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="hero-headline">Titulo Principal</Label>
-            <Input id="hero-headline" value={heroHeadline} onChange={(e) => setHeroHeadline(e.target.value)} data-testid="input-hero-headline" />
-          </div>
-          <div>
-            <Label htmlFor="hero-subheadline">Subtitulo</Label>
-            <Input id="hero-subheadline" value={heroSubheadline} onChange={(e) => setHeroSubheadline(e.target.value)} data-testid="input-hero-subheadline" />
-          </div>
-        </div>
+        <h3 className="font-semibold text-lg mb-1">Cabeçalho (Hero)</h3>
+        <p className="text-sm text-muted-foreground mb-4">Configure o título, subtítulo e formulário de inscrição do topo da página.</p>
       </div>
 
-      <div>
-        <h3 className="font-semibold text-lg mb-4">Newsletter</h3>
+      <div className="space-y-4">
         <div>
-          <Label htmlFor="newsletter-text">Texto da Newsletter</Label>
-          <Input id="newsletter-text" value={newsletterText} onChange={(e) => setNewsletterText(e.target.value)} data-testid="input-newsletter-text" />
+          <Label htmlFor="hero-headline-html">Título Principal (HTML)</Label>
+          <Textarea
+            id="hero-headline-html"
+            value={heroHeadlineHtml}
+            onChange={(e) => setHeroHeadlineHtml(e.target.value)}
+            data-testid="input-hero-headline-html"
+            rows={2}
+            className="font-mono text-sm"
+          />
+          <p className="text-xs text-muted-foreground mt-1">Use HTML para formatar. Ex: O seu &lt;span style="color:#31D5FF"&gt;Blog&lt;/span&gt; de Psicometria</p>
+          {heroHeadlineHtml && (
+            <div className="mt-2 p-3 bg-[#000A24] rounded-md">
+              <p className="text-white font-serif text-lg font-bold" dangerouslySetInnerHTML={{ __html: heroHeadlineHtml }} />
+            </div>
+          )}
         </div>
+
+        <div>
+          <Label htmlFor="hero-subheadline">Subtítulo</Label>
+          <Input id="hero-subheadline" value={heroSubheadline} onChange={(e) => setHeroSubheadline(e.target.value)} data-testid="input-hero-subheadline" />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Switch
+            id="hero-form-enabled"
+            checked={heroFormEnabled}
+            onCheckedChange={setHeroFormEnabled}
+            data-testid="switch-hero-form-enabled"
+          />
+          <Label htmlFor="hero-form-enabled">Habilitar formulário de inscrição</Label>
+        </div>
+
+        {heroFormEnabled && (
+          <div className="space-y-4 pl-4 border-l-2 border-muted">
+            <div>
+              <Label htmlFor="hero-form-cta">Texto acima do formulário (HTML)</Label>
+              <Textarea
+                id="hero-form-cta"
+                value={heroFormCtaText}
+                onChange={(e) => setHeroFormCtaText(e.target.value)}
+                data-testid="input-hero-form-cta"
+                rows={2}
+                className="font-mono text-sm"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="hero-name-placeholder">Placeholder do nome</Label>
+                <Input id="hero-name-placeholder" value={heroNamePlaceholder} onChange={(e) => setHeroNamePlaceholder(e.target.value)} data-testid="input-hero-name-placeholder" />
+              </div>
+              <div>
+                <Label htmlFor="hero-email-placeholder">Placeholder do e-mail</Label>
+                <Input id="hero-email-placeholder" value={heroEmailPlaceholder} onChange={(e) => setHeroEmailPlaceholder(e.target.value)} data-testid="input-hero-email-placeholder" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="hero-button-text">Texto do botão</Label>
+                <Input id="hero-button-text" value={heroButtonText} onChange={(e) => setHeroButtonText(e.target.value)} data-testid="input-hero-button-text" />
+              </div>
+              <div>
+                <Label htmlFor="hero-button-color">Cor do botão</Label>
+                <div className="flex gap-2 items-center">
+                  <Input id="hero-button-color" value={heroButtonColor} onChange={(e) => setHeroButtonColor(e.target.value)} data-testid="input-hero-button-color" className="flex-1" />
+                  <div className="h-9 w-9 rounded-md border flex-shrink-0" style={{ backgroundColor: heroButtonColor }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <Button
         onClick={() => saveMutation.mutate({
-          hero_headline: heroHeadline,
+          hero_headline_html: heroHeadlineHtml,
           hero_subheadline: heroSubheadline,
-          newsletter_text: newsletterText,
+          hero_form_enabled: String(heroFormEnabled),
+          hero_form_cta_text: heroFormCtaText,
+          hero_button_text: heroButtonText,
+          hero_button_color: heroButtonColor,
+          hero_name_placeholder: heroNamePlaceholder,
+          hero_email_placeholder: heroEmailPlaceholder,
         })}
         disabled={saveMutation.isPending}
-        data-testid="button-save-general"
+        data-testid="button-save-hero"
       >
         <Save className="h-4 w-4 mr-1" />
-        {saveMutation.isPending ? "Salvando..." : "Salvar Configurações"}
+        {saveMutation.isPending ? "Salvando..." : "Salvar Cabeçalho"}
       </Button>
     </Card>
   );
 }
 
-function SectionsTab({ settings, categories }: { settings: Record<string, string>; categories: Category[] }) {
+function NewsletterSettingsTab({ settings }: { settings: Record<string, string> }) {
+  const { toast } = useToast();
+  const [enabled, setEnabled] = useState(true);
+  const [title, setTitle] = useState("");
+  const [text, setText] = useState("");
+  const [buttonText, setButtonText] = useState("");
+  const [buttonColor, setButtonColor] = useState("#31D5FF");
+  const [emailPlaceholder, setEmailPlaceholder] = useState("");
+
+  useEffect(() => {
+    setEnabled(settings["newsletter_enabled"] !== "false");
+    setTitle(settings["newsletter_title"] || "Newsletter");
+    setText(settings["newsletter_text"] || "Receba nossos conteúdos diretamente no seu e-mail");
+    setButtonText(settings["newsletter_button_text"] || "Inscrever-se");
+    setButtonColor(settings["newsletter_button_color"] || "#31D5FF");
+    setEmailPlaceholder(settings["newsletter_email_placeholder"] || "Seu melhor e-mail");
+  }, [settings]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: Record<string, string>) => {
+      return apiRequest("PUT", "/api/admin/settings", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/home"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      toast({ title: "Salvo", description: "Configurações da newsletter atualizadas." });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Falha ao salvar.", variant: "destructive" });
+    },
+  });
+
+  return (
+    <Card className="p-6 space-y-6">
+      <div>
+        <h3 className="font-semibold text-lg mb-1">Newsletter</h3>
+        <p className="text-sm text-muted-foreground mb-4">Configure a seção de newsletter exibida na Home.</p>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Switch
+          id="newsletter-enabled"
+          checked={enabled}
+          onCheckedChange={setEnabled}
+          data-testid="switch-newsletter-enabled"
+        />
+        <Label htmlFor="newsletter-enabled">Habilitar seção de newsletter</Label>
+      </div>
+
+      {enabled && (
+        <div className="space-y-4 pl-4 border-l-2 border-muted">
+          <div>
+            <Label htmlFor="newsletter-title">Título</Label>
+            <Input id="newsletter-title" value={title} onChange={(e) => setTitle(e.target.value)} data-testid="input-newsletter-title" />
+          </div>
+          <div>
+            <Label htmlFor="newsletter-text">Texto descritivo</Label>
+            <Input id="newsletter-text" value={text} onChange={(e) => setText(e.target.value)} data-testid="input-newsletter-text" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="newsletter-button-text">Texto do botão</Label>
+              <Input id="newsletter-button-text" value={buttonText} onChange={(e) => setButtonText(e.target.value)} data-testid="input-newsletter-button-text" />
+            </div>
+            <div>
+              <Label htmlFor="newsletter-button-color">Cor do botão</Label>
+              <div className="flex gap-2 items-center">
+                <Input id="newsletter-button-color" value={buttonColor} onChange={(e) => setButtonColor(e.target.value)} data-testid="input-newsletter-button-color" className="flex-1" />
+                <div className="h-9 w-9 rounded-md border flex-shrink-0" style={{ backgroundColor: buttonColor }} />
+              </div>
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="newsletter-email-placeholder">Placeholder do e-mail</Label>
+            <Input id="newsletter-email-placeholder" value={emailPlaceholder} onChange={(e) => setEmailPlaceholder(e.target.value)} data-testid="input-newsletter-email-placeholder" />
+          </div>
+        </div>
+      )}
+
+      <Button
+        onClick={() => saveMutation.mutate({
+          newsletter_enabled: String(enabled),
+          newsletter_title: title,
+          newsletter_text: text,
+          newsletter_button_text: buttonText,
+          newsletter_button_color: buttonColor,
+          newsletter_email_placeholder: emailPlaceholder,
+        })}
+        disabled={saveMutation.isPending}
+        data-testid="button-save-newsletter"
+      >
+        <Save className="h-4 w-4 mr-1" />
+        {saveMutation.isPending ? "Salvando..." : "Salvar Newsletter"}
+      </Button>
+    </Card>
+  );
+}
+
+function MostReadSettingsTab({ settings }: { settings: Record<string, string> }) {
+  const { toast } = useToast();
+  const [count, setCount] = useState("9");
+
+  useEffect(() => {
+    setCount(settings["most_read_count"] || "9");
+  }, [settings]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: Record<string, string>) => {
+      return apiRequest("PUT", "/api/admin/settings", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/home"] });
+      toast({ title: "Salvo", description: "Configuração dos mais lidos atualizada." });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Falha ao salvar.", variant: "destructive" });
+    },
+  });
+
+  return (
+    <Card className="p-6 space-y-6">
+      <div>
+        <h3 className="font-semibold text-lg mb-1">Mais Lidos</h3>
+        <p className="text-sm text-muted-foreground mb-4">Configure o número de posts exibidos na seção "Mais Lidos" da Home.</p>
+      </div>
+
+      <div className="max-w-xs">
+        <Label htmlFor="most-read-count">Número de posts</Label>
+        <Input
+          id="most-read-count"
+          type="number"
+          min="1"
+          max="50"
+          value={count}
+          onChange={(e) => setCount(e.target.value)}
+          data-testid="input-most-read-count"
+        />
+      </div>
+
+      <Button
+        onClick={() => saveMutation.mutate({ most_read_count: count })}
+        disabled={saveMutation.isPending}
+        data-testid="button-save-most-read"
+      >
+        <Save className="h-4 w-4 mr-1" />
+        {saveMutation.isPending ? "Salvando..." : "Salvar"}
+      </Button>
+    </Card>
+  );
+}
+
+function HomeSectionsTab({ settings, categories }: { settings: Record<string, string>; categories: Category[] }) {
   const { toast } = useToast();
   const [featuredSlug, setFeaturedSlug] = useState("");
   const [diverseSlug1, setDiverseSlug1] = useState("");
@@ -191,12 +466,6 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
   const [diverseSlug3, setDiverseSlug3] = useState("");
   const [row1Slug, setRow1Slug] = useState("");
   const [row2Slug, setRow2Slug] = useState("");
-  const [catDiverse1, setCatDiverse1] = useState("");
-  const [catDiverse2, setCatDiverse2] = useState("");
-  const [catDiverse3, setCatDiverse3] = useState("");
-  const [tagDiverse1, setTagDiverse1] = useState("");
-  const [tagDiverse2, setTagDiverse2] = useState("");
-  const [tagDiverse3, setTagDiverse3] = useState("");
 
   useEffect(() => {
     setFeaturedSlug(settings["featured_category_slug"] || "");
@@ -206,14 +475,6 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
     setDiverseSlug3(diverseParts[2]?.trim() || "");
     setRow1Slug(settings["row_section_1_slug"] || "");
     setRow2Slug(settings["row_section_2_slug"] || "");
-    const catParts = (settings["category_page_diverse_slugs"] || "").split(",").filter(Boolean);
-    setCatDiverse1(catParts[0]?.trim() || "");
-    setCatDiverse2(catParts[1]?.trim() || "");
-    setCatDiverse3(catParts[2]?.trim() || "");
-    const tagParts = (settings["tag_page_diverse_slugs"] || "").split(",").filter(Boolean);
-    setTagDiverse1(tagParts[0]?.trim() || "");
-    setTagDiverse2(tagParts[1]?.trim() || "");
-    setTagDiverse3(tagParts[2]?.trim() || "");
   }, [settings]);
 
   const saveMutation = useMutation({
@@ -224,10 +485,10 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
       queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/home"] });
       queryClient.invalidateQueries({ queryKey: ["/api/diverse-sections"] });
-      toast({ title: "Salvo", description: "Seções atualizadas com sucesso." });
+      toast({ title: "Salvo", description: "Seções da home atualizadas." });
     },
     onError: () => {
-      toast({ title: "Erro", description: "Falha ao salvar seções.", variant: "destructive" });
+      toast({ title: "Erro", description: "Falha ao salvar.", variant: "destructive" });
     },
   });
 
@@ -265,8 +526,7 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
       </div>
 
       <div>
-        <h3 className="font-semibold text-lg mb-4">Categorias Diversas — Home (até 3)</h3>
-        <p className="text-sm text-muted-foreground mb-3">Colunas de categorias exibidas na página inicial</p>
+        <h3 className="font-semibold text-lg mb-4">Categorias Diversas (até 3)</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <Label>Categoria 1</Label>
@@ -279,44 +539,6 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
           <div>
             <Label>Categoria 3</Label>
             <CategorySelect value={diverseSlug3} onChange={setDiverseSlug3} testId="select-diverse-3" />
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <h3 className="font-semibold text-lg mb-4">Categorias Diversas — Páginas de Categorias (até 3)</h3>
-        <p className="text-sm text-muted-foreground mb-3">Colunas de categorias exibidas nas páginas de categorias individuais</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <Label>Categoria 1</Label>
-            <CategorySelect value={catDiverse1} onChange={setCatDiverse1} testId="select-cat-diverse-1" />
-          </div>
-          <div>
-            <Label>Categoria 2</Label>
-            <CategorySelect value={catDiverse2} onChange={setCatDiverse2} testId="select-cat-diverse-2" />
-          </div>
-          <div>
-            <Label>Categoria 3</Label>
-            <CategorySelect value={catDiverse3} onChange={setCatDiverse3} testId="select-cat-diverse-3" />
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <h3 className="font-semibold text-lg mb-4">Categorias Diversas — Páginas de Tags (até 3)</h3>
-        <p className="text-sm text-muted-foreground mb-3">Colunas de categorias exibidas nas páginas de tags individuais</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <Label>Categoria 1</Label>
-            <CategorySelect value={tagDiverse1} onChange={setTagDiverse1} testId="select-tag-diverse-1" />
-          </div>
-          <div>
-            <Label>Categoria 2</Label>
-            <CategorySelect value={tagDiverse2} onChange={setTagDiverse2} testId="select-tag-diverse-2" />
-          </div>
-          <div>
-            <Label>Categoria 3</Label>
-            <CategorySelect value={tagDiverse3} onChange={setTagDiverse3} testId="select-tag-diverse-3" />
           </div>
         </div>
       </div>
@@ -339,8 +561,6 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
         onClick={() => saveMutation.mutate({
           featured_category_slug: featuredSlug,
           diverse_category_slugs: [diverseSlug1, diverseSlug2, diverseSlug3].filter(Boolean).join(","),
-          category_page_diverse_slugs: [catDiverse1, catDiverse2, catDiverse3].filter(Boolean).join(","),
-          tag_page_diverse_slugs: [tagDiverse1, tagDiverse2, tagDiverse3].filter(Boolean).join(","),
           row_section_1_slug: row1Slug === "none" ? "" : row1Slug,
           row_section_2_slug: row2Slug === "none" ? "" : row2Slug,
         })}
@@ -349,6 +569,158 @@ function SectionsTab({ settings, categories }: { settings: Record<string, string
       >
         <Save className="h-4 w-4 mr-1" />
         {saveMutation.isPending ? "Salvando..." : "Salvar Seções"}
+      </Button>
+    </Card>
+  );
+}
+
+function CategoryPageTab({ settings, categories }: { settings: Record<string, string>; categories: Category[] }) {
+  const { toast } = useToast();
+  const [catDiverse1, setCatDiverse1] = useState("");
+  const [catDiverse2, setCatDiverse2] = useState("");
+  const [catDiverse3, setCatDiverse3] = useState("");
+
+  useEffect(() => {
+    const catParts = (settings["category_page_diverse_slugs"] || "").split(",").filter(Boolean);
+    setCatDiverse1(catParts[0]?.trim() || "");
+    setCatDiverse2(catParts[1]?.trim() || "");
+    setCatDiverse3(catParts[2]?.trim() || "");
+  }, [settings]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: Record<string, string>) => {
+      return apiRequest("PUT", "/api/admin/settings", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/diverse-sections"] });
+      toast({ title: "Salvo", description: "Configurações da página de categorias atualizadas." });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Falha ao salvar.", variant: "destructive" });
+    },
+  });
+
+  const CategorySelect = ({ value, onChange, testId }: { value: string; onChange: (v: string) => void; testId: string }) => (
+    <Select value={value || "none"} onValueChange={(v) => onChange(v === "none" ? "" : v)}>
+      <SelectTrigger data-testid={testId}>
+        <SelectValue placeholder="Selecionar categoria" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="none">Nenhuma</SelectItem>
+        {categories.map((cat) => (
+          <SelectItem key={cat.id} value={cat.slug}>{cat.name}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  return (
+    <Card className="p-6 space-y-6">
+      <div>
+        <h3 className="font-semibold text-lg mb-1">Categorias Diversas</h3>
+        <p className="text-sm text-muted-foreground mb-4">Colunas de categorias exibidas abaixo da listagem nas páginas de categorias individuais.</p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <Label>Categoria 1</Label>
+          <CategorySelect value={catDiverse1} onChange={setCatDiverse1} testId="select-cat-diverse-1" />
+        </div>
+        <div>
+          <Label>Categoria 2</Label>
+          <CategorySelect value={catDiverse2} onChange={setCatDiverse2} testId="select-cat-diverse-2" />
+        </div>
+        <div>
+          <Label>Categoria 3</Label>
+          <CategorySelect value={catDiverse3} onChange={setCatDiverse3} testId="select-cat-diverse-3" />
+        </div>
+      </div>
+
+      <Button
+        onClick={() => saveMutation.mutate({
+          category_page_diverse_slugs: [catDiverse1, catDiverse2, catDiverse3].filter(Boolean).join(","),
+        })}
+        disabled={saveMutation.isPending}
+        data-testid="button-save-cat-page"
+      >
+        <Save className="h-4 w-4 mr-1" />
+        {saveMutation.isPending ? "Salvando..." : "Salvar"}
+      </Button>
+    </Card>
+  );
+}
+
+function TagPageTab({ settings, categories }: { settings: Record<string, string>; categories: Category[] }) {
+  const { toast } = useToast();
+  const [tagDiverse1, setTagDiverse1] = useState("");
+  const [tagDiverse2, setTagDiverse2] = useState("");
+  const [tagDiverse3, setTagDiverse3] = useState("");
+
+  useEffect(() => {
+    const tagParts = (settings["tag_page_diverse_slugs"] || "").split(",").filter(Boolean);
+    setTagDiverse1(tagParts[0]?.trim() || "");
+    setTagDiverse2(tagParts[1]?.trim() || "");
+    setTagDiverse3(tagParts[2]?.trim() || "");
+  }, [settings]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: Record<string, string>) => {
+      return apiRequest("PUT", "/api/admin/settings", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/diverse-sections"] });
+      toast({ title: "Salvo", description: "Configurações da página de tags atualizadas." });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Falha ao salvar.", variant: "destructive" });
+    },
+  });
+
+  const CategorySelect = ({ value, onChange, testId }: { value: string; onChange: (v: string) => void; testId: string }) => (
+    <Select value={value || "none"} onValueChange={(v) => onChange(v === "none" ? "" : v)}>
+      <SelectTrigger data-testid={testId}>
+        <SelectValue placeholder="Selecionar categoria" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="none">Nenhuma</SelectItem>
+        {categories.map((cat) => (
+          <SelectItem key={cat.id} value={cat.slug}>{cat.name}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  return (
+    <Card className="p-6 space-y-6">
+      <div>
+        <h3 className="font-semibold text-lg mb-1">Categorias Diversas</h3>
+        <p className="text-sm text-muted-foreground mb-4">Colunas de categorias exibidas abaixo da listagem nas páginas de tags individuais.</p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <Label>Categoria 1</Label>
+          <CategorySelect value={tagDiverse1} onChange={setTagDiverse1} testId="select-tag-diverse-1" />
+        </div>
+        <div>
+          <Label>Categoria 2</Label>
+          <CategorySelect value={tagDiverse2} onChange={setTagDiverse2} testId="select-tag-diverse-2" />
+        </div>
+        <div>
+          <Label>Categoria 3</Label>
+          <CategorySelect value={tagDiverse3} onChange={setTagDiverse3} testId="select-tag-diverse-3" />
+        </div>
+      </div>
+
+      <Button
+        onClick={() => saveMutation.mutate({
+          tag_page_diverse_slugs: [tagDiverse1, tagDiverse2, tagDiverse3].filter(Boolean).join(","),
+        })}
+        disabled={saveMutation.isPending}
+        data-testid="button-save-tag-page"
+      >
+        <Save className="h-4 w-4 mr-1" />
+        {saveMutation.isPending ? "Salvando..." : "Salvar"}
       </Button>
     </Card>
   );
@@ -935,12 +1307,12 @@ function MenuTab({ settings }: { settings: Record<string, string> }) {
         </div>
 
         <p className="text-sm text-muted-foreground mb-4">
-          Configure os itens do menu de navegacao do site. URLs externas (com http) abrem em nova aba.
+          Configure os itens do menu de navegação do site. URLs externas (com http) abrem em nova aba.
           Adicione sub-itens para criar menus dropdown.
         </p>
 
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">Nenhum item no menu. Clique em "Adicionar item" para comecar.</p>
+          <p className="text-sm text-muted-foreground text-center py-8">Nenhum item no menu. Clique em "Adicionar item" para começar.</p>
         ) : (
           <div className="space-y-4">
             {items.map((item, index) => (
@@ -970,7 +1342,7 @@ function MenuTab({ settings }: { settings: Record<string, string> }) {
                   <div className="flex-1 space-y-3">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <Label className="text-xs">Titulo</Label>
+                        <Label className="text-xs">Título</Label>
                         <Input
                           value={item.label}
                           onChange={(e) => updateItem(index, "label", e.target.value)}
@@ -995,7 +1367,7 @@ function MenuTab({ settings }: { settings: Record<string, string> }) {
                         {item.children.map((child, childIndex) => (
                           <div key={childIndex} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end">
                             <div>
-                              <Label className="text-xs">Titulo</Label>
+                              <Label className="text-xs">Título</Label>
                               <Input
                                 value={child.label}
                                 onChange={(e) => updateSubItem(index, childIndex, "label", e.target.value)}

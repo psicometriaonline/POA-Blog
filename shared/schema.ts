@@ -188,6 +188,14 @@ export const mediaLibrary = pgTable("media_library", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const subscribers = pgTable("subscribers", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name"),
+  email: text("email").notNull().unique(),
+  source: text("source").notNull().default("hero"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const siteSettings = pgTable("site_settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
@@ -204,6 +212,7 @@ export const insertImageGroupSchema = createInsertSchema(imageGroups).omit({ id:
 export const insertImageBankItemSchema = createInsertSchema(imageBankItems).omit({ id: true });
 export const insertContainerRuleSchema = createInsertSchema(containerRules).omit({ id: true });
 export const insertMediaSchema = createInsertSchema(mediaLibrary).omit({ id: true, createdAt: true });
+export const insertSubscriberSchema = createInsertSchema(subscribers).omit({ id: true, createdAt: true });
 
 export type Author = typeof authors.$inferSelect;
 export type InsertAuthor = z.infer<typeof insertAuthorSchema>;
@@ -225,6 +234,8 @@ export type ImageBankItem = typeof imageBankItems.$inferSelect;
 export type InsertImageBankItem = z.infer<typeof insertImageBankItemSchema>;
 export type ContainerRule = typeof containerRules.$inferSelect;
 export type InsertContainerRule = z.infer<typeof insertContainerRuleSchema>;
+export type Subscriber = typeof subscribers.$inferSelect;
+export type InsertSubscriber = z.infer<typeof insertSubscriberSchema>;
 export type SiteSetting = typeof siteSettings.$inferSelect;
 export type MediaItem = typeof mediaLibrary.$inferSelect;
 export type InsertMedia = z.infer<typeof insertMediaSchema>;

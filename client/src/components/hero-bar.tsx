@@ -1,9 +1,46 @@
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import DOMPurify from "dompurify";
 
 export function HeroBar({ showHeadline = true, settings = {} }: { showHeadline?: boolean; settings?: Record<string, string> }) {
-  const headline = settings["hero_headline"] || "O seu Blog de Psicometria";
-  const subheadline = settings["hero_subheadline"] || "Tenha acesso a nossa enciclopedia virtual de conhecimento em Psicometria e Analise de Dados";
+  const { toast } = useToast();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+
+  const headlineHtml = settings["hero_headline_html"] || 'O seu <span style="color:#31D5FF;font-weight:bold">Blog</span> de Psicometria';
+  const subheadline = settings["hero_subheadline"] || "Recursos de aprendizagem em psicometria e análises quantitativas";
+  const formEnabled = settings["hero_form_enabled"] !== "false";
+  const ctaText = settings["hero_form_cta_text"] || 'Junte-se a mais de <span style="color:#31D5FF;font-weight:600">22.300</span> membros e receba conteúdos exclusivos e com prioridade';
+  const buttonText = settings["hero_button_text"] || "Quero receber materiais gratuitos";
+  const buttonColor = settings["hero_button_color"] || "#31D5FF";
+  const namePlaceholder = settings["hero_name_placeholder"] || "Seu primeiro nome";
+  const emailPlaceholder = settings["hero_email_placeholder"] || "Digite seu e-mail";
+
+  const subscribeMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/subscribe", { name, email, source: "hero" });
+    },
+    onSuccess: () => {
+      toast({ title: "Inscrito com sucesso!", description: "Você receberá nossos conteúdos em breve." });
+      setName("");
+      setEmail("");
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro", description: error.message || "Verifique o e-mail informado.", variant: "destructive" });
+    },
+  });
+
+  const handleSubmit = () => {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast({ title: "E-mail inválido", description: "Por favor, digite um e-mail válido.", variant: "destructive" });
+      return;
+    }
+    subscribeMutation.mutate();
+  };
 
   if (!showHeadline) return null;
 
@@ -11,39 +48,50 @@ export function HeroBar({ showHeadline = true, settings = {} }: { showHeadline?:
     <section className="bg-dark-bg" data-testid="section-hero">
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center py-8 md:py-12">
-          <h1 className="font-serif text-2xl md:text-3xl font-bold mb-3 text-white" data-testid="text-hero-title">
-            {headline.includes("Blog") ? (
-              <>
-                O seu <span className="text-accent-bright">Blog</span> de Psicometria
-              </>
-            ) : (
-              headline
-            )}
-          </h1>
+          <h1
+            className="font-serif text-2xl md:text-3xl font-bold mb-3 text-white"
+            data-testid="text-hero-title"
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(headlineHtml, { ALLOWED_TAGS: ["span", "strong", "em", "b", "i"], ALLOWED_ATTR: ["style", "class"] }) }}
+          />
           <p className="text-white/70 text-base md:text-lg mb-8 max-w-2xl mx-auto" data-testid="text-hero-subtitle">{subheadline}</p>
 
-          <div className="max-w-4xl mx-auto">
-            <p className="text-white/80 text-sm mb-4 text-left">
-              Junte-se a mais de <span className="text-accent-bright font-semibold">22.300</span> membros e receba conteudos exclusivos e com prioridade
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Input
-                type="text"
-                placeholder="Seu primeiro nome"
-                className="bg-white text-foreground placeholder:text-muted-foreground flex-1"
-                data-testid="input-hero-name"
+          {formEnabled && (
+            <div className="max-w-4xl mx-auto">
+              <p
+                className="text-white/80 text-sm mb-4 text-left"
+                data-testid="text-hero-cta"
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(ctaText, { ALLOWED_TAGS: ["span", "strong", "em", "b", "i"], ALLOWED_ATTR: ["style", "class"] }) }}
               />
-              <Input
-                type="email"
-                placeholder="Digite seu e-mail"
-                className="bg-white text-foreground placeholder:text-muted-foreground flex-1"
-                data-testid="input-hero-email"
-              />
-              <Button className="flex-shrink-0 bg-accent-bright text-accent-bright-foreground border-accent-bright" data-testid="button-hero-subscribe">
-                Quero receber materiais gratuitos
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Input
+                  type="text"
+                  placeholder={namePlaceholder}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="bg-white text-foreground placeholder:text-muted-foreground flex-1"
+                  data-testid="input-hero-name"
+                />
+                <Input
+                  type="email"
+                  placeholder={emailPlaceholder}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="bg-white text-foreground placeholder:text-muted-foreground flex-1"
+                  data-testid="input-hero-email"
+                  onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                />
+                <Button
+                  className="flex-shrink-0 text-white border-transparent"
+                  style={{ backgroundColor: buttonColor }}
+                  onClick={handleSubmit}
+                  disabled={subscribeMutation.isPending}
+                  data-testid="button-hero-subscribe"
+                >
+                  {subscribeMutation.isPending ? "Enviando..." : buttonText}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </section>

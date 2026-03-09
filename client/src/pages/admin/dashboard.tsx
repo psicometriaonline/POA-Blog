@@ -249,6 +249,12 @@ export default function AdminDashboard() {
               Comentários
             </Button>
           </Link>
+          <Link href="/admin/inscritos">
+            <Button variant="outline" data-testid="button-subscribers">
+              <Users className="h-4 w-4 mr-1" />
+              Inscritos
+            </Button>
+          </Link>
           <Link href="/admin/home">
             <Button variant="outline" data-testid="button-home-settings">
               <Settings className="h-4 w-4 mr-1" />
