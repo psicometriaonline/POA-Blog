@@ -17,16 +17,8 @@ import TagPage from "@/pages/tag";
 import SearchPage from "@/pages/search";
 import AdminDashboard from "@/pages/admin/dashboard";
 import PostEditor from "@/pages/admin/post-editor";
-import ManageCategories from "@/pages/admin/manage-categories";
-import ManageTags from "@/pages/admin/manage-tags";
-import CrawlPage from "@/pages/admin/crawl";
-import HomeSettings from "@/pages/admin/home-settings";
-import ManageAuthors from "@/pages/admin/manage-authors";
 import AnalyticsPage from "@/pages/admin/analytics";
-import ContainersPage from "@/pages/admin/containers";
-import ManageMediaPage from "@/pages/admin/manage-media";
 import ManageComments from "@/pages/admin/manage-comments";
-import SubscribersPage from "@/pages/admin/subscribers";
 import CategoryDetailPage from "@/pages/admin/category-detail";
 import TagDetailPage from "@/pages/admin/tag-detail";
 import TermsPage from "@/pages/terms";
@@ -47,17 +39,9 @@ function Router() {
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/post/:id" component={PostEditor} />
       <Route path="/admin/categorias/:slug" component={CategoryDetailPage} />
-      <Route path="/admin/categorias" component={ManageCategories} />
       <Route path="/admin/tags/:slug" component={TagDetailPage} />
-      <Route path="/admin/tags" component={ManageTags} />
-      <Route path="/admin/crawl" component={CrawlPage} />
-      <Route path="/admin/home" component={HomeSettings} />
-      <Route path="/admin/autores" component={ManageAuthors} />
       <Route path="/admin/metricas" component={AnalyticsPage} />
-      <Route path="/admin/conteineres" component={ContainersPage} />
-      <Route path="/admin/midias" component={ManageMediaPage} />
       <Route path="/admin/comentarios" component={ManageComments} />
-      <Route path="/admin/inscritos" component={SubscribersPage} />
       <Route path="/:slug" component={PostPage} />
       <Route component={NotFound} />
     </Switch>

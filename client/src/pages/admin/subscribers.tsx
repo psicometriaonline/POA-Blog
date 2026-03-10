@@ -43,7 +43,32 @@ interface SubscribersResponse {
 
 const LIMIT = 30;
 
+export function SubscribersContent() {
+  return <SubscribersInner />;
+}
+
 export default function SubscribersPage() {
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="flex items-center gap-4 mb-6">
+        <Link href="/admin">
+          <Button variant="ghost" size="icon" data-testid="button-back">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        </Link>
+        <div className="flex items-center gap-2">
+          <Users className="h-6 w-6 text-primary" />
+          <h1 className="font-serif text-2xl font-bold" data-testid="text-subscribers-title">
+            Gerenciar Inscritos
+          </h1>
+        </div>
+      </div>
+      <SubscribersInner />
+    </div>
+  );
+}
+
+function SubscribersInner() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -60,10 +85,7 @@ export default function SubscribersPage() {
   const { data, isLoading } = useQuery<SubscribersResponse>({
     queryKey: ["/api/admin/subscribers", { search, page, limit: LIMIT }],
     queryFn: async () => {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(LIMIT),
-      });
+      const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
       if (search) params.set("search", search);
       const res = await fetch(`/api/admin/subscribers?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Erro ao carregar inscritos");
@@ -86,53 +108,23 @@ export default function SubscribersPage() {
     },
   });
 
-  const handleExportCSV = () => {
-    window.open("/api/admin/subscribers/export", "_blank");
-  };
-
-  const formatDate = (d: string) => {
-    const date = new Date(d);
-    return date.toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
+  const formatDate = (d: string) => new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="flex items-center gap-4 mb-6 flex-wrap">
-        <Link href="/admin">
-          <Button variant="ghost" size="icon" data-testid="button-back">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div className="flex items-center gap-2">
-          <Users className="h-6 w-6 text-primary" />
-          <h1 className="font-serif text-2xl font-bold" data-testid="text-subscribers-title">
-            Gerenciar Inscritos
-          </h1>
-        </div>
-        <div className="ml-auto flex items-center gap-2 flex-wrap">
-          <span className="text-sm text-muted-foreground" data-testid="text-subscriber-count">
-            {total} {total === 1 ? "inscrito" : "inscritos"}
-          </span>
-          <Button variant="outline" onClick={handleExportCSV} data-testid="button-export-csv">
-            <Download className="h-4 w-4 mr-1" />
-            Exportar CSV
-          </Button>
-        </div>
+    <>
+      <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+        <span className="text-sm text-muted-foreground" data-testid="text-subscriber-count">
+          {total} {total === 1 ? "inscrito" : "inscritos"}
+        </span>
+        <Button variant="outline" onClick={() => window.open("/api/admin/subscribers/export", "_blank")} data-testid="button-export-csv">
+          <Download className="h-4 w-4 mr-1" />
+          Exportar CSV
+        </Button>
       </div>
 
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nome ou e-mail..."
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          className="pl-9"
-          data-testid="input-search-subscribers"
-        />
+        <Input placeholder="Buscar por nome ou e-mail..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="pl-9" data-testid="input-search-subscribers" />
       </div>
 
       {search && data && (
@@ -144,14 +136,10 @@ export default function SubscribersPage() {
       <Card>
         {isLoading ? (
           <div className="p-4 space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
+            {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
           </div>
         ) : subscribers.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground" data-testid="text-no-subscribers">
-            Nenhum inscrito encontrado.
-          </div>
+          <div className="p-8 text-center text-muted-foreground" data-testid="text-no-subscribers">Nenhum inscrito encontrado.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm" data-testid="table-subscribers">
@@ -167,46 +155,25 @@ export default function SubscribersPage() {
               <tbody>
                 {subscribers.map((subscriber) => (
                   <tr key={subscriber.id} className="border-b hover:bg-muted/30" data-testid={`row-subscriber-${subscriber.id}`}>
-                    <td className="p-3" data-testid={`text-name-${subscriber.id}`}>
-                      {subscriber.name || <span className="text-muted-foreground">—</span>}
-                    </td>
-                    <td className="p-3" data-testid={`text-email-${subscriber.id}`}>
-                      {subscriber.email}
-                    </td>
-                    <td className="p-3 text-muted-foreground" data-testid={`text-source-${subscriber.id}`}>
-                      {subscriber.source}
-                    </td>
-                    <td className="p-3 text-muted-foreground whitespace-nowrap" data-testid={`text-date-${subscriber.id}`}>
-                      {formatDate(subscriber.createdAt)}
-                    </td>
+                    <td className="p-3" data-testid={`text-name-${subscriber.id}`}>{subscriber.name || <span className="text-muted-foreground">—</span>}</td>
+                    <td className="p-3" data-testid={`text-email-${subscriber.id}`}>{subscriber.email}</td>
+                    <td className="p-3 text-muted-foreground" data-testid={`text-source-${subscriber.id}`}>{subscriber.source}</td>
+                    <td className="p-3 text-muted-foreground whitespace-nowrap" data-testid={`text-date-${subscriber.id}`}>{formatDate(subscriber.createdAt)}</td>
                     <td className="p-3">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive"
-                            title="Excluir"
-                            data-testid={`button-delete-subscriber-${subscriber.id}`}
-                          >
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title="Excluir" data-testid={`button-delete-subscriber-${subscriber.id}`}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Excluir Inscrito</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Tem certeza que deseja excluir este inscrito? Esta ação não pode ser desfeita.
-                            </AlertDialogDescription>
+                            <AlertDialogDescription>Tem certeza que deseja excluir este inscrito? Esta ação não pode ser desfeita.</AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel data-testid="button-cancel-delete">Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteMutation.mutate(subscriber.id)}
-                              data-testid="button-confirm-delete"
-                            >
-                              Excluir
-                            </AlertDialogAction>
+                            <AlertDialogAction onClick={() => deleteMutation.mutate(subscriber.id)} data-testid="button-confirm-delete">Excluir</AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
@@ -221,29 +188,15 @@ export default function SubscribersPage() {
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-4">
-          <Button
-            variant="outline"
-            size="icon"
-            disabled={page <= 1}
-            onClick={() => setPage(page - 1)}
-            data-testid="button-prev-page"
-          >
+          <Button variant="outline" size="icon" disabled={page <= 1} onClick={() => setPage(page - 1)} data-testid="button-prev-page">
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-sm text-muted-foreground" data-testid="text-pagination-info">
-            Página {page} de {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="icon"
-            disabled={page >= totalPages}
-            onClick={() => setPage(page + 1)}
-            data-testid="button-next-page"
-          >
+          <span className="text-sm text-muted-foreground" data-testid="text-pagination-info">Página {page} de {totalPages}</span>
+          <Button variant="outline" size="icon" disabled={page >= totalPages} onClick={() => setPage(page + 1)} data-testid="button-next-page">
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       )}
-    </div>
+    </>
   );
 }

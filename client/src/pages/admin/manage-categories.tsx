@@ -16,8 +16,34 @@ function slugify(text: string): string {
   return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
+export function CategoriesManagerContent() {
+  return <CategoriesManagerInner />;
+}
+
 export default function ManageCategories() {
   const { user } = useAuth();
+  if (!user) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-16 text-center">
+        <h1 className="text-2xl font-bold mb-4">Acesso Restrito</h1>
+        <a href="/api/login"><Button>Fazer Login</Button></a>
+      </div>
+    );
+  }
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="flex items-center gap-2 mb-6">
+        <Link href="/admin">
+          <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
+        </Link>
+        <h1 className="font-serif text-2xl font-bold" data-testid="text-categories-title">Gerenciar Categorias</h1>
+      </div>
+      <CategoriesManagerInner />
+    </div>
+  );
+}
+
+function CategoriesManagerInner() {
   const { toast } = useToast();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [name, setName] = useState("");
@@ -28,7 +54,6 @@ export default function ManageCategories() {
 
   const { data: categories } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
-    enabled: !!user,
   });
 
   const createMutation = useMutation({
@@ -79,24 +104,8 @@ export default function ManageCategories() {
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
   };
 
-  if (!user) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold mb-4">Acesso Restrito</h1>
-        <a href="/api/login"><Button>Fazer Login</Button></a>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/admin">
-          <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
-        </Link>
-        <h1 className="font-serif text-2xl font-bold" data-testid="text-categories-title">Gerenciar Categorias</h1>
-      </div>
-
+    <>
       {(isAdding || editingId !== null) && (
         <Card ref={formRef} className="p-4 mb-6">
           <div className="space-y-3">
@@ -161,6 +170,6 @@ export default function ManageCategories() {
           <p className="text-muted-foreground text-center py-8">Nenhuma categoria criada ainda.</p>
         )}
       </div>
-    </div>
+    </>
   );
 }

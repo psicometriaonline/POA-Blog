@@ -19,8 +19,34 @@ function normalize(text: string): string {
   return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
+export function TagsManagerContent() {
+  return <TagsManagerInner />;
+}
+
 export default function ManageTags() {
   const { user } = useAuth();
+  if (!user) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-16 text-center">
+        <h1 className="text-2xl font-bold mb-4">Acesso Restrito</h1>
+        <a href="/api/login"><Button>Fazer Login</Button></a>
+      </div>
+    );
+  }
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="flex items-center gap-2 mb-6">
+        <Link href="/admin">
+          <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
+        </Link>
+        <h1 className="font-serif text-2xl font-bold" data-testid="text-tags-title">Gerenciar Tags</h1>
+      </div>
+      <TagsManagerInner />
+    </div>
+  );
+}
+
+function TagsManagerInner() {
   const { toast } = useToast();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [name, setName] = useState("");
@@ -31,7 +57,6 @@ export default function ManageTags() {
 
   const { data: tags } = useQuery<Tag[]>({
     queryKey: ["/api/tags"],
-    enabled: !!user,
   });
 
   const { data: postCounts } = useQuery<Record<number, number>>({
@@ -41,7 +66,6 @@ export default function ManageTags() {
       if (!res.ok) throw new Error("Erro ao carregar contagem");
       return res.json();
     },
-    enabled: !!user,
   });
 
   const sortedFilteredTags = useMemo(() => {
@@ -108,24 +132,8 @@ export default function ManageTags() {
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
   };
 
-  if (!user) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold mb-4">Acesso Restrito</h1>
-        <a href="/api/login"><Button>Fazer Login</Button></a>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/admin">
-          <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
-        </Link>
-        <h1 className="font-serif text-2xl font-bold" data-testid="text-tags-title">Gerenciar Tags</h1>
-      </div>
-
+    <>
       {(isAdding || editingId !== null) && (
         <Card ref={formRef} className="p-4 mb-6">
           <div className="space-y-3">
@@ -211,6 +219,6 @@ export default function ManageTags() {
           <p className="text-muted-foreground text-center py-8 w-full">Nenhuma tag criada ainda.</p>
         )}
       </div>
-    </div>
+    </>
   );
 }

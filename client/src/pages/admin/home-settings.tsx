@@ -119,7 +119,7 @@ export default function HomeSettings() {
   );
 }
 
-function HomePageTab({ settings, categories, banners, bannersLoading, materials, materialsLoading }: {
+export function HomePageTab({ settings, categories, banners, bannersLoading, materials, materialsLoading }: {
   settings: Record<string, string>;
   categories: Category[];
   banners: Banner[];
@@ -574,7 +574,7 @@ function HomeSectionsTab({ settings, categories }: { settings: Record<string, st
   );
 }
 
-function CategoryPageTab({ settings, categories }: { settings: Record<string, string>; categories: Category[] }) {
+export function CategoryPageTab({ settings, categories }: { settings: Record<string, string>; categories: Category[] }) {
   const { toast } = useToast();
   const [catDiverse1, setCatDiverse1] = useState("");
   const [catDiverse2, setCatDiverse2] = useState("");
@@ -650,7 +650,7 @@ function CategoryPageTab({ settings, categories }: { settings: Record<string, st
   );
 }
 
-function TagPageTab({ settings, categories }: { settings: Record<string, string>; categories: Category[] }) {
+export function TagPageTab({ settings, categories }: { settings: Record<string, string>; categories: Category[] }) {
   const { toast } = useToast();
   const [tagDiverse1, setTagDiverse1] = useState("");
   const [tagDiverse2, setTagDiverse2] = useState("");

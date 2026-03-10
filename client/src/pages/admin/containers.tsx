@@ -724,6 +724,29 @@ function RuleCard({ rule, onEdit, onDelete, onToggle }: {
   );
 }
 
+export function ContainersContent() {
+  return (
+    <Tabs defaultValue="groups">
+      <TabsList className="mb-6" data-testid="tabs-containers">
+        <TabsTrigger value="groups" data-testid="tab-groups">
+          <ImageLucide className="h-4 w-4 mr-1" />
+          Banco de Imagens
+        </TabsTrigger>
+        <TabsTrigger value="rules" data-testid="tab-rules">
+          <Layers className="h-4 w-4 mr-1" />
+          Regras
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="groups">
+        <ImageGroupsTab />
+      </TabsContent>
+      <TabsContent value="rules">
+        <RulesTab />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
 export default function ContainersPage() {
   const { user, isLoading: authLoading } = useAuth();
 
@@ -760,27 +783,7 @@ export default function ContainersPage() {
           Gerenciamento de Contêineres
         </h1>
       </div>
-
-      <Tabs defaultValue="groups">
-        <TabsList className="mb-6" data-testid="tabs-containers">
-          <TabsTrigger value="groups" data-testid="tab-groups">
-            <ImageLucide className="h-4 w-4 mr-1" />
-            Banco de Imagens
-          </TabsTrigger>
-          <TabsTrigger value="rules" data-testid="tab-rules">
-            <Layers className="h-4 w-4 mr-1" />
-            Regras
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="groups">
-          <ImageGroupsTab />
-        </TabsContent>
-
-        <TabsContent value="rules">
-          <RulesTab />
-        </TabsContent>
-      </Tabs>
+      <ContainersContent />
     </div>
   );
 }

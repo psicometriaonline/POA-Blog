@@ -21,23 +21,13 @@ interface QueueItem {
   error?: string;
 }
 
-export default function CrawlPage() {
-  const { user } = useAuth();
+export function CrawlContent() {
   const { toast } = useToast();
   const [urlsText, setUrlsText] = useState("");
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const abortRef = useRef(false);
   const [delaySeconds, setDelaySeconds] = useState(3);
-
-  if (!user) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold mb-4">Acesso Restrito</h1>
-        <a href="/api/login"><Button>Fazer Login</Button></a>
-      </div>
-    );
-  }
 
   const buildQueue = () => {
     const urls = urlsText.split("\n").map(u => u.trim()).filter(u => u.length > 0);
@@ -149,14 +139,7 @@ export default function CrawlPage() {
   });
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/admin">
-          <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
-        </Link>
-        <h1 className="font-serif text-2xl font-bold" data-testid="text-crawl-title">Importar Posts do WordPress</h1>
-      </div>
-
+    <div>
       {queue.length === 0 ? (
         <Card className="p-4 mb-6">
           <Label className="mb-2 block">Cole as URLs dos posts (uma por linha)</Label>
@@ -399,6 +382,31 @@ export default function CrawlPage() {
           </div>
         )}
       </Card>
+    </div>
+  );
+}
+
+export default function CrawlPage() {
+  const { user } = useAuth();
+
+  if (!user) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-16 text-center">
+        <h1 className="text-2xl font-bold mb-4">Acesso Restrito</h1>
+        <a href="/api/login"><Button>Fazer Login</Button></a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="flex items-center gap-2 mb-6">
+        <Link href="/admin?tab=posts">
+          <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
+        </Link>
+        <h1 className="font-serif text-2xl font-bold" data-testid="text-crawl-title">Importar Posts do WordPress</h1>
+      </div>
+      <CrawlContent />
     </div>
   );
 }

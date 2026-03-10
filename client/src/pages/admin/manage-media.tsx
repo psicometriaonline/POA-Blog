@@ -57,8 +57,8 @@ function getMimeFromFilename(filename: string): string {
   return map[ext || ""] || "image/jpeg";
 }
 
-export default function ManageMediaPage() {
-  const { user, isLoading: authLoading } = useAuth();
+export function MediaContent() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -233,23 +233,13 @@ export default function ManageMediaPage() {
     }
   };
 
-  if (authLoading) return <div className="max-w-6xl mx-auto px-4 py-8"><Skeleton className="h-8 w-48" /></div>;
-  if (!user) return <div className="max-w-6xl mx-auto px-4 py-8 text-center">Faça login para acessar o admin.</div>;
-
   const totalPages = mediaData ? Math.ceil(mediaData.total / limit) : 0;
   const dupeCount = duplicates?.length || 0;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Link href="/admin">
-            <Button variant="ghost" size="sm" data-testid="button-back-admin">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Gerenciar Imagens</h1>
-        </div>
+    <div>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+        <h2 className="text-xl font-bold" data-testid="text-page-title">Gerenciar Imagens</h2>
         <div className="flex items-center gap-2">
           <Button
             onClick={async () => {
@@ -750,6 +740,27 @@ export default function ManageMediaPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+export default function ManageMediaPage() {
+  const { user, isLoading: authLoading } = useAuth();
+
+  if (authLoading) return <div className="max-w-6xl mx-auto px-4 py-8"><Skeleton className="h-8 w-48" /></div>;
+  if (!user) return <div className="max-w-6xl mx-auto px-4 py-8 text-center">Faça login para acessar o admin.</div>;
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="flex items-center gap-3 mb-6">
+        <Link href="/admin?tab=database">
+          <Button variant="ghost" size="sm" data-testid="button-back-admin">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <h1 className="text-2xl font-bold">Gerenciar Imagens</h1>
+      </div>
+      <MediaContent />
     </div>
   );
 }
