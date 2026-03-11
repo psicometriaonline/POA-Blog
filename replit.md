@@ -30,6 +30,13 @@ Key features include:
 - **Authentication:** Admin access is secured via Replit Auth integration.
 - **Post Structure & Validation:** Posts require at least one category and tag. Deletion of categories/tags triggers an orphan check, reassigning affected posts to an "Indefinida" category/tag if necessary.
 
+## Image Storage
+- **Persistent Binary Storage:** All uploaded images are stored as base64-encoded binary data in the PostgreSQL `media_library` table (`data` TEXT column), alongside filesystem copies in `/uploads/`.
+- **Fallback Serving:** The smart `/uploads/:filename` route first checks the filesystem; if the file is missing (after container restart), it serves the image from the database and restores it to disk for caching.
+- **Backfill System:** Admin endpoint `POST /api/admin/media/backfill` populates binary data for existing images in batch operations (500 at a time).
+- **WordPress Imports:** Images downloaded from WordPress during migration are automatically stored as binary data in the database.
+- **Production Resilience:** Images survive container restarts and deployments; no data loss occurs due to ephemeral filesystem.
+
 ## External Dependencies
 - **PostgreSQL:** Primary database for all application data.
 - **Replit Auth:** For secure administrator authentication.

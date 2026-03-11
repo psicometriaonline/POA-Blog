@@ -185,6 +185,7 @@ export const mediaLibrary = pgTable("media_library", {
   height: integer("height"),
   fileSize: integer("file_size"),
   source: text("source").notNull().default("upload"),
+  data: text("data"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

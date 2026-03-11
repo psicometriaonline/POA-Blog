@@ -1438,6 +1438,20 @@ export class DatabaseStorage implements IStorage {
     await db.update(mediaLibrary).set(update).where(eq(mediaLibrary.id, id));
   }
 
+  async updateMediaData(id: number, data: Buffer): Promise<void> {
+    const encoded = data.toString("base64");
+    await db.update(mediaLibrary).set({ data: encoded }).where(eq(mediaLibrary.id, id));
+  }
+
+  async getMediaByUrl(url: string): Promise<MediaItem | undefined> {
+    const [item] = await db.select().from(mediaLibrary).where(eq(mediaLibrary.url, url)).limit(1);
+    return item;
+  }
+
+  async getMediasWithoutData(limit: number = 100): Promise<MediaItem[]> {
+    return db.select().from(mediaLibrary).where(isNull(mediaLibrary.data)).limit(limit);
+  }
+
   async replaceUrlInAllPosts(oldUrl: string, newUrl: string): Promise<number> {
     let updatedCount = 0;
     const featuredResult = await db.update(posts)

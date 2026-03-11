@@ -69,6 +69,30 @@ export async function registerRoutes(
     }
   }, 60000);
 
+  app.get("/uploads/:filename", async (req, res, next) => {
+    const filename = req.params.filename;
+    const filePath = path.join(uploadsDir, filename);
+    
+    if (fs.existsSync(filePath)) {
+      return (await import("express")).default.static(uploadsDir)(req, res, next);
+    }
+    
+    const fileUrl = `/uploads/${filename}`;
+    const media = await storage.getMediaByUrl(fileUrl);
+    
+    if (media && media.data) {
+      const mimeType = media.mimeType || "application/octet-stream";
+      const buffer = Buffer.from(media.data, "base64");
+      res.setHeader("Content-Type", mimeType);
+      res.setHeader("Content-Length", buffer.length);
+      
+      fs.writeFileSync(filePath, buffer);
+      return res.send(buffer);
+    }
+    
+    return res.status(404).json({ message: "Arquivo não encontrado" });
+  });
+  
   app.use("/uploads", (await import("express")).default.static(uploadsDir));
 
   app.post("/api/admin/upload", isAuthenticated, upload.single("file"), async (req, res) => {
@@ -76,12 +100,15 @@ export async function registerRoutes(
       return res.status(400).json({ message: "Nenhum arquivo enviado" });
     }
     const fileUrl = `/uploads/${req.file.filename}`;
+    const fileData = fs.readFileSync(req.file.path);
+    const encodedData = fileData.toString("base64");
     const mediaItem = await storage.createMedia({
       filename: req.file.originalname,
       url: fileUrl,
       mimeType: req.file.mimetype,
       fileSize: req.file.size,
       source: "upload",
+      data: encodedData,
     });
     res.json({ url: fileUrl, filename: req.file.originalname, mediaId: mediaItem.id });
   });
@@ -117,6 +144,8 @@ export async function registerRoutes(
       return res.status(400).json({ message: "Nenhum arquivo enviado" });
     }
     const fileUrl = `/uploads/${req.file.filename}`;
+    const fileData = fs.readFileSync(req.file.path);
+    const encodedData = fileData.toString("base64");
     const mediaItem = await storage.createMedia({
       filename: req.file.originalname,
       url: fileUrl,
@@ -125,6 +154,7 @@ export async function registerRoutes(
       mimeType: req.file.mimetype,
       fileSize: req.file.size,
       source: "upload",
+      data: encodedData,
     });
     res.json(mediaItem);
   });
@@ -310,6 +340,33 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/media/backfill", isAuthenticated, async (req, res) => {
+    try {
+      const items = await storage.getMediasWithoutData(500);
+      let updated = 0;
+      
+      for (const item of items) {
+        try {
+          if (item.url.startsWith("/uploads/")) {
+            const filePath = path.join(uploadsDir, path.basename(item.url));
+            if (fs.existsSync(filePath)) {
+              const fileData = fs.readFileSync(filePath);
+              await storage.updateMediaData(item.id, fileData);
+              updated++;
+            }
+          }
+        } catch (e: any) {
+          console.error(`Backfill failed for media ${item.id}:`, e.message);
+        }
+      }
+      
+      const remaining = await storage.getMediasWithoutData(1);
+      res.json({ updated, remaining: remaining.length });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.post("/api/admin/media/migrate-images", isAuthenticated, async (req, res) => {
     req.setTimeout(600000);
     res.setTimeout(600000);
@@ -455,6 +512,12 @@ export async function registerRoutes(
             const filePath = path.join(uploadsDir, localUrl.replace("/uploads/", ""));
             const fileSize = fs.existsSync(filePath) ? fs.statSync(filePath).size : undefined;
             await storage.updateMediaUrl(item.id, localUrl, fileSize);
+            
+            if (fs.existsSync(filePath) && !item.data) {
+              const fileData = fs.readFileSync(filePath);
+              const encodedData = fileData.toString("base64");
+              await storage.updateMediaData(item.id, Buffer.from(encodedData, "utf8"));
+            }
             mediaUpdated++;
           }
         }
