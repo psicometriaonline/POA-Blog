@@ -419,6 +419,7 @@ function SectionNewsletter({ settings }: { settings: Record<string, string> }) {
   const text = settings["newsletter_text"] || "Receba nossos conteúdos diretamente no seu e-mail";
   const buttonText = settings["newsletter_button_text"] || "Inscrever-se";
   const buttonColor = settings["newsletter_button_color"] || "#31D5FF";
+  const buttonTextColor = settings["newsletter_button_text_color"] || "#000A24";
   const emailPlaceholder = settings["newsletter_email_placeholder"] || "Seu melhor e-mail";
 
   const subscribeMutation = useMutation({
@@ -462,8 +463,8 @@ function SectionNewsletter({ settings }: { settings: Record<string, string> }) {
               data-testid="input-newsletter-email"
             />
             <Button
-              className="text-white border-transparent"
-              style={{ backgroundColor: buttonColor }}
+              className="border-transparent"
+              style={{ backgroundColor: buttonColor, color: buttonTextColor }}
               onClick={handleSubmit}
               disabled={subscribeMutation.isPending}
               data-testid="button-newsletter-subscribe"

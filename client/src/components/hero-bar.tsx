@@ -17,6 +17,7 @@ export function HeroBar({ showHeadline = true, settings = {} }: { showHeadline?:
   const ctaText = settings["hero_form_cta_text"] || 'Junte-se a mais de <span style="color:#31D5FF;font-weight:600">22.300</span> membros e receba conteúdos exclusivos e com prioridade';
   const buttonText = settings["hero_button_text"] || "Quero receber materiais gratuitos";
   const buttonColor = settings["hero_button_color"] || "#31D5FF";
+  const buttonTextColor = settings["hero_button_text_color"] || "#000A24";
   const namePlaceholder = settings["hero_name_placeholder"] || "Seu primeiro nome";
   const emailPlaceholder = settings["hero_email_placeholder"] || "Digite seu e-mail";
 
@@ -81,8 +82,8 @@ export function HeroBar({ showHeadline = true, settings = {} }: { showHeadline?:
                   onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
                 />
                 <Button
-                  className="flex-shrink-0 text-white border-transparent"
-                  style={{ backgroundColor: buttonColor }}
+                  className="flex-shrink-0 border-transparent"
+                  style={{ backgroundColor: buttonColor, color: buttonTextColor }}
                   onClick={handleSubmit}
                   disabled={subscribeMutation.isPending}
                   data-testid="button-hero-subscribe"

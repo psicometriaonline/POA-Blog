@@ -564,16 +564,6 @@ export default function AdminDashboard() {
     enabled: !!user,
   });
 
-  const { data: postsData } = useQuery<{ posts: PostWithRelations[]; total: number }>({
-    queryKey: ["/api/admin/posts", { limit: 1, offset: 0 }],
-    queryFn: async () => {
-      const res = await fetch(`/api/admin/posts?limit=1&offset=0`, { credentials: "include" });
-      if (!res.ok) throw new Error("Erro");
-      return res.json();
-    },
-    enabled: !!user,
-  });
-
   if (authLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -601,70 +591,37 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="font-serif text-3xl font-bold mb-8" data-testid="text-admin-title">
-        Painel Administrativo
-      </h1>
+    <div className="max-w-7xl mx-auto">
+      <div className="border-b bg-muted/30 px-4 pt-6 pb-0 mb-6">
+        <h1 className="font-serif text-2xl font-bold mb-4" data-testid="text-admin-title">
+          Painel Administrativo
+        </h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-md">
-              <FileText className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold" data-testid="text-post-count">{postsData?.total || 0}</p>
-              <p className="text-sm text-muted-foreground">Posts</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-md">
-              <FolderOpen className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold" data-testid="text-category-count">{categories?.length || 0}</p>
-              <p className="text-sm text-muted-foreground">Categorias</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-md">
-              <Tag className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold" data-testid="text-tag-count">{allTags?.length || 0}</p>
-              <p className="text-sm text-muted-foreground">Tags</p>
-            </div>
-          </div>
-        </Card>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
+          <TabsList className="h-auto gap-0 p-0 bg-transparent border-0 rounded-none" data-testid="tabs-admin-main">
+            {[
+              { value: "home", icon: Home, label: "Home" },
+              { value: "posts", icon: FileText, label: "Página de Posts" },
+              { value: "categories", icon: FolderOpen, label: "Página de Categorias" },
+              { value: "tags", icon: Tag, label: "Página de Tags" },
+              { value: "database", icon: Database, label: "Banco de Dados" },
+            ].map(({ value, icon: Icon, label }) => (
+              <TabsTrigger
+                key={value}
+                value={value}
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm font-medium"
+                data-testid={`tab-main-${value}`}
+              >
+                <Icon className="h-4 w-4 mr-1.5" />
+                {label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="flex flex-wrap h-auto gap-1" data-testid="tabs-admin-main">
-          <TabsTrigger value="home" data-testid="tab-main-home">
-            <Home className="h-4 w-4 mr-1" />
-            Home
-          </TabsTrigger>
-          <TabsTrigger value="posts" data-testid="tab-main-posts">
-            <FileText className="h-4 w-4 mr-1" />
-            Página de Posts
-          </TabsTrigger>
-          <TabsTrigger value="categories" data-testid="tab-main-categories">
-            <FolderOpen className="h-4 w-4 mr-1" />
-            Página de Categorias
-          </TabsTrigger>
-          <TabsTrigger value="tags" data-testid="tab-main-tags">
-            <Tag className="h-4 w-4 mr-1" />
-            Página de Tags
-          </TabsTrigger>
-          <TabsTrigger value="database" data-testid="tab-main-database">
-            <Database className="h-4 w-4 mr-1" />
-            Banco de Dados
-          </TabsTrigger>
-        </TabsList>
+      <div className="px-4 pb-8">
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
 
         <TabsContent value="home">
           <HomePageTab
@@ -693,6 +650,7 @@ export default function AdminDashboard() {
           <DatabaseTab />
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

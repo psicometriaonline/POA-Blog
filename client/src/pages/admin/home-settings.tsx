@@ -129,7 +129,7 @@ export function HomePageTab({ settings, categories, banners, bannersLoading, mat
 }) {
   return (
     <Tabs defaultValue="hero" className="space-y-6">
-      <TabsList className="flex flex-wrap h-auto gap-1" data-testid="tabs-home-sections">
+      <TabsList className="flex flex-wrap h-auto gap-1 justify-start" data-testid="tabs-home-sections">
         <TabsTrigger value="hero" data-testid="tab-hero">Cabeçalho</TabsTrigger>
         <TabsTrigger value="newsletter" data-testid="tab-newsletter">Newsletter</TabsTrigger>
         <TabsTrigger value="most-read" data-testid="tab-most-read">Mais Lidos</TabsTrigger>
@@ -172,6 +172,7 @@ function HeroSettingsTab({ settings }: { settings: Record<string, string> }) {
   const [heroFormCtaText, setHeroFormCtaText] = useState("");
   const [heroButtonText, setHeroButtonText] = useState("");
   const [heroButtonColor, setHeroButtonColor] = useState("#31D5FF");
+  const [heroButtonTextColor, setHeroButtonTextColor] = useState("#000A24");
   const [heroNamePlaceholder, setHeroNamePlaceholder] = useState("");
   const [heroEmailPlaceholder, setHeroEmailPlaceholder] = useState("");
 
@@ -182,6 +183,7 @@ function HeroSettingsTab({ settings }: { settings: Record<string, string> }) {
     setHeroFormCtaText(settings["hero_form_cta_text"] || 'Junte-se a mais de <span style="color:#31D5FF;font-weight:600">22.300</span> membros e receba conteúdos exclusivos e com prioridade');
     setHeroButtonText(settings["hero_button_text"] || "Quero receber materiais gratuitos");
     setHeroButtonColor(settings["hero_button_color"] || "#31D5FF");
+    setHeroButtonTextColor(settings["hero_button_text_color"] || "#000A24");
     setHeroNamePlaceholder(settings["hero_name_placeholder"] || "Seu primeiro nome");
     setHeroEmailPlaceholder(settings["hero_email_placeholder"] || "Digite seu e-mail");
   }, [settings]);
@@ -280,6 +282,16 @@ function HeroSettingsTab({ settings }: { settings: Record<string, string> }) {
                 </div>
               </div>
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="hero-button-text-color">Cor do texto do botão</Label>
+                <div className="flex gap-2 items-center">
+                  <Input id="hero-button-text-color" value={heroButtonTextColor} onChange={(e) => setHeroButtonTextColor(e.target.value)} data-testid="input-hero-button-text-color" className="flex-1" />
+                  <div className="h-9 w-9 rounded-md border flex-shrink-0 flex items-center justify-center text-xs font-bold" style={{ backgroundColor: heroButtonColor, color: heroButtonTextColor }}>Aa</div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -292,6 +304,7 @@ function HeroSettingsTab({ settings }: { settings: Record<string, string> }) {
           hero_form_cta_text: heroFormCtaText,
           hero_button_text: heroButtonText,
           hero_button_color: heroButtonColor,
+          hero_button_text_color: heroButtonTextColor,
           hero_name_placeholder: heroNamePlaceholder,
           hero_email_placeholder: heroEmailPlaceholder,
         })}
@@ -312,6 +325,7 @@ function NewsletterSettingsTab({ settings }: { settings: Record<string, string> 
   const [text, setText] = useState("");
   const [buttonText, setButtonText] = useState("");
   const [buttonColor, setButtonColor] = useState("#31D5FF");
+  const [buttonTextColor, setButtonTextColor] = useState("#000A24");
   const [emailPlaceholder, setEmailPlaceholder] = useState("");
 
   useEffect(() => {
@@ -320,6 +334,7 @@ function NewsletterSettingsTab({ settings }: { settings: Record<string, string> 
     setText(settings["newsletter_text"] || "Receba nossos conteúdos diretamente no seu e-mail");
     setButtonText(settings["newsletter_button_text"] || "Inscrever-se");
     setButtonColor(settings["newsletter_button_color"] || "#31D5FF");
+    setButtonTextColor(settings["newsletter_button_text_color"] || "#000A24");
     setEmailPlaceholder(settings["newsletter_email_placeholder"] || "Seu melhor e-mail");
   }, [settings]);
 
@@ -378,6 +393,15 @@ function NewsletterSettingsTab({ settings }: { settings: Record<string, string> 
               </div>
             </div>
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="newsletter-button-text-color">Cor do texto do botão</Label>
+              <div className="flex gap-2 items-center">
+                <Input id="newsletter-button-text-color" value={buttonTextColor} onChange={(e) => setButtonTextColor(e.target.value)} data-testid="input-newsletter-button-text-color" className="flex-1" />
+                <div className="h-9 w-9 rounded-md border flex-shrink-0 flex items-center justify-center text-xs font-bold" style={{ backgroundColor: buttonColor, color: buttonTextColor }}>Aa</div>
+              </div>
+            </div>
+          </div>
           <div>
             <Label htmlFor="newsletter-email-placeholder">Placeholder do e-mail</Label>
             <Input id="newsletter-email-placeholder" value={emailPlaceholder} onChange={(e) => setEmailPlaceholder(e.target.value)} data-testid="input-newsletter-email-placeholder" />
@@ -392,6 +416,7 @@ function NewsletterSettingsTab({ settings }: { settings: Record<string, string> 
           newsletter_text: text,
           newsletter_button_text: buttonText,
           newsletter_button_color: buttonColor,
+          newsletter_button_text_color: buttonTextColor,
           newsletter_email_placeholder: emailPlaceholder,
         })}
         disabled={saveMutation.isPending}
