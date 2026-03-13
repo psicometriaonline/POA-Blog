@@ -27,6 +27,11 @@ import AboutPage from "@/pages/about";
 import { useEffect } from "react";
 import type { FreeMaterial } from "@shared/schema";
 
+// Replit preview pane workaround: the preview iframe may not properly update
+// window.location.pathname when the user types a URL in the preview address bar.
+// This component syncs wouter's location with the real pathname on mount,
+// listens for postMessage navigation events, and supports ?path= query fallback.
+// Can be removed if Replit preview routing is fixed or app moves off Replit.
 function NavigationSync() {
   const [location, navigate] = useLocation();
 
@@ -39,7 +44,14 @@ function NavigationSync() {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.data && typeof event.data === "object" && event.data.type === "navigate" && typeof event.data.path === "string") {
+      if (
+        event.origin === window.location.origin &&
+        event.data &&
+        typeof event.data === "object" &&
+        event.data.type === "navigate" &&
+        typeof event.data.path === "string" &&
+        /^\/[a-zA-Z0-9/_-]*$/.test(event.data.path)
+      ) {
         navigate(event.data.path);
       }
     };
@@ -50,7 +62,7 @@ function NavigationSync() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const targetPath = params.get("path");
-    if (targetPath && targetPath !== location) {
+    if (targetPath && /^\/[a-zA-Z0-9/_-]*$/.test(targetPath) && targetPath !== location) {
       navigate(targetPath);
     }
   }, []);
