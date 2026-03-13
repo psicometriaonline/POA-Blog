@@ -24,7 +24,39 @@ import TagDetailPage from "@/pages/admin/tag-detail";
 import TermsPage from "@/pages/terms";
 import PrivacyPage from "@/pages/privacy";
 import AboutPage from "@/pages/about";
+import { useEffect } from "react";
 import type { FreeMaterial } from "@shared/schema";
+
+function NavigationSync() {
+  const [location, navigate] = useLocation();
+
+  useEffect(() => {
+    const realPath = window.location.pathname;
+    if (realPath !== "/" && realPath !== location) {
+      navigate(realPath);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data && typeof event.data === "object" && event.data.type === "navigate" && typeof event.data.path === "string") {
+        navigate(event.data.path);
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [navigate]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const targetPath = params.get("path");
+    if (targetPath && targetPath !== location) {
+      navigate(targetPath);
+    }
+  }, []);
+
+  return null;
+}
 
 function Router() {
   return (
@@ -79,6 +111,7 @@ function App() {
       <ThemeProvider>
         <TooltipProvider>
           <div className="min-h-screen flex flex-col">
+            <NavigationSync />
             <BlogHeader />
             <SharedHeroBar />
             <main className="flex-1">

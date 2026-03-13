@@ -1,8 +1,9 @@
 import { Link, useLocation } from "wouter";
-import { Menu, X, ChevronDown, ChevronRight, Search } from "lucide-react";
+import { Menu, X, ChevronDown, ChevronRight, Search, Settings } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import type { Category } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
 import logoImg from "@assets/psicometria_online_negativopng_1771733729541.png";
 
 interface MenuItem {
@@ -22,6 +23,7 @@ export function BlogHeader() {
   const [openDropdowns, setOpenDropdowns] = useState<Record<number, boolean>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [, navigate] = useLocation();
+  const { user } = useAuth();
   const categoriesRef = useRef<HTMLDivElement>(null);
   const menuRefsRef = useRef<Record<number, HTMLDivElement | null>>({});
 
@@ -237,6 +239,17 @@ export function BlogHeader() {
               />
             </form>
 
+            {user && (
+              <a
+                href="/admin"
+                className="hidden xl:flex items-center justify-center h-9 w-9 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                data-testid="link-admin-panel"
+                title="Painel Admin"
+              >
+                <Settings className="h-4.5 w-4.5" />
+              </a>
+            )}
+
             {ctaUrl.startsWith("http") ? (
               <a href={ctaUrl} target="_blank" rel="noopener noreferrer" className="hidden xl:block">
                 <button
@@ -364,6 +377,16 @@ export function BlogHeader() {
                       {ctaText}
                     </div>
                   </Link>
+                )}
+                {user && (
+                  <a
+                    href="/admin"
+                    className="flex items-center gap-2 px-3 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                    data-testid="link-admin-panel-mobile"
+                  >
+                    <Settings className="h-4 w-4" />
+                    Painel Admin
+                  </a>
                 )}
               </div>
             </nav>
