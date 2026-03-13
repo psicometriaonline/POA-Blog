@@ -5,34 +5,53 @@ import type { Category } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import logoImg from "@assets/psicometria_online_negativopng_1771733729541.png";
 
-const materiaisGratuitos = [
-  { label: "Glossário de Análise Fatorial Exploratória", url: "https://psicometriaonline.com.br/glossario-afe-blog" },
-  { label: "Glossário Análises Bi e Multivariadas", url: "https://psicometriaonline.com.br/analises-bi-e-multivariadas-blog/" },
-  { label: "Escrita Científica de Alto Impacto", url: "https://psicometriaonline.com.br/escrita-cientifica-blog/" },
-  { label: "Profissão Psicometrista", url: "https://psicometriaonline.com.br/profissao-psicometrista-blog/" },
-];
+interface MenuItem {
+  label: string;
+  url: string;
+  children?: MenuItem[];
+}
+
+interface HeaderSettings {
+  header_cta_text?: string;
+  header_cta_url?: string;
+}
 
 export function BlogHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
-  const [materiaisOpen, setMateriaisOpen] = useState(false);
+  const [openDropdowns, setOpenDropdowns] = useState<Record<number, boolean>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [, navigate] = useLocation();
   const categoriesRef = useRef<HTMLDivElement>(null);
-  const materiaisRef = useRef<HTMLDivElement>(null);
+  const menuRefsRef = useRef<Record<number, HTMLDivElement | null>>({});
 
   const { data: categories } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
+
+  const { data: menuItems } = useQuery<MenuItem[]>({
+    queryKey: ["/api/menu"],
+  });
+
+  const { data: headerSettings } = useQuery<HeaderSettings>({
+    queryKey: ["/api/settings"],
+  });
+
+  const ctaText = headerSettings?.header_cta_text || "Criar conta";
+  const ctaUrl = headerSettings?.header_cta_url || "https://academy.psicometriaonline.com.br";
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (categoriesRef.current && !categoriesRef.current.contains(e.target as Node)) {
         setCategoriesOpen(false);
       }
-      if (materiaisRef.current && !materiaisRef.current.contains(e.target as Node)) {
-        setMateriaisOpen(false);
-      }
+      // Close open dropdowns
+      Object.keys(menuRefsRef.current).forEach((key) => {
+        const ref = menuRefsRef.current[parseInt(key)];
+        if (ref && !ref.contains(e.target as Node)) {
+          setOpenDropdowns((prev) => ({ ...prev, [parseInt(key)]: false }));
+        }
+      });
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -57,6 +76,103 @@ export function BlogHeader() {
           </Link>
 
           <nav className="hidden xl:flex items-center gap-1">
+            {menuItems?.map((item, idx) => (
+              <div key={idx}>
+                {item.children ? (
+                  <div
+                    className="relative"
+                    ref={(el) => {
+                      if (el) menuRefsRef.current[idx] = el;
+                    }}
+                  >
+                    <button
+                      className="flex items-center gap-1 px-3 py-2 text-sm text-white/80 hover:text-white transition-colors rounded-full hover:bg-white/5"
+                      onClick={() =>
+                        setOpenDropdowns((prev) => ({
+                          ...prev,
+                          [idx]: !prev[idx],
+                        }))
+                      }
+                      data-testid={`nav-menu-${idx}`}
+                    >
+                      {item.label}
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 transition-transform ${
+                          openDropdowns[idx] ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+                    {openDropdowns[idx] && (
+                      <div
+                        className="absolute top-full left-0 mt-2 rounded-xl shadow-2xl border border-white/10 py-2 z-50 min-w-48"
+                        style={{ backgroundColor: "#0a1535" }}
+                      >
+                        {item.children.map((child, childIdx) => {
+                          const isExternal = child.url.startsWith("http");
+                          return isExternal ? (
+                            <a
+                              key={childIdx}
+                              href={child.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() =>
+                                setOpenDropdowns((prev) => ({
+                                  ...prev,
+                                  [idx]: false,
+                                }))
+                              }
+                            >
+                              <div className="block px-4 py-2.5 text-sm text-white/80 hover:text-white hover:bg-white/5 cursor-pointer transition-colors">
+                                {child.label}
+                              </div>
+                            </a>
+                          ) : (
+                            <Link
+                              key={childIdx}
+                              href={child.url}
+                              onClick={() =>
+                                setOpenDropdowns((prev) => ({
+                                  ...prev,
+                                  [idx]: false,
+                                }))
+                              }
+                            >
+                              <div className="block px-4 py-2.5 text-sm text-white/80 hover:text-white hover:bg-white/5 cursor-pointer transition-colors">
+                                {child.label}
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : item.url.startsWith("http") ? (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    key={idx}
+                  >
+                    <button
+                      className="px-3 py-2 text-sm text-white/80 hover:text-white transition-colors rounded-full hover:bg-white/5"
+                      data-testid={`nav-menu-item-${idx}`}
+                    >
+                      {item.label}
+                    </button>
+                  </a>
+                ) : (
+                  <Link key={idx} href={item.url}>
+                    <button
+                      className="px-3 py-2 text-sm text-white/80 hover:text-white transition-colors rounded-full hover:bg-white/5"
+                      data-testid={`nav-menu-item-${idx}`}
+                    >
+                      {item.label}
+                    </button>
+                  </Link>
+                )}
+              </div>
+            ))}
+
             <div className="relative" ref={categoriesRef}>
               <button
                 className="flex items-center gap-1 px-3 py-2 text-sm text-white/80 hover:text-white transition-colors rounded-full hover:bg-white/5"
@@ -87,56 +203,6 @@ export function BlogHeader() {
                       </Link>
                     ))}
                   </div>
-                </div>
-              )}
-            </div>
-
-            <a href="https://academy.psicometriaonline.com.br" target="_blank" rel="noopener noreferrer">
-              <button
-                className="px-3 py-2 text-sm text-white/80 hover:text-white transition-colors rounded-full hover:bg-white/5"
-                data-testid="nav-academy"
-              >
-                Psicometria Online Academy
-              </button>
-            </a>
-
-            <a href="https://quantidados.com.br" target="_blank" rel="noopener noreferrer">
-              <button
-                className="px-3 py-2 text-sm text-white/80 hover:text-white transition-colors rounded-full hover:bg-white/5"
-                data-testid="nav-consultoria"
-              >
-                Consultoria
-              </button>
-            </a>
-
-            <div className="relative" ref={materiaisRef}>
-              <button
-                className="flex items-center gap-1 px-3 py-2 text-sm text-white/80 hover:text-white transition-colors rounded-full hover:bg-white/5"
-                onClick={() => setMateriaisOpen(!materiaisOpen)}
-                data-testid="nav-materiais-gratuitos"
-              >
-                Materiais Gratuitos
-                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${materiaisOpen ? "rotate-180" : ""}`} />
-              </button>
-              {materiaisOpen && (
-                <div
-                  className="absolute top-full left-0 mt-2 min-w-72 rounded-xl shadow-2xl border py-2 z-50"
-                  style={{ backgroundColor: "#e8f7fc", borderColor: "#b8e8f5" }}
-                >
-                  {materiaisGratuitos.map((item, idx) => (
-                    <a
-                      key={idx}
-                      href={item.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block px-5 py-3 text-sm text-gray-800 hover:bg-white/60 cursor-pointer transition-colors"
-                      style={{ borderBottom: idx < materiaisGratuitos.length - 1 ? "1px solid #d0edf5" : "none" }}
-                      onClick={() => setMateriaisOpen(false)}
-                      data-testid={`nav-material-${idx}`}
-                    >
-                      {item.label}
-                    </a>
-                  ))}
                 </div>
               )}
             </div>
@@ -171,15 +237,27 @@ export function BlogHeader() {
               />
             </form>
 
-            <a href="https://academy.psicometriaonline.com.br" target="_blank" rel="noopener noreferrer" className="hidden xl:block">
-              <button
-                className="inline-flex items-center px-5 py-2 text-sm font-medium rounded-full transition-colors"
-                style={{ backgroundColor: "#31D5FF", color: "#000A24" }}
-                data-testid="button-criar-conta"
-              >
-                Criar conta
-              </button>
-            </a>
+            {ctaUrl.startsWith("http") ? (
+              <a href={ctaUrl} target="_blank" rel="noopener noreferrer" className="hidden xl:block">
+                <button
+                  className="inline-flex items-center px-5 py-2 text-sm font-medium rounded-full transition-colors"
+                  style={{ backgroundColor: "#31D5FF", color: "#000A24" }}
+                  data-testid="button-criar-conta"
+                >
+                  {ctaText}
+                </button>
+              </a>
+            ) : (
+              <Link href={ctaUrl} className="hidden xl:block">
+                <button
+                  className="inline-flex items-center px-5 py-2 text-sm font-medium rounded-full transition-colors"
+                  style={{ backgroundColor: "#31D5FF", color: "#000A24" }}
+                  data-testid="button-criar-conta"
+                >
+                  {ctaText}
+                </button>
+              </Link>
+            )}
 
             <button
               className="xl:hidden flex items-center justify-center h-9 w-9 rounded-full text-white/80 hover:text-white hover:bg-white/5 transition-colors"
@@ -208,23 +286,37 @@ export function BlogHeader() {
                 ))}
               </div>
 
-              <a href="https://academy.psicometriaonline.com.br" target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)}>
-                <div className="px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
-                  Psicometria Online Academy
+              {menuItems?.map((item, idx) => (
+                <div key={idx}>
+                  {item.children ? (
+                    <MobileDropdown
+                      label={item.label}
+                      items={item.children}
+                      onNavigate={() => setMobileMenuOpen(false)}
+                    />
+                  ) : item.url.startsWith("http") ? (
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <div className="px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                        {item.label}
+                      </div>
+                    </a>
+                  ) : (
+                    <Link
+                      href={item.url}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <div className="px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+                        {item.label}
+                      </div>
+                    </Link>
+                  )}
                 </div>
-              </a>
-
-              <a href="https://quantidados.com.br" target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)}>
-                <div className="px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
-                  Consultoria
-                </div>
-              </a>
-
-              <MobileDropdown
-                label="Materiais Gratuitos"
-                items={materiaisGratuitos}
-                onNavigate={() => setMobileMenuOpen(false)}
-              />
+              ))}
 
               <div className="border-t border-white/10 mt-2 pt-3 flex flex-col gap-2">
                 <form
@@ -254,14 +346,25 @@ export function BlogHeader() {
                     data-testid="input-mobile-search"
                   />
                 </form>
-                <a href="https://academy.psicometriaonline.com.br" target="_blank" rel="noopener noreferrer">
-                  <div
-                    className="text-center py-2.5 text-sm font-medium rounded-full"
-                    style={{ backgroundColor: "#31D5FF", color: "#000A24" }}
-                  >
-                    Criar conta
-                  </div>
-                </a>
+                {ctaUrl.startsWith("http") ? (
+                  <a href={ctaUrl} target="_blank" rel="noopener noreferrer">
+                    <div
+                      className="text-center py-2.5 text-sm font-medium rounded-full"
+                      style={{ backgroundColor: "#31D5FF", color: "#000A24" }}
+                    >
+                      {ctaText}
+                    </div>
+                  </a>
+                ) : (
+                  <Link href={ctaUrl}>
+                    <div
+                      className="text-center py-2.5 text-sm font-medium rounded-full"
+                      style={{ backgroundColor: "#31D5FF", color: "#000A24" }}
+                    >
+                      {ctaText}
+                    </div>
+                  </Link>
+                )}
               </div>
             </nav>
           </div>

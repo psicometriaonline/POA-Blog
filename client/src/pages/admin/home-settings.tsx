@@ -137,6 +137,8 @@ export function HomePageTab({ settings, categories, banners, bannersLoading, mat
         <TabsTrigger value="banners" data-testid="tab-banners">Banners</TabsTrigger>
         <TabsTrigger value="materials" data-testid="tab-materials">Materiais</TabsTrigger>
         <TabsTrigger value="menu" data-testid="tab-menu">Menu</TabsTrigger>
+        <TabsTrigger value="header-cta" data-testid="tab-header-cta">Menu - Botão CTA</TabsTrigger>
+        <TabsTrigger value="footer" data-testid="tab-footer">Rodapé</TabsTrigger>
       </TabsList>
 
       <TabsContent value="hero">
@@ -159,6 +161,12 @@ export function HomePageTab({ settings, categories, banners, bannersLoading, mat
       </TabsContent>
       <TabsContent value="menu">
         <MenuTab settings={settings} />
+      </TabsContent>
+      <TabsContent value="header-cta">
+        <HeaderCtaSettingsTab settings={settings} />
+      </TabsContent>
+      <TabsContent value="footer">
+        <FooterSettingsTab settings={settings} />
       </TabsContent>
     </Tabs>
   );
@@ -1240,6 +1248,340 @@ interface MenuItemEditable {
   label: string;
   url: string;
   children?: MenuItemEditable[];
+}
+
+function HeaderCtaSettingsTab({ settings }: { settings: Record<string, string> }) {
+  const { toast } = useToast();
+  const [ctaText, setCtaText] = useState("Criar conta");
+  const [ctaUrl, setCtaUrl] = useState("https://academy.psicometriaonline.com.br");
+
+  useEffect(() => {
+    setCtaText(settings["header_cta_text"] || "Criar conta");
+    setCtaUrl(settings["header_cta_url"] || "https://academy.psicometriaonline.com.br");
+  }, [settings]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("PUT", "/api/admin/settings", {
+        header_cta_text: ctaText,
+        header_cta_url: ctaUrl,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      toast({ title: "Salvo", description: "Botão CTA atualizado." });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Falha ao salvar.", variant: "destructive" });
+    },
+  });
+
+  return (
+    <Card className="p-6 space-y-6">
+      <div>
+        <h3 className="font-semibold text-lg mb-1">Botão CTA do Menu</h3>
+        <p className="text-sm text-muted-foreground mb-4">Configure o texto e a URL do botão "Criar conta" no cabeçalho do site.</p>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="header-cta-text">Texto do botão</Label>
+          <Input
+            id="header-cta-text"
+            value={ctaText}
+            onChange={(e) => setCtaText(e.target.value)}
+            placeholder="Ex: Criar conta"
+            data-testid="input-header-cta-text"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="header-cta-url">URL do botão</Label>
+          <Input
+            id="header-cta-url"
+            value={ctaUrl}
+            onChange={(e) => setCtaUrl(e.target.value)}
+            placeholder="Ex: https://academy.psicometriaonline.com.br ou /"
+            data-testid="input-header-cta-url"
+          />
+        </div>
+      </div>
+
+      <Button
+        onClick={() => saveMutation.mutate()}
+        disabled={saveMutation.isPending}
+        data-testid="button-save-header-cta"
+      >
+        <Save className="h-4 w-4 mr-1" />
+        {saveMutation.isPending ? "Salvando..." : "Salvar"}
+      </Button>
+    </Card>
+  );
+}
+
+function FooterSettingsTab({ settings }: { settings: Record<string, string> }) {
+  const { toast } = useToast();
+  const [description, setDescription] = useState("");
+  const [instagramUrl, setInstagramUrl] = useState("");
+  const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [whatsappMessage, setWhatsappMessage] = useState("");
+  const [formationLinks, setFormationLinks] = useState<{ label: string; url: string }[]>([]);
+  const [supportLinks, setSupportLinks] = useState<{ label: string; url: string }[]>([]);
+
+  useEffect(() => {
+    setDescription(settings["footer_description"] || "Maior portal de conteúdo sobre psicometria, análise de dados e pesquisa quantitativa da América Latina.");
+    setInstagramUrl(settings["footer_instagram_url"] || "https://instagram.com/psicometriaonline");
+    setLinkedinUrl(settings["footer_linkedin_url"] || "https://br.linkedin.com/company/psicometriaonline");
+    setYoutubeUrl(settings["footer_youtube_url"] || "https://www.youtube.com/c/psicometriaonline?sub_confirmation=1");
+    setWhatsappNumber(settings["footer_whatsapp_number"] || "5516981060218");
+    setWhatsappMessage(settings["footer_whatsapp_message"] || "Estou no blog de vocês, e gostaria de tirar uma dúvida.");
+    try {
+      setFormationLinks(settings["footer_formation_links"] ? JSON.parse(settings["footer_formation_links"]) : [
+        { label: "Psicometria Online Academy", url: "https://academy.psicometriaonline.com.br" },
+        { label: "Consultoria", url: "https://quantidados.com.br" },
+      ]);
+    } catch {
+      setFormationLinks([
+        { label: "Psicometria Online Academy", url: "https://academy.psicometriaonline.com.br" },
+        { label: "Consultoria", url: "https://quantidados.com.br" },
+      ]);
+    }
+    try {
+      setSupportLinks(settings["footer_support_links"] ? JSON.parse(settings["footer_support_links"]) : [
+        { label: "Fale Conosco via WhatsApp", url: "https://wa.me/5516981060218" },
+      ]);
+    } catch {
+      setSupportLinks([
+        { label: "Fale Conosco via WhatsApp", url: "https://wa.me/5516981060218" },
+      ]);
+    }
+  }, [settings]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("PUT", "/api/admin/settings", {
+        footer_description: description,
+        footer_instagram_url: instagramUrl,
+        footer_linkedin_url: linkedinUrl,
+        footer_youtube_url: youtubeUrl,
+        footer_whatsapp_number: whatsappNumber,
+        footer_whatsapp_message: whatsappMessage,
+        footer_formation_links: JSON.stringify(formationLinks),
+        footer_support_links: JSON.stringify(supportLinks),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      toast({ title: "Salvo", description: "Configurações do rodapé atualizadas." });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Falha ao salvar.", variant: "destructive" });
+    },
+  });
+
+  const updateFormationLink = (idx: number, field: "label" | "url", value: string) => {
+    const newLinks = [...formationLinks];
+    newLinks[idx][field] = value;
+    setFormationLinks(newLinks);
+  };
+
+  const removeFormationLink = (idx: number) => {
+    setFormationLinks(formationLinks.filter((_, i) => i !== idx));
+  };
+
+  const addFormationLink = () => {
+    setFormationLinks([...formationLinks, { label: "", url: "" }]);
+  };
+
+  const updateSupportLink = (idx: number, field: "label" | "url", value: string) => {
+    const newLinks = [...supportLinks];
+    newLinks[idx][field] = value;
+    setSupportLinks(newLinks);
+  };
+
+  const removeSupportLink = (idx: number) => {
+    setSupportLinks(supportLinks.filter((_, i) => i !== idx));
+  };
+
+  const addSupportLink = () => {
+    setSupportLinks([...supportLinks, { label: "", url: "" }]);
+  };
+
+  return (
+    <Card className="p-6 space-y-6">
+      <div>
+        <h3 className="font-semibold text-lg mb-1">Configurações do Rodapé</h3>
+        <p className="text-sm text-muted-foreground mb-4">Configure a descrição, redes sociais e links do rodapé do site.</p>
+      </div>
+
+      <div className="space-y-6">
+        <div>
+          <Label htmlFor="footer-description">Descrição</Label>
+          <Textarea
+            id="footer-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Descrição do blog"
+            rows={3}
+            data-testid="input-footer-description"
+          />
+        </div>
+
+        <div className="border-t pt-4">
+          <h4 className="font-semibold text-sm mb-4">Redes Sociais</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="footer-instagram">Instagram</Label>
+              <Input
+                id="footer-instagram"
+                value={instagramUrl}
+                onChange={(e) => setInstagramUrl(e.target.value)}
+                placeholder="https://instagram.com/..."
+                data-testid="input-footer-instagram"
+              />
+            </div>
+            <div>
+              <Label htmlFor="footer-linkedin">LinkedIn</Label>
+              <Input
+                id="footer-linkedin"
+                value={linkedinUrl}
+                onChange={(e) => setLinkedinUrl(e.target.value)}
+                placeholder="https://linkedin.com/..."
+                data-testid="input-footer-linkedin"
+              />
+            </div>
+            <div>
+              <Label htmlFor="footer-youtube">YouTube</Label>
+              <Input
+                id="footer-youtube"
+                value={youtubeUrl}
+                onChange={(e) => setYoutubeUrl(e.target.value)}
+                placeholder="https://youtube.com/..."
+                data-testid="input-footer-youtube"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t pt-4">
+          <h4 className="font-semibold text-sm mb-4">WhatsApp</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="footer-whatsapp-number">Número (sem +55)</Label>
+              <Input
+                id="footer-whatsapp-number"
+                value={whatsappNumber}
+                onChange={(e) => setWhatsappNumber(e.target.value)}
+                placeholder="Ex: 5516981060218"
+                data-testid="input-footer-whatsapp-number"
+              />
+            </div>
+            <div>
+              <Label htmlFor="footer-whatsapp-message">Mensagem padrão</Label>
+              <Input
+                id="footer-whatsapp-message"
+                value={whatsappMessage}
+                onChange={(e) => setWhatsappMessage(e.target.value)}
+                placeholder="Mensagem"
+                data-testid="input-footer-whatsapp-message"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t pt-4">
+          <h4 className="font-semibold text-sm mb-4">Links de Formação</h4>
+          <div className="space-y-3 mb-4">
+            {formationLinks.map((link, idx) => (
+              <div key={idx} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                <Input
+                  placeholder="Rótulo"
+                  value={link.label}
+                  onChange={(e) => updateFormationLink(idx, "label", e.target.value)}
+                  data-testid={`input-footer-formation-label-${idx}`}
+                />
+                <Input
+                  placeholder="URL"
+                  value={link.url}
+                  onChange={(e) => updateFormationLink(idx, "url", e.target.value)}
+                  data-testid={`input-footer-formation-url-${idx}`}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeFormationLink(idx)}
+                  data-testid={`button-delete-footer-formation-${idx}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={addFormationLink}
+            data-testid="button-add-footer-formation"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Adicionar link
+          </Button>
+        </div>
+
+        <div className="border-t pt-4">
+          <h4 className="font-semibold text-sm mb-4">Links de Suporte</h4>
+          <div className="space-y-3 mb-4">
+            {supportLinks.map((link, idx) => (
+              <div key={idx} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                <Input
+                  placeholder="Rótulo"
+                  value={link.label}
+                  onChange={(e) => updateSupportLink(idx, "label", e.target.value)}
+                  data-testid={`input-footer-support-label-${idx}`}
+                />
+                <Input
+                  placeholder="URL"
+                  value={link.url}
+                  onChange={(e) => updateSupportLink(idx, "url", e.target.value)}
+                  data-testid={`input-footer-support-url-${idx}`}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeSupportLink(idx)}
+                  data-testid={`button-delete-footer-support-${idx}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={addSupportLink}
+            data-testid="button-add-footer-support"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Adicionar link
+          </Button>
+        </div>
+      </div>
+
+      <Button
+        onClick={() => saveMutation.mutate()}
+        disabled={saveMutation.isPending}
+        data-testid="button-save-footer"
+      >
+        <Save className="h-4 w-4 mr-1" />
+        {saveMutation.isPending ? "Salvando..." : "Salvar Rodapé"}
+      </Button>
+    </Card>
+  );
 }
 
 function MenuTab({ settings }: { settings: Record<string, string> }) {
