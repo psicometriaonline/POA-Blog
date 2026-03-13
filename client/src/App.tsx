@@ -29,43 +29,64 @@ import type { FreeMaterial } from "@shared/schema";
 
 // Replit preview pane workaround: the preview iframe may not properly update
 // window.location.pathname when the user types a URL in the preview address bar.
-// This component syncs wouter's location with the real pathname on mount,
-// listens for postMessage navigation events, and supports ?path= query fallback.
+// Uses polling to continuously sync wouter's location with the real pathname,
+// and monkeypatches history.pushState/replaceState to trigger sync immediately.
 // Can be removed if Replit preview routing is fixed or app moves off Replit.
 function NavigationSync() {
   const [location, navigate] = useLocation();
 
   useEffect(() => {
-    const realPath = window.location.pathname;
-    if (realPath !== "/" && realPath !== location) {
-      navigate(realPath);
-    }
-  }, []);
+    let lastHref = window.location.href;
 
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (
-        event.origin === window.location.origin &&
-        event.data &&
-        typeof event.data === "object" &&
-        event.data.type === "navigate" &&
-        typeof event.data.path === "string" &&
-        /^\/[a-zA-Z0-9/_-]*$/.test(event.data.path)
-      ) {
-        navigate(event.data.path);
+    const checkUrlChange = () => {
+      const currentHref = window.location.href;
+      if (currentHref !== lastHref) {
+        lastHref = currentHref;
+        const pathname = new URL(currentHref).pathname;
+        if (pathname !== location) {
+          navigate(pathname);
+        }
       }
     };
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [navigate]);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const targetPath = params.get("path");
-    if (targetPath && /^\/[a-zA-Z0-9/_-]*$/.test(targetPath) && targetPath !== location) {
-      navigate(targetPath);
-    }
-  }, []);
+    // Check immediately
+    checkUrlChange();
+
+    // Aggressive polling every 50ms to catch preview pane URL changes
+    const interval = setInterval(checkUrlChange, 50);
+
+    // Also listen to all possible navigation events
+    const handleNavEvent = () => {
+      setTimeout(checkUrlChange, 0);
+    };
+
+    ['popstate', 'hashchange', 'load'].forEach(event => {
+      window.addEventListener(event, handleNavEvent);
+    });
+
+    // Monkeypatch history methods to sync immediately
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+
+    window.history.pushState = function(...args) {
+      originalPushState.apply(this, args);
+      checkUrlChange();
+    };
+
+    window.history.replaceState = function(...args) {
+      originalReplaceState.apply(this, args);
+      checkUrlChange();
+    };
+
+    return () => {
+      clearInterval(interval);
+      ['popstate', 'hashchange', 'load'].forEach(event => {
+        window.removeEventListener(event, handleNavEvent);
+      });
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+    };
+  }, [navigate, location]);
 
   return null;
 }
