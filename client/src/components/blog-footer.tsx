@@ -173,6 +173,7 @@ export function BlogFooter() {
             <Link href="/quem-somos" className="hover:text-white/60 transition-colors" data-testid="link-footer-about">Quem Somos</Link>
             <Link href="/politicas-de-privacidade" className="hover:text-white/60 transition-colors" data-testid="link-footer-privacy">Políticas de Privacidade</Link>
             <Link href="/termos-de-uso" className="hover:text-white/60 transition-colors" data-testid="link-footer-terms">Termos de Uso</Link>
+            <a href="/admin" className="hover:text-white/60 transition-colors" data-testid="link-footer-admin">Admin</a>
           </div>
         </div>
       </div>

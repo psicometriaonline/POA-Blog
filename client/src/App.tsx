@@ -24,72 +24,7 @@ import TagDetailPage from "@/pages/admin/tag-detail";
 import TermsPage from "@/pages/terms";
 import PrivacyPage from "@/pages/privacy";
 import AboutPage from "@/pages/about";
-import { useEffect } from "react";
 import type { FreeMaterial } from "@shared/schema";
-
-// Replit preview pane workaround: the preview iframe may not properly update
-// window.location.pathname when the user types a URL in the preview address bar.
-// Uses polling to continuously sync wouter's location with the real pathname,
-// and monkeypatches history.pushState/replaceState to trigger sync immediately.
-// Can be removed if Replit preview routing is fixed or app moves off Replit.
-function NavigationSync() {
-  const [location, navigate] = useLocation();
-
-  useEffect(() => {
-    let lastHref = window.location.href;
-
-    const checkUrlChange = () => {
-      const currentHref = window.location.href;
-      if (currentHref !== lastHref) {
-        lastHref = currentHref;
-        const pathname = new URL(currentHref).pathname;
-        if (pathname !== location) {
-          navigate(pathname);
-        }
-      }
-    };
-
-    // Check immediately
-    checkUrlChange();
-
-    // Aggressive polling every 50ms to catch preview pane URL changes
-    const interval = setInterval(checkUrlChange, 50);
-
-    // Also listen to all possible navigation events
-    const handleNavEvent = () => {
-      setTimeout(checkUrlChange, 0);
-    };
-
-    ['popstate', 'hashchange', 'load'].forEach(event => {
-      window.addEventListener(event, handleNavEvent);
-    });
-
-    // Monkeypatch history methods to sync immediately
-    const originalPushState = window.history.pushState;
-    const originalReplaceState = window.history.replaceState;
-
-    window.history.pushState = function(...args) {
-      originalPushState.apply(this, args);
-      checkUrlChange();
-    };
-
-    window.history.replaceState = function(...args) {
-      originalReplaceState.apply(this, args);
-      checkUrlChange();
-    };
-
-    return () => {
-      clearInterval(interval);
-      ['popstate', 'hashchange', 'load'].forEach(event => {
-        window.removeEventListener(event, handleNavEvent);
-      });
-      window.history.pushState = originalPushState;
-      window.history.replaceState = originalReplaceState;
-    };
-  }, [navigate, location]);
-
-  return null;
-}
 
 function Router() {
   return (
@@ -144,7 +79,6 @@ function App() {
       <ThemeProvider>
         <TooltipProvider>
           <div className="min-h-screen flex flex-col">
-            <NavigationSync />
             <BlogHeader />
             <SharedHeroBar />
             <main className="flex-1">
