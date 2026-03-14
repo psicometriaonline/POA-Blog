@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Settings, Image as ImageLucide, BookOpen, Download, Plus, Trash2, Save, ArrowLeft, Menu, GripVertical, ChevronDown, Search, Edit, Home, FileText, FolderOpen, Tag } from "lucide-react";
+import { Settings, Image as ImageLucide, BookOpen, Download, Plus, Trash2, Save, ArrowLeft, Menu, GripVertical, ChevronDown, Search, Edit, Home, FileText, FolderOpen, Tag, Eye } from "lucide-react";
+import { PagePreview } from "@/components/admin/page-preview";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -139,6 +140,10 @@ export function HomePageTab({ settings, categories, banners, bannersLoading, mat
         <TabsTrigger value="menu" data-testid="tab-menu">Menu</TabsTrigger>
         <TabsTrigger value="header-cta" data-testid="tab-header-cta">Menu - Botão CTA</TabsTrigger>
         <TabsTrigger value="footer" data-testid="tab-footer">Rodapé</TabsTrigger>
+        <TabsTrigger value="preview" data-testid="tab-home-preview">
+          <Eye className="h-3.5 w-3.5 mr-1" />
+          Preview
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="hero">
@@ -167,6 +172,9 @@ export function HomePageTab({ settings, categories, banners, bannersLoading, mat
       </TabsContent>
       <TabsContent value="footer">
         <FooterSettingsTab settings={settings} />
+      </TabsContent>
+      <TabsContent value="preview">
+        <PagePreview path="/" label="Preview da Home" />
       </TabsContent>
     </Tabs>
   );

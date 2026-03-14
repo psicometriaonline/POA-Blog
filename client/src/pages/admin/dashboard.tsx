@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2, Search, ChevronLeft, ChevronRight, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown, Loader2, MessageSquare, BarChart3, Home, Database, Layers } from "lucide-react";
+import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2, Search, ChevronLeft, ChevronRight, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown, Loader2, MessageSquare, BarChart3, Home, Database, Layers, Eye } from "lucide-react";
+import { PagePreview } from "@/components/admin/page-preview";
 import { useAuth } from "@/hooks/use-auth";
 import type { PostWithRelations, Category, Tag as TagType, Banner, FreeMaterial } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -116,6 +117,7 @@ function PostsTab({ user }: { user: any }) {
   const [sortBy, setSortBy] = useState<SortField | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [subTab, setSubTab] = useState("posts");
+  const [previewPostSlug, setPreviewPostSlug] = useState<string>("");
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -150,6 +152,12 @@ function PostsTab({ user }: { user: any }) {
   });
 
   const displayPosts = postsData?.posts || [];
+
+  useEffect(() => {
+    if (!previewPostSlug && displayPosts.length > 0) {
+      setPreviewPostSlug(displayPosts[0].slug);
+    }
+  }, [displayPosts, previewPostSlug]);
 
   const handleSort = (field: SortField) => {
     if (sortBy === field) {
@@ -198,6 +206,10 @@ function PostsTab({ user }: { user: any }) {
             <TabsTrigger value="posts" data-testid="tab-posts-manage">Gerenciar Posts</TabsTrigger>
             <TabsTrigger value="containers" data-testid="tab-posts-containers">Contêineres</TabsTrigger>
             <TabsTrigger value="import" data-testid="tab-posts-import">Importar Posts</TabsTrigger>
+            <TabsTrigger value="preview" data-testid="tab-posts-preview">
+              <Eye className="h-3.5 w-3.5 mr-1" />
+              Preview
+            </TabsTrigger>
           </TabsList>
           {subTab === "posts" && (
             <div className="flex items-center gap-2 flex-wrap">
@@ -434,6 +446,17 @@ function PostsTab({ user }: { user: any }) {
         <TabsContent value="import" className="mt-0">
           <CrawlContent />
         </TabsContent>
+
+        <TabsContent value="preview" className="mt-0">
+          <PagePreview
+            path={previewPostSlug ? `/${previewPostSlug}` : "/"}
+            label="Preview do Post"
+            selector={previewPostSlug}
+            selectorLabel="Post"
+            selectorItems={displayPosts.map(p => ({ value: p.slug, label: p.title }))}
+            onSelectorChange={setPreviewPostSlug}
+          />
+        </TabsContent>
       </Tabs>
     </div>
   );
@@ -460,14 +483,25 @@ function CategoriesTab({ settings, categories }: { settings: Record<string, stri
   );
 }
 
-function TagsTab({ settings, categories }: { settings: Record<string, string>; categories: Category[] }) {
+function TagsTab({ settings, categories, allTags }: { settings: Record<string, string>; categories: Category[]; allTags: TagType[] }) {
   const [subTab, setSubTab] = useState("manage");
+  const [previewTagSlug, setPreviewTagSlug] = useState<string>("");
+
+  useEffect(() => {
+    if (!previewTagSlug && allTags.length > 0) {
+      setPreviewTagSlug(allTags[0].slug);
+    }
+  }, [allTags, previewTagSlug]);
 
   return (
     <Tabs value={subTab} onValueChange={setSubTab}>
       <TabsList className="mb-6" data-testid="tabs-tags-sub">
         <TabsTrigger value="manage" data-testid="tab-tags-manage">Gerenciar</TabsTrigger>
         <TabsTrigger value="settings" data-testid="tab-tags-settings">Configurações da Página</TabsTrigger>
+        <TabsTrigger value="preview" data-testid="tab-tags-preview">
+          <Eye className="h-3.5 w-3.5 mr-1" />
+          Preview
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="manage" className="mt-0">
@@ -476,6 +510,17 @@ function TagsTab({ settings, categories }: { settings: Record<string, string>; c
 
       <TabsContent value="settings" className="mt-0">
         <TagPageTab settings={settings} categories={categories} />
+      </TabsContent>
+
+      <TabsContent value="preview" className="mt-0">
+        <PagePreview
+          path={previewTagSlug ? `/tag/${previewTagSlug}` : "/"}
+          label="Preview da Página de Tags"
+          selector={previewTagSlug}
+          selectorLabel="Tag"
+          selectorItems={allTags.map(t => ({ value: t.slug, label: t.name }))}
+          onSelectorChange={setPreviewTagSlug}
+        />
       </TabsContent>
     </Tabs>
   );
@@ -643,7 +688,7 @@ export default function AdminDashboard() {
         </TabsContent>
 
         <TabsContent value="tags">
-          <TagsTab settings={settings || {}} categories={categories || []} />
+          <TagsTab settings={settings || {}} categories={categories || []} allTags={allTags || []} />
         </TabsContent>
 
         <TabsContent value="database">
