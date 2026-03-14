@@ -574,18 +574,7 @@ export default function AdminDashboard() {
     }
   }, [searchString]);
 
-  const handleTabChange = (value: AdminTab) => {
-    setActiveTab(value);
-    const url = new URL(window.location.href);
-    if (value === "home") {
-      url.searchParams.delete("tab");
-    } else {
-      url.searchParams.set("tab", value);
-    }
-    window.history.replaceState({}, "", url.toString());
-  };
-
-  const { data: settings, isLoading: settingsLoading } = useQuery<Record<string, string>>({
+  const { data: settings } = useQuery<Record<string, string>>({
     queryKey: ["/api/admin/settings"],
     enabled: !!user,
   });
