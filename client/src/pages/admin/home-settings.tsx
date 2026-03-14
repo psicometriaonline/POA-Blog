@@ -1224,6 +1224,7 @@ function MaterialsTab({ materials, isLoading }: { materials: FreeMaterial[]; isL
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{mat.title}</p>
                   {mat.description && <p className="text-xs text-muted-foreground truncate">{mat.description}</p>}
+                  {mat.linkUrl && <p className="text-xs text-muted-foreground truncate">Link: {mat.linkUrl}</p>}
                 </div>
                 <div className="flex items-center gap-1">
                   <Button
