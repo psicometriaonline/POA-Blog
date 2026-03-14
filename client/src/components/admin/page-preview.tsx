@@ -78,9 +78,9 @@ export function PagePreview({ path, label, selector, selectorItems, onSelectorCh
         </div>
       </div>
 
-      <div className="border rounded-lg bg-muted/20 p-4 flex justify-center overflow-hidden">
+      <div className="border rounded-lg bg-muted/20 p-4 flex justify-center">
         <div
-          className="bg-white rounded-lg shadow-lg overflow-hidden transition-all duration-300"
+          className="bg-white rounded-lg shadow-lg transition-all duration-300"
           style={{ width: activeDevice.width, maxWidth: "100%" }}
         >
           <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/40 border-b text-xs text-muted-foreground">
