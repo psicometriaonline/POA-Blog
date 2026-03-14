@@ -1077,6 +1077,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{banner.title}</p>
                   <p className="text-xs text-muted-foreground">Local: {banner.slot}</p>
+                  {banner.linkUrl && <p className="text-xs text-muted-foreground truncate">Link: {banner.linkUrl}</p>}
                 </div>
                 <div className="flex items-center gap-1">
                   <Button
