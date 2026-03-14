@@ -78,6 +78,40 @@ export function BlogHeader() {
           </Link>
 
           <nav className="hidden xl:flex items-center gap-1">
+            <div className="relative" ref={categoriesRef}>
+              <button
+                className="flex items-center gap-1 px-3 py-2 text-sm text-white/80 hover:text-white transition-colors rounded-full hover:bg-white/5"
+                onClick={() => setCategoriesOpen(!categoriesOpen)}
+                data-testid="nav-categorias"
+              >
+                Categorias
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${categoriesOpen ? "rotate-180" : ""}`} />
+              </button>
+              {categoriesOpen && (
+                <div
+                  className="absolute top-full left-0 mt-2 rounded-xl shadow-2xl border border-white/10 py-2 z-50"
+                  style={{ backgroundColor: "#0a1535", width: "28rem" }}
+                >
+                  <div className="grid grid-cols-2">
+                    {cats.map((cat) => (
+                      <Link
+                        key={cat.id}
+                        href={`/categoria/${cat.slug}`}
+                        onClick={() => setCategoriesOpen(false)}
+                      >
+                        <div
+                          className="block px-4 py-2.5 text-sm text-white/80 hover:text-white hover:bg-white/5 cursor-pointer transition-colors"
+                          data-testid={`nav-cat-${cat.id}`}
+                        >
+                          {cat.name}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {menuItems?.map((item, idx) => (
               <div key={idx}>
                 {item.children ? (
@@ -174,40 +208,6 @@ export function BlogHeader() {
                 )}
               </div>
             ))}
-
-            <div className="relative" ref={categoriesRef}>
-              <button
-                className="flex items-center gap-1 px-3 py-2 text-sm text-white/80 hover:text-white transition-colors rounded-full hover:bg-white/5"
-                onClick={() => setCategoriesOpen(!categoriesOpen)}
-                data-testid="nav-categorias"
-              >
-                Categorias
-                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${categoriesOpen ? "rotate-180" : ""}`} />
-              </button>
-              {categoriesOpen && (
-                <div
-                  className="absolute top-full left-0 mt-2 rounded-xl shadow-2xl border border-white/10 py-2 z-50"
-                  style={{ backgroundColor: "#0a1535", width: "28rem" }}
-                >
-                  <div className="grid grid-cols-2">
-                    {cats.map((cat) => (
-                      <Link
-                        key={cat.id}
-                        href={`/categoria/${cat.slug}`}
-                        onClick={() => setCategoriesOpen(false)}
-                      >
-                        <div
-                          className="block px-4 py-2.5 text-sm text-white/80 hover:text-white hover:bg-white/5 cursor-pointer transition-colors"
-                          data-testid={`nav-cat-${cat.id}`}
-                        >
-                          {cat.name}
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
           </nav>
 
           <div className="flex items-center gap-2">
