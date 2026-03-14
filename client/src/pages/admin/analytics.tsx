@@ -370,8 +370,8 @@ export default function AnalyticsPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground flex items-center">
-                Posts com Visualizações
-                <InfoTooltip text="Quantidade de posts diferentes que receberam ao menos uma visualização no período selecionado." />
+                Posts no Período
+                <InfoTooltip text="Total de posts publicados com pelo menos uma visualização no período selecionado. Posts sem visualizações não aparecem aqui." />
               </p>
               <p className="text-2xl font-bold" data-testid="text-posts-with-views">
                 {postsQuery.isLoading ? "..." : (postsQuery.data?.total || 0)}
