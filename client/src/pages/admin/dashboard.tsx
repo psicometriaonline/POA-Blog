@@ -205,15 +205,26 @@ function PostsTab({ user }: { user: any }) {
       <PostsSubNav activePage={subTab as "posts" | "containers" | "import" | "preview"} />
       <Tabs value={subTab} onValueChange={setSubTab}>
         <TabsContent value="posts" className="mt-0">
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar posts por título..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="pl-9"
-              data-testid="input-search-posts"
-            />
+          <div className="flex items-center gap-2 mb-4">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar posts por título..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="pl-9"
+                data-testid="input-search-posts"
+              />
+            </div>
+            <a
+              href={`/api/admin/posts/export${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ""}`}
+              download
+              data-testid="button-export-posts"
+            >
+              <Button variant="outline" size="icon" title="Exportar posts como CSV">
+                <Download className="h-4 w-4" />
+              </Button>
+            </a>
           </div>
 
           {searchTerm && postsData && (
