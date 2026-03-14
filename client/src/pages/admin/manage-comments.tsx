@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { AdminLayout } from "@/components/admin/admin-layout";
 
 interface CommentWithPost {
   id: number;
@@ -186,9 +187,10 @@ export default function ManageComments() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <AdminLayout activeTab="posts">
+    <div className="max-w-7xl mx-auto py-8">
       <div className="flex items-center gap-4 mb-6">
-        <Link href="/admin">
+        <Link href="/admin?tab=posts">
           <Button variant="ghost" size="icon" data-testid="button-back">
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -455,5 +457,6 @@ export default function ManageComments() {
         </div>
       )}
     </div>
+    </AdminLayout>
   );
 }

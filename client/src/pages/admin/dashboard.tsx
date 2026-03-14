@@ -24,6 +24,7 @@ import { AuthorsManagerContent } from "./manage-authors";
 import { SubscribersContent } from "./subscribers";
 import { MediaContent } from "./manage-media";
 import { CrawlContent } from "./crawl";
+import { AdminLayout } from "@/components/admin/admin-layout";
 
 const POSTS_PER_PAGE = 20;
 
@@ -636,66 +637,33 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="border-b bg-muted/30 px-4 pt-6 pb-0 mb-6">
-        <h1 className="font-serif text-2xl font-bold mb-4" data-testid="text-admin-title">
-          Painel Administrativo
-        </h1>
+    <AdminLayout activeTab={activeTab as any}>
+      {activeTab === "home" && (
+        <HomePageTab
+          settings={settings || {}}
+          categories={categories || []}
+          banners={bannersList || []}
+          bannersLoading={bannersLoading}
+          materials={materialsList || []}
+          materialsLoading={materialsLoading}
+        />
+      )}
 
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="h-auto gap-0 p-0 bg-transparent border-0 rounded-none" data-testid="tabs-admin-main">
-            {[
-              { value: "home", icon: Home, label: "Home" },
-              { value: "posts", icon: FileText, label: "Página de Posts" },
-              { value: "categories", icon: FolderOpen, label: "Página de Categorias" },
-              { value: "tags", icon: Tag, label: "Página de Tags" },
-              { value: "database", icon: Database, label: "Banco de Dados" },
-            ].map(({ value, icon: Icon, label }) => (
-              <TabsTrigger
-                key={value}
-                value={value}
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm font-medium"
-                data-testid={`tab-main-${value}`}
-              >
-                <Icon className="h-4 w-4 mr-1.5" />
-                {label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      </div>
+      {activeTab === "posts" && (
+        <PostsTab user={user} />
+      )}
 
-      <div className="px-4 pb-8">
-      <Tabs value={activeTab} onValueChange={handleTabChange}>
+      {activeTab === "categories" && (
+        <CategoriesTab settings={settings || {}} categories={categories || []} />
+      )}
 
-        <TabsContent value="home">
-          <HomePageTab
-            settings={settings || {}}
-            categories={categories || []}
-            banners={bannersList || []}
-            bannersLoading={bannersLoading}
-            materials={materialsList || []}
-            materialsLoading={materialsLoading}
-          />
-        </TabsContent>
+      {activeTab === "tags" && (
+        <TagsTab settings={settings || {}} categories={categories || []} allTags={allTags || []} />
+      )}
 
-        <TabsContent value="posts">
-          <PostsTab user={user} />
-        </TabsContent>
-
-        <TabsContent value="categories">
-          <CategoriesTab settings={settings || {}} categories={categories || []} />
-        </TabsContent>
-
-        <TabsContent value="tags">
-          <TagsTab settings={settings || {}} categories={categories || []} allTags={allTags || []} />
-        </TabsContent>
-
-        <TabsContent value="database">
-          <DatabaseTab />
-        </TabsContent>
-      </Tabs>
-      </div>
-    </div>
+      {activeTab === "database" && (
+        <DatabaseTab />
+      )}
+    </AdminLayout>
   );
 }

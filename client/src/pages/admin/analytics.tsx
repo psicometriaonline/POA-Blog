@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ArrowLeft, ArrowUpDown, Eye, TrendingUp, Users, Calendar as CalendarIcon, Info, ChevronLeft, ChevronRight, Search, BarChart3, Globe } from "lucide-react";
+import { AdminLayout } from "@/components/admin/admin-layout";
 import { useAuth } from "@/hooks/use-auth";
 import type { Category, Tag } from "@shared/schema";
 import {
@@ -266,9 +267,10 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <AdminLayout activeTab="posts">
+    <div className="max-w-6xl mx-auto py-8">
       <div className="flex items-center gap-3 mb-8">
-        <Link href="/admin">
+        <Link href="/admin?tab=posts">
           <Button variant="ghost" size="icon" data-testid="button-back-dashboard">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -608,5 +610,6 @@ export default function AnalyticsPage() {
         )}
       </Card>
     </div>
+    </AdminLayout>
   );
 }

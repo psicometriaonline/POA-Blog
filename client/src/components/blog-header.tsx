@@ -62,8 +62,8 @@ export function BlogHeader() {
   const cats = categories || [];
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-[9999]" style={{ backgroundColor: "#000A24" }}>
-      <div className="max-w-full px-4 py-2">
+    <header className="fixed top-0 left-0 right-0 z-50" style={{ backgroundColor: "#000A24" }}>
+      <div className="max-w-7xl mx-auto px-4 py-2">
         <div
           className="flex items-center justify-between gap-2 px-6 h-14 rounded-full border border-white/10"
           style={{ backgroundColor: "rgba(255,255,255,0.04)" }}

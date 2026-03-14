@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ArrowLeft, FileText, Eye, Edit, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { AdminLayout } from "@/components/admin/admin-layout";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -149,7 +150,8 @@ export default function TagDetailPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <AdminLayout activeTab="tags">
+    <div className="max-w-7xl mx-auto py-8">
       <div className="flex items-center gap-2 mb-6">
         <Link href="/admin?tab=tags">
           <Button variant="ghost" size="icon" data-testid="button-back"><ArrowLeft className="h-4 w-4" /></Button>
@@ -272,5 +274,6 @@ export default function TagDetailPage() {
         </div>
       )}
     </div>
+    </AdminLayout>
   );
 }
