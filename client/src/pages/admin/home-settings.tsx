@@ -130,21 +130,23 @@ export function HomePageTab({ settings, categories, banners, bannersLoading, mat
 }) {
   return (
     <Tabs defaultValue="hero" className="space-y-6">
-      <TabsList className="flex flex-wrap h-auto gap-1 justify-start" data-testid="tabs-home-sections">
-        <TabsTrigger value="hero" data-testid="tab-hero">Cabeçalho</TabsTrigger>
-        <TabsTrigger value="newsletter" data-testid="tab-newsletter">Newsletter</TabsTrigger>
-        <TabsTrigger value="most-read" data-testid="tab-most-read">Mais Lidos</TabsTrigger>
-        <TabsTrigger value="sections" data-testid="tab-sections">Seções</TabsTrigger>
-        <TabsTrigger value="banners" data-testid="tab-banners">Banners</TabsTrigger>
-        <TabsTrigger value="materials" data-testid="tab-materials">Materiais</TabsTrigger>
-        <TabsTrigger value="menu" data-testid="tab-menu">Menu</TabsTrigger>
-        <TabsTrigger value="header-cta" data-testid="tab-header-cta">Menu - Botão CTA</TabsTrigger>
-        <TabsTrigger value="footer" data-testid="tab-footer">Rodapé</TabsTrigger>
-        <TabsTrigger value="preview" data-testid="tab-home-preview">
-          <Eye className="h-3.5 w-3.5 mr-1" />
-          Preview
-        </TabsTrigger>
-      </TabsList>
+      <div className="sticky top-[177px] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3">
+        <TabsList className="flex flex-wrap h-auto gap-1 justify-start" data-testid="tabs-home-sections">
+          <TabsTrigger value="hero" data-testid="tab-hero">Cabeçalho</TabsTrigger>
+          <TabsTrigger value="newsletter" data-testid="tab-newsletter">Newsletter</TabsTrigger>
+          <TabsTrigger value="most-read" data-testid="tab-most-read">Mais Lidos</TabsTrigger>
+          <TabsTrigger value="sections" data-testid="tab-sections">Seções</TabsTrigger>
+          <TabsTrigger value="banners" data-testid="tab-banners">Banners</TabsTrigger>
+          <TabsTrigger value="materials" data-testid="tab-materials">Materiais</TabsTrigger>
+          <TabsTrigger value="menu" data-testid="tab-menu">Menu</TabsTrigger>
+          <TabsTrigger value="header-cta" data-testid="tab-header-cta">Menu - Botão CTA</TabsTrigger>
+          <TabsTrigger value="footer" data-testid="tab-footer">Rodapé</TabsTrigger>
+          <TabsTrigger value="preview" data-testid="tab-home-preview">
+            <Eye className="h-3.5 w-3.5 mr-1" />
+            Preview
+          </TabsTrigger>
+        </TabsList>
+      </div>
 
       <TabsContent value="hero">
         <HeroSettingsTab settings={settings} />

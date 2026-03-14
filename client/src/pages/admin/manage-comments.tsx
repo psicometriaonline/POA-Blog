@@ -189,50 +189,51 @@ export default function ManageComments() {
   return (
     <AdminLayout activeTab="posts">
     <div className="max-w-7xl mx-auto py-8">
-      <div className="flex items-center gap-4 mb-6">
-        <Link href="/admin?tab=posts">
-          <Button variant="ghost" size="icon" data-testid="button-back">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div className="flex items-center gap-2">
-          <MessageSquare className="h-6 w-6 text-primary" />
-          <h1 className="font-serif text-2xl font-bold" data-testid="text-comments-title">
-            Gerenciar Comentários
-          </h1>
+      <div className="sticky top-[177px] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3 space-y-4">
+        <div className="flex items-center gap-4">
+          <Link href="/admin?tab=posts">
+            <Button variant="ghost" size="icon" data-testid="button-back">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-6 w-6 text-primary" />
+            <h1 className="font-serif text-2xl font-bold" data-testid="text-comments-title">
+              Gerenciar Comentários
+            </h1>
+          </div>
+          <div className="ml-auto">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" data-testid="button-import-comments" disabled={importMutation.isPending}>
+                  {importMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-1" />
+                  )}
+                  Importar do WordPress
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Importar Comentários do WordPress</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Isso irá buscar todos os comentários do WordPress via API REST e importá-los como aprovados.
+                    Comentários já importados (com sourceUrl duplicado) serão ignorados.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => importMutation.mutate()} data-testid="button-confirm-import">
+                    Importar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
-        <div className="ml-auto">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" data-testid="button-import-comments" disabled={importMutation.isPending}>
-                {importMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4 mr-1" />
-                )}
-                Importar do WordPress
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Importar Comentários do WordPress</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Isso irá buscar todos os comentários do WordPress via API REST e importá-los como aprovados.
-                  Comentários já importados (com sourceUrl duplicado) serão ignorados.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={() => importMutation.mutate()} data-testid="button-confirm-import">
-                  Importar
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </div>
 
-      <div className="flex items-center gap-1 mb-4 flex-wrap" data-testid="tabs-status">
+        <div className="flex items-center gap-1 flex-wrap" data-testid="tabs-status">
         {statusTabs.map((tab) => (
           <Button
             key={tab.key}
@@ -247,6 +248,7 @@ export default function ManageComments() {
             </Badge>
           </Button>
         ))}
+        </div>
       </div>
 
       <div className="flex items-center gap-2 mb-4 flex-wrap">

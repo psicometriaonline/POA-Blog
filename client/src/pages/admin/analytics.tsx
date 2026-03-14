@@ -274,27 +274,28 @@ export default function AnalyticsPage() {
   return (
     <AdminLayout activeTab="posts">
     <div className="max-w-6xl mx-auto py-8">
-      <div className="flex items-center gap-3 mb-8">
-        <Link href="/admin?tab=posts">
-          <Button variant="ghost" size="icon" data-testid="button-back-dashboard">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <h1 className="font-serif text-3xl font-bold" data-testid="text-analytics-title">
-          Métricas de Visualização
-        </h1>
-      </div>
-
-      {filterPostId && (
-        <div className="flex items-center gap-2 mb-4 p-3 bg-muted rounded-lg">
-          <span className="text-sm text-muted-foreground">Filtrando por post específico (ID: {filterPostId})</span>
-          <Button variant="outline" size="sm" onClick={() => setFilterPostId("")} data-testid="button-clear-post-filter">
-            Limpar filtro
-          </Button>
+      <div className="sticky top-[177px] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3 space-y-3">
+        <div className="flex items-center gap-3">
+          <Link href="/admin?tab=posts">
+            <Button variant="ghost" size="icon" data-testid="button-back-dashboard">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <h1 className="font-serif text-3xl font-bold" data-testid="text-analytics-title">
+            Métricas de Visualização
+          </h1>
         </div>
-      )}
 
-      <div className="flex flex-wrap items-center gap-2 mb-6">
+        {filterPostId && (
+          <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+            <span className="text-sm text-muted-foreground">Filtrando por post específico (ID: {filterPostId})</span>
+            <Button variant="outline" size="sm" onClick={() => setFilterPostId("")} data-testid="button-clear-post-filter">
+              Limpar filtro
+            </Button>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2">
         {(Object.keys(periodLabels) as Period[]).filter(p => p !== "custom").map((p) => (
           <Button
             key={p}
@@ -315,20 +316,21 @@ export default function AnalyticsPage() {
           <CalendarIcon className="h-3.5 w-3.5 mr-1" />
           Personalizado
         </Button>
-      </div>
-
-      {period === "custom" && (
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">De:</span>
-            <Input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="w-auto" data-testid="input-custom-start" />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Até:</span>
-            <Input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="w-auto" data-testid="input-custom-end" />
-          </div>
         </div>
-      )}
+
+        {period === "custom" && (
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">De:</span>
+              <Input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="w-auto" data-testid="input-custom-start" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Até:</span>
+              <Input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="w-auto" data-testid="input-custom-end" />
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <Card className="p-5">

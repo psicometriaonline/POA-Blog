@@ -30,7 +30,7 @@ export function AdminLayout({ activeTab, children }: AdminLayoutProps) {
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="border-b bg-muted/30 px-4 pt-6 pb-0 mb-6">
+      <div className="sticky top-16 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 pt-6 pb-0">
         <h1 className="font-serif text-2xl font-bold mb-4" data-testid="text-admin-title">
           Painel Administrativo
         </h1>
@@ -55,7 +55,7 @@ export function AdminLayout({ activeTab, children }: AdminLayoutProps) {
         </div>
       </div>
 
-      <div className="px-4 pb-8">
+      <div className="px-4 pb-8 pt-6">
         {children}
       </div>
     </div>
