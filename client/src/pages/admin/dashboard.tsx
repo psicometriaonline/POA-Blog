@@ -25,6 +25,7 @@ import { SubscribersContent } from "./subscribers";
 import { MediaContent } from "./manage-media";
 import { CrawlContent } from "./crawl";
 import { AdminLayout, type AdminTab } from "@/components/admin/admin-layout";
+import { PostsSubNav } from "@/components/admin/posts-sub-nav";
 
 const POSTS_PER_PAGE = 20;
 
@@ -201,41 +202,8 @@ function PostsTab({ user }: { user: any }) {
 
   return (
     <div className="space-y-6">
+      <PostsSubNav activePage={subTab as "posts" | "containers" | "import" | "preview"} />
       <Tabs value={subTab} onValueChange={setSubTab}>
-        <div className="sticky top-[var(--admin-subheader-top)] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
-          <TabsList data-testid="tabs-posts-sub">
-            <TabsTrigger value="posts" data-testid="tab-posts-manage">Gerenciar Posts</TabsTrigger>
-            <TabsTrigger value="containers" data-testid="tab-posts-containers">Contêineres</TabsTrigger>
-            <TabsTrigger value="import" data-testid="tab-posts-import">Importar Posts</TabsTrigger>
-            <TabsTrigger value="preview" data-testid="tab-posts-preview">
-              <Eye className="h-3.5 w-3.5 mr-1" />
-              Preview
-            </TabsTrigger>
-          </TabsList>
-          {subTab === "posts" && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <Link href="/admin/post/novo">
-                <Button data-testid="button-new-post">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Novo Post
-                </Button>
-              </Link>
-              <Link href="/admin/metricas">
-                <Button variant="outline" data-testid="button-analytics">
-                  <BarChart3 className="h-4 w-4 mr-1" />
-                  Métricas
-                </Button>
-              </Link>
-              <Link href="/admin/comentarios">
-                <Button variant="outline" data-testid="button-comments">
-                  <MessageSquare className="h-4 w-4 mr-1" />
-                  Comentários
-                </Button>
-              </Link>
-            </div>
-          )}
-        </div>
-
         <TabsContent value="posts" className="mt-0">
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

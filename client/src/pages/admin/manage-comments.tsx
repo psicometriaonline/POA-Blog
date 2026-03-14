@@ -40,6 +40,7 @@ import {
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { AdminLayout } from "@/components/admin/admin-layout";
+import { PostsSubNav } from "@/components/admin/posts-sub-nav";
 
 interface CommentWithPost {
   id: number;
@@ -189,20 +190,15 @@ export default function ManageComments() {
   return (
     <AdminLayout activeTab="posts">
     <div className="max-w-7xl mx-auto py-8">
-      <div className="sticky top-[var(--admin-subheader-top)] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3 space-y-4">
-        <div className="flex items-center gap-4">
-          <Link href="/admin?tab=posts">
-            <Button variant="ghost" size="icon" data-testid="button-back">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-6 w-6 text-primary" />
-            <h1 className="font-serif text-2xl font-bold" data-testid="text-comments-title">
-              Gerenciar Comentários
-            </h1>
-          </div>
-          <div className="ml-auto">
+      <PostsSubNav activePage="comentarios" />
+      <div className="mt-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-6 w-6 text-primary" />
+          <h1 className="font-serif text-2xl font-bold" data-testid="text-comments-title">
+            Gerenciar Comentários
+          </h1>
+        </div>
+        <div>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" data-testid="button-import-comments" disabled={importMutation.isPending}>
@@ -230,7 +226,6 @@ export default function ManageComments() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-          </div>
         </div>
 
         <div className="flex items-center gap-1 flex-wrap" data-testid="tabs-status">

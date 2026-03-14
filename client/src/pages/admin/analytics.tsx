@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ArrowLeft, ArrowUpDown, Eye, TrendingUp, Users, Calendar as CalendarIcon, Info, ChevronLeft, ChevronRight, Search, BarChart3, Globe, FileText, Clock, Pencil } from "lucide-react";
 import { AdminLayout } from "@/components/admin/admin-layout";
+import { PostsSubNav } from "@/components/admin/posts-sub-nav";
 import { useAuth } from "@/hooks/use-auth";
 import type { Category, Tag } from "@shared/schema";
 import {
@@ -274,17 +275,11 @@ export default function AnalyticsPage() {
   return (
     <AdminLayout activeTab="posts">
     <div className="max-w-6xl mx-auto py-8">
-      <div className="sticky top-[var(--admin-subheader-top)] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3 space-y-3">
-        <div className="flex items-center gap-3">
-          <Link href="/admin?tab=posts">
-            <Button variant="ghost" size="icon" data-testid="button-back-dashboard">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <h1 className="font-serif text-3xl font-bold" data-testid="text-analytics-title">
-            Métricas de Visualização
-          </h1>
-        </div>
+      <PostsSubNav activePage="metricas" />
+      <div className="mt-6 space-y-3">
+        <h1 className="font-serif text-3xl font-bold" data-testid="text-analytics-title">
+          Métricas de Visualização
+        </h1>
 
         {filterPostId && (
           <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
