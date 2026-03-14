@@ -81,7 +81,7 @@ function App() {
           <div className="min-h-screen flex flex-col">
             <BlogHeader />
             <SharedHeroBar />
-            <main className="flex-1 pt-16">
+            <main className="flex-1 pt-24">
               <Router />
             </main>
             <SharedFreeMaterials />
