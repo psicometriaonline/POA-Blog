@@ -202,7 +202,7 @@ function PostsTab({ user }: { user: any }) {
   return (
     <div className="space-y-6">
       <Tabs value={subTab} onValueChange={setSubTab}>
-        <div className="sticky top-[177px] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
+        <div className="sticky top-[var(--admin-subheader-top)] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
           <TabsList data-testid="tabs-posts-sub">
             <TabsTrigger value="posts" data-testid="tab-posts-manage">Gerenciar Posts</TabsTrigger>
             <TabsTrigger value="containers" data-testid="tab-posts-containers">Contêineres</TabsTrigger>
@@ -468,7 +468,7 @@ function CategoriesTab({ settings, categories }: { settings: Record<string, stri
 
   return (
     <Tabs value={subTab} onValueChange={setSubTab}>
-      <div className="sticky top-[177px] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3">
+      <div className="sticky top-[var(--admin-subheader-top)] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3">
         <TabsList data-testid="tabs-categories-sub">
           <TabsTrigger value="manage" data-testid="tab-categories-manage">Gerenciar</TabsTrigger>
           <TabsTrigger value="settings" data-testid="tab-categories-settings">Configurações da Página</TabsTrigger>
@@ -498,7 +498,7 @@ function TagsTab({ settings, categories, allTags }: { settings: Record<string, s
 
   return (
     <Tabs value={subTab} onValueChange={setSubTab}>
-      <div className="sticky top-[177px] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3">
+      <div className="sticky top-[var(--admin-subheader-top)] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3">
         <TabsList data-testid="tabs-tags-sub">
           <TabsTrigger value="manage" data-testid="tab-tags-manage">Gerenciar</TabsTrigger>
           <TabsTrigger value="settings" data-testid="tab-tags-settings">Configurações da Página</TabsTrigger>
@@ -536,7 +536,7 @@ function DatabaseTab() {
 
   return (
     <Tabs value={subTab} onValueChange={setSubTab}>
-      <div className="sticky top-[177px] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3">
+      <div className="sticky top-[var(--admin-subheader-top)] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3">
         <TabsList data-testid="tabs-database-sub">
           <TabsTrigger value="media" data-testid="tab-db-media">Imagens</TabsTrigger>
           <TabsTrigger value="subscribers" data-testid="tab-db-subscribers">Inscritos</TabsTrigger>

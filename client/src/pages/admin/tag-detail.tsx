@@ -152,7 +152,7 @@ export default function TagDetailPage() {
   return (
     <AdminLayout activeTab="tags">
     <div className="max-w-7xl mx-auto py-8">
-      <div className="sticky top-[177px] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3 flex items-center gap-2">
+      <div className="sticky top-[var(--admin-subheader-top)] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3 flex items-center gap-2">
         <Link href="/admin?tab=tags">
           <Button variant="ghost" size="icon" data-testid="button-back"><ArrowLeft className="h-4 w-4" /></Button>
         </Link>

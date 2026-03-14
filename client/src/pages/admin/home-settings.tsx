@@ -130,7 +130,7 @@ export function HomePageTab({ settings, categories, banners, bannersLoading, mat
 }) {
   return (
     <Tabs defaultValue="hero" className="space-y-6">
-      <div className="sticky top-[177px] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3">
+      <div className="sticky top-[var(--admin-subheader-top)] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3">
         <TabsList className="flex flex-wrap h-auto gap-1 justify-start" data-testid="tabs-home-sections">
           <TabsTrigger value="hero" data-testid="tab-hero">Cabeçalho</TabsTrigger>
           <TabsTrigger value="newsletter" data-testid="tab-newsletter">Newsletter</TabsTrigger>

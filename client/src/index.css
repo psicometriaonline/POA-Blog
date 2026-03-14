@@ -6,6 +6,12 @@ html {
   scroll-padding-top: 100px;
 }
 
+:root {
+  --site-header-h: 4rem;
+  --admin-header-h: 113px;
+  --admin-subheader-top: calc(var(--site-header-h) + var(--admin-header-h));
+}
+
 /* LIGHT MODE - Blue/Academic theme inspired by Psicometria Online */
 :root {
   --button-outline: rgba(0,0,0, .10);

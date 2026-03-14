@@ -274,7 +274,7 @@ export default function AnalyticsPage() {
   return (
     <AdminLayout activeTab="posts">
     <div className="max-w-6xl mx-auto py-8">
-      <div className="sticky top-[177px] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3 space-y-3">
+      <div className="sticky top-[var(--admin-subheader-top)] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3 space-y-3">
         <div className="flex items-center gap-3">
           <Link href="/admin?tab=posts">
             <Button variant="ghost" size="icon" data-testid="button-back-dashboard">
