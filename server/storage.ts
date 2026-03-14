@@ -662,20 +662,7 @@ export class DatabaseStorage implements IStorage {
   } = {}): Promise<{ data: { postId: number; title: string; slug: string; views: number; visitors: number }[]; total: number }> {
     const { sortDir = 'desc', search, categoryId, tagId, postId: filterPostId, page = 1, limit = 30 } = options;
 
-    let query = db.select({
-      postId: posts.id,
-      title: posts.title,
-      slug: posts.slug,
-      views: sql<number>`coalesce(count(${postViews.postId})::int, 0)`,
-      visitors: sql<number>`count(distinct ${postViews.visitorId})::int`,
-    })
-      .from(posts)
-      .leftJoin(postViews, eq(postViews.postId, posts.id));
-
-    const conditions: any[] = [
-      sql`${postViews.viewedAt} >= ${startDate}::timestamptz OR ${postViews.viewedAt} IS NULL`,
-      sql`${postViews.viewedAt} <= ${endDate}::timestamptz OR ${postViews.viewedAt} IS NULL`,
-    ];
+    const conditions: any[] = [eq(posts.status, 'published')];
 
     if (filterPostId) conditions.push(eq(posts.id, parseInt(filterPostId)));
     if (search) conditions.push(sql`lower(${posts.title}) like ${'%' + search.toLowerCase() + '%'}`);
@@ -687,13 +674,31 @@ export class DatabaseStorage implements IStorage {
       conditions.push(sql`${posts.id} in (select ${postTags.postId} from ${postTags} where ${postTags.tagId} = ${tagId})`);
     }
 
-    const whereClause = and(eq(posts.status, 'published'), ...conditions);
+    const whereClause = and(...conditions);
+
+    let query = db.select({
+      postId: posts.id,
+      title: posts.title,
+      slug: posts.slug,
+      views: sql<number>`coalesce(count(${postViews.postId})::int, 0)`,
+      visitors: sql<number>`count(distinct ${postViews.visitorId})::int`,
+    })
+      .from(posts)
+      .leftJoin(postViews, and(
+        eq(postViews.postId, posts.id),
+        gte(postViews.viewedAt, startDate),
+        lte(postViews.viewedAt, endDate)
+      ));
 
     const countResult = await db.select({
       total: sql<number>`count(distinct ${posts.id})::int`,
     })
       .from(posts)
-      .leftJoin(postViews, eq(postViews.postId, posts.id))
+      .leftJoin(postViews, and(
+        eq(postViews.postId, posts.id),
+        gte(postViews.viewedAt, startDate),
+        lte(postViews.viewedAt, endDate)
+      ))
       .where(whereClause);
 
     const total = countResult[0]?.total || 0;
