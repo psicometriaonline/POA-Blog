@@ -78,7 +78,7 @@ export function PagePreview({ path, label, selector, selectorItems, onSelectorCh
         </div>
       </div>
 
-      <div className="border rounded-lg bg-muted/20 p-4 flex justify-center">
+      <div className="border rounded-lg bg-muted/20 p-4 flex justify-center overflow-y-auto" style={{ maxHeight: "70vh" }}>
         <div
           className="bg-white rounded-lg shadow-lg transition-all duration-300"
           style={{ width: activeDevice.width, maxWidth: "100%" }}
@@ -95,10 +95,9 @@ export function PagePreview({ path, label, selector, selectorItems, onSelectorCh
             key={refreshKey}
             src={previewUrl}
             className="w-full border-0"
-            style={{ height: "70vh" }}
+            style={{ height: "auto", display: "block" }}
             title={`Preview - ${label}`}
             data-testid="iframe-preview"
-            scrolling="no"
           />
         </div>
       </div>
