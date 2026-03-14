@@ -98,6 +98,7 @@ export function PagePreview({ path, label, selector, selectorItems, onSelectorCh
             style={{ height: "70vh" }}
             title={`Preview - ${label}`}
             data-testid="iframe-preview"
+            scrolling="no"
           />
         </div>
       </div>
