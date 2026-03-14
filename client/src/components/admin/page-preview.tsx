@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Monitor, Tablet, Smartphone, RefreshCw, ExternalLink } from "lucide-react";
@@ -19,21 +19,7 @@ export function PagePreview({ path, label, selector, selectorItems, onSelectorCh
 }) {
   const [device, setDevice] = useState<DeviceSize>("desktop");
   const [refreshKey, setRefreshKey] = useState(0);
-  const [iframeHeight, setIframeHeight] = useState(1200);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
   const activeDevice = DEVICE_SIZES.find(d => d.value === device)!;
-
-  const handleIframeLoad = () => {
-    try {
-      const iframe = iframeRef.current;
-      if (iframe?.contentWindow?.document?.documentElement) {
-        const height = iframe.contentWindow.document.documentElement.scrollHeight;
-        setIframeHeight(Math.max(height + 20, 1200));
-      }
-    } catch (e) {
-      console.error("Failed to measure iframe height:", e);
-    }
-  };
 
   const previewUrl = `${window.location.origin}${path}`;
 
@@ -106,15 +92,13 @@ export function PagePreview({ path, label, selector, selectorItems, onSelectorCh
             <span className="truncate flex-1 text-center">{previewUrl}</span>
           </div>
           <iframe
-            ref={iframeRef}
             key={refreshKey}
             src={previewUrl}
             className="w-full border-0"
-            style={{ height: `${iframeHeight}px`, display: "block" }}
+            style={{ height: "1200px", display: "block" }}
             title={`Preview - ${label}`}
             data-testid="iframe-preview"
-            scrolling="no"
-            onLoad={handleIframeLoad}
+            scrolling="yes"
           />
         </div>
       </div>
