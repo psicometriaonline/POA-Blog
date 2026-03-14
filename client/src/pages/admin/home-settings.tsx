@@ -1612,7 +1612,7 @@ function MenuTab({ settings }: { settings: Record<string, string> }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/menu"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/menu"], refetchType: "active" });
       toast({ title: "Menu salvo", description: "Menu atualizado com sucesso." });
     },
     onError: () => {
