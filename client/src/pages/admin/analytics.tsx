@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowLeft, ArrowUpDown, Eye, TrendingUp, Users, Calendar as CalendarIcon, Info, ChevronLeft, ChevronRight, Search, BarChart3, Globe } from "lucide-react";
+import { ArrowLeft, ArrowUpDown, Eye, TrendingUp, Users, Calendar as CalendarIcon, Info, ChevronLeft, ChevronRight, Search, BarChart3, Globe, FileText, Clock, Pencil } from "lucide-react";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { useAuth } from "@/hooks/use-auth";
 import type { Category, Tag } from "@shared/schema";
@@ -116,6 +116,11 @@ export default function AnalyticsPage() {
   const [filterPostId, setFilterPostId] = useState<string>(urlPostId || "");
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(getPerPagePref);
+
+  const countsQuery = useQuery<{ total: number; published: number; scheduled: number; draft: number }>({
+    queryKey: ["/api/admin/analytics/post-counts"],
+    enabled: !!user,
+  });
 
   useEffect(() => {
     try { localStorage.setItem("analytics_per_page", String(perPage)); } catch {}
@@ -370,6 +375,61 @@ export default function AnalyticsPage() {
               </p>
               <p className="text-2xl font-bold" data-testid="text-posts-with-views">
                 {postsQuery.isLoading ? "..." : (postsQuery.data?.total || 0)}
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
+        <Card className="p-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Total de Posts</p>
+              <p className="text-2xl font-bold" data-testid="text-total-posts">
+                {countsQuery.isLoading ? "..." : (countsQuery.data?.total || 0)}
+              </p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <FileText className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Publicados</p>
+              <p className="text-2xl font-bold" data-testid="text-published-posts">
+                {countsQuery.isLoading ? "..." : (countsQuery.data?.published || 0)}
+              </p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+              <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Agendados</p>
+              <p className="text-2xl font-bold" data-testid="text-scheduled-posts">
+                {countsQuery.isLoading ? "..." : (countsQuery.data?.scheduled || 0)}
+              </p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+              <Pencil className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Pendentes (Rascunho)</p>
+              <p className="text-2xl font-bold" data-testid="text-draft-posts">
+                {countsQuery.isLoading ? "..." : (countsQuery.data?.draft || 0)}
               </p>
             </div>
           </div>

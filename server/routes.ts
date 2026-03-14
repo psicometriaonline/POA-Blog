@@ -1866,6 +1866,15 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/analytics/post-counts", isAuthenticated, async (_req, res) => {
+    try {
+      const counts = await storage.getPostCountsByStatus();
+      res.json(counts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.delete("/api/admin/subscribers/:id", isAuthenticated, async (req, res) => {
     try {
       const success = await storage.deleteSubscriber(parseInt(req.params.id));

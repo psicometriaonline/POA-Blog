@@ -137,6 +137,7 @@ export interface IStorage {
   getViewsTimeSeriesMonthly(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]>;
   getViewsTimeSeriesHourly(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number }[]>;
   getPostViewsSummary(startDate: Date, endDate: Date, sortDir?: 'asc' | 'desc'): Promise<{ postId: number; title: string; slug: string; views: number }[]>;
+  getPostCountsByStatus(): Promise<{ total: number; published: number; scheduled: number; draft: number }>;
   getTotalViews(startDate: Date, endDate: Date, postId?: number): Promise<number>;
 }
 
@@ -662,54 +663,74 @@ export class DatabaseStorage implements IStorage {
     const { sortDir = 'desc', search, categoryId, tagId, postId: filterPostId, page = 1, limit = 30 } = options;
 
     let query = db.select({
-      postId: postViews.postId,
+      postId: posts.id,
       title: posts.title,
       slug: posts.slug,
-      views: sql<number>`count(*)::int`,
+      views: sql<number>`coalesce(count(${postViews.postId})::int, 0)`,
       visitors: sql<number>`count(distinct ${postViews.visitorId})::int`,
     })
-      .from(postViews)
-      .innerJoin(posts, eq(postViews.postId, posts.id));
+      .from(posts)
+      .leftJoin(postViews, eq(postViews.postId, posts.id));
 
     const conditions: any[] = [
-      gte(postViews.viewedAt, startDate),
-      lte(postViews.viewedAt, endDate),
+      sql`${postViews.viewedAt} >= ${startDate}::timestamptz OR ${postViews.viewedAt} IS NULL`,
+      sql`${postViews.viewedAt} <= ${endDate}::timestamptz OR ${postViews.viewedAt} IS NULL`,
     ];
 
-    if (filterPostId) conditions.push(eq(postViews.postId, filterPostId));
+    if (filterPostId) conditions.push(eq(posts.id, parseInt(filterPostId)));
     if (search) conditions.push(sql`lower(${posts.title}) like ${'%' + search.toLowerCase() + '%'}`);
 
     if (categoryId) {
-      conditions.push(sql`${postViews.postId} in (select ${postCategories.postId} from ${postCategories} where ${postCategories.categoryId} = ${categoryId})`);
+      conditions.push(sql`${posts.id} in (select ${postCategories.postId} from ${postCategories} where ${postCategories.categoryId} = ${categoryId})`);
     }
     if (tagId) {
-      conditions.push(sql`${postViews.postId} in (select ${postTags.postId} from ${postTags} where ${postTags.tagId} = ${tagId})`);
+      conditions.push(sql`${posts.id} in (select ${postTags.postId} from ${postTags} where ${postTags.tagId} = ${tagId})`);
     }
 
-    const whereClause = and(...conditions);
-
-    const countQuery = db.select({
-      postId: postViews.postId,
-    })
-      .from(postViews)
-      .innerJoin(posts, eq(postViews.postId, posts.id))
-      .where(whereClause)
-      .groupBy(postViews.postId);
+    const whereClause = and(eq(posts.status, 'published'), ...conditions);
 
     const countResult = await db.select({
-      total: sql<number>`count(*)::int`,
-    }).from(countQuery.as('grouped'));
+      total: sql<number>`count(distinct ${posts.id})::int`,
+    })
+      .from(posts)
+      .leftJoin(postViews, eq(postViews.postId, posts.id))
+      .where(whereClause);
 
     const total = countResult[0]?.total || 0;
 
     const offset = (page - 1) * limit;
     const data = await query.where(whereClause)
-      .groupBy(postViews.postId, posts.title, posts.slug)
-      .orderBy(sortDir === 'desc' ? desc(sql`count(*)`) : asc(sql`count(*)`))
+      .groupBy(posts.id, posts.title, posts.slug)
+      .orderBy(sortDir === 'desc' ? desc(sql<number>`coalesce(count(${postViews.postId})::int, 0)`) : asc(sql<number>`coalesce(count(${postViews.postId})::int, 0)`))
       .limit(limit)
       .offset(offset) as any;
 
     return { data, total };
+  }
+
+  async getPostCountsByStatus(): Promise<{ total: number; published: number; scheduled: number; draft: number }> {
+    const result = await db.select({
+      status: posts.status,
+      count: sql<number>`count(*)::int`,
+    })
+      .from(posts)
+      .groupBy(posts.status);
+
+    const counts = {
+      total: 0,
+      published: 0,
+      scheduled: 0,
+      draft: 0,
+    };
+
+    for (const row of result) {
+      counts.total += row.count;
+      if (row.status === 'published') counts.published = row.count;
+      else if (row.status === 'scheduled') counts.scheduled = row.count;
+      else if (row.status === 'draft') counts.draft = row.count;
+    }
+
+    return counts;
   }
 
   async getTotalViews(startDate: Date, endDate: Date, postId?: number): Promise<number> {
