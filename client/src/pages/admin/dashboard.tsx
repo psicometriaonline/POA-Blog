@@ -24,7 +24,7 @@ import { AuthorsManagerContent } from "./manage-authors";
 import { SubscribersContent } from "./subscribers";
 import { MediaContent } from "./manage-media";
 import { CrawlContent } from "./crawl";
-import { AdminLayout } from "@/components/admin/admin-layout";
+import { AdminLayout, type AdminTab } from "@/components/admin/admin-layout";
 
 const POSTS_PER_PAGE = 20;
 
@@ -553,19 +553,19 @@ function DatabaseTab() {
   );
 }
 
-const VALID_TABS = ["home", "posts", "categories", "tags", "database"];
+const VALID_TABS: AdminTab[] = ["home", "posts", "categories", "tags", "database"];
 
 export default function AdminDashboard() {
   const { user, isLoading: authLoading } = useAuth();
   const searchString = useSearch();
 
-  const getTabFromSearch = (search: string) => {
+  const getTabFromSearch = (search: string): AdminTab => {
     const p = new URLSearchParams(search);
     const tab = p.get("tab");
-    return tab && VALID_TABS.includes(tab) ? tab : "home";
+    return tab && VALID_TABS.includes(tab as AdminTab) ? (tab as AdminTab) : "home";
   };
 
-  const [activeTab, setActiveTab] = useState(() => getTabFromSearch(searchString));
+  const [activeTab, setActiveTab] = useState<AdminTab>(() => getTabFromSearch(searchString));
 
   useEffect(() => {
     const resolved = getTabFromSearch(searchString);
@@ -574,7 +574,7 @@ export default function AdminDashboard() {
     }
   }, [searchString]);
 
-  const handleTabChange = (value: string) => {
+  const handleTabChange = (value: AdminTab) => {
     setActiveTab(value);
     const url = new URL(window.location.href);
     if (value === "home") {
@@ -637,7 +637,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <AdminLayout activeTab={activeTab as any}>
+    <AdminLayout activeTab={activeTab}>
       {activeTab === "home" && (
         <HomePageTab
           settings={settings || {}}
