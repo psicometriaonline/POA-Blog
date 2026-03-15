@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowLeft, ArrowUpDown, Eye, TrendingUp, Users, Calendar as CalendarIcon, Info, ChevronLeft, ChevronRight, Search, BarChart3, Globe, FileText, Clock, Pencil } from "lucide-react";
+import { ArrowLeft, ArrowUpDown, Eye, TrendingUp, Users, Calendar as CalendarIcon, Info, ChevronLeft, ChevronRight, Search, BarChart3, Globe, FileText, Clock, Pencil, Download } from "lucide-react";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { PostsSubNav } from "@/components/admin/posts-sub-nav";
 import { useAuth } from "@/hooks/use-auth";
@@ -481,15 +481,37 @@ export default function AnalyticsPage() {
       <Card className="p-6 mb-8" data-testid="card-post-list">
         <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
           <h2 className="text-lg font-semibold">Visualizações por Post</h2>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSortDir(sortDir === "desc" ? "asc" : "desc")}
-            data-testid="button-toggle-sort"
-          >
-            <ArrowUpDown className="h-3.5 w-3.5 mr-1" />
-            {sortDir === "desc" ? "Maior → Menor" : "Menor → Maior"}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const params = new URLSearchParams({
+                  start: startDate.toISOString().split('T')[0],
+                  end: endDate.toISOString().split('T')[0],
+                  sort: sortDir,
+                  ...(searchText && { search: searchText }),
+                  ...(filterCategoryId && { categoryId: filterCategoryId }),
+                  ...(filterTagId && { tagId: filterTagId }),
+                });
+                window.location.href = `/api/admin/analytics/export?${params.toString()}`;
+              }}
+              data-testid="button-export-analytics"
+              title="Exportar relatório como CSV"
+            >
+              <Download className="h-3.5 w-3.5 mr-1" />
+              Exportar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSortDir(sortDir === "desc" ? "asc" : "desc")}
+              data-testid="button-toggle-sort"
+            >
+              <ArrowUpDown className="h-3.5 w-3.5 mr-1" />
+              {sortDir === "desc" ? "Maior → Menor" : "Menor → Maior"}
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-3 mb-4">

@@ -768,6 +768,107 @@ export class DatabaseStorage implements IStorage {
     return result?.total || 0;
   }
 
+  async getAnalyticsExportData(startDate: Date, endDate: Date, options: {
+    search?: string;
+    categoryId?: number;
+    tagId?: number;
+    sortDir?: 'asc' | 'desc';
+  } = {}): Promise<Array<{
+    postId: number;
+    title: string;
+    slug: string;
+    authorName: string;
+    categories: Array<{ name: string }>;
+    tags: Array<{ name: string }>;
+    publishedAt: Date | null;
+    viewsInPeriod: number;
+    visitorsInPeriod: number;
+    viewsTotal: number;
+    avgViewsPerDay: number;
+    topReferrer: string;
+  }>> {
+    const { search, categoryId, tagId, sortDir = 'desc' } = options;
+    const conditions: any[] = [eq(posts.status, 'published')];
+
+    if (search) conditions.push(sql`lower(${posts.title}) like ${'%' + search.toLowerCase() + '%'}`);
+    if (categoryId) {
+      conditions.push(sql`${posts.id} in (select ${postCategories.postId} from ${postCategories} where ${postCategories.categoryId} = ${categoryId})`);
+    }
+    if (tagId) {
+      conditions.push(sql`${posts.id} in (select ${postTags.postId} from ${postTags} where ${postTags.tagId} = ${tagId})`);
+    }
+
+    const whereClause = and(...conditions);
+    const daysDiff = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
+
+    const data = await db.select({
+      postId: posts.id,
+      title: posts.title,
+      slug: posts.slug,
+      authorName: authors.name,
+      publishedAt: posts.publishedAt,
+      viewsInPeriod: sql<number>`coalesce(count(${postViews.postId})::int, 0)`,
+      visitorsInPeriod: sql<number>`count(distinct ${postViews.visitorId})::int`,
+      viewsTotal: posts.viewCount,
+    })
+      .from(posts)
+      .leftJoin(authors, eq(posts.authorId, authors.id))
+      .leftJoin(postViews, and(
+        eq(postViews.postId, posts.id),
+        gte(postViews.viewedAt, startDate),
+        lte(postViews.viewedAt, endDate)
+      ))
+      .where(whereClause)
+      .groupBy(posts.id, posts.title, posts.slug, posts.publishedAt, posts.viewCount, authors.name)
+      .orderBy(sortDir === 'desc' ? desc(sql<number>`coalesce(count(${postViews.postId})::int, 0)`) : asc(sql<number>`coalesce(count(${postViews.postId})::int, 0)`)) as any;
+
+    const postIds = data.map(d => d.postId);
+    let topReferrerMap: Record<number, string> = {};
+    
+    if (postIds.length > 0) {
+      const referrers = await db.select({
+        postId: sql<number>`split_part(referrer_source, '::', 1)::int`,
+        source: sql<string>`split_part(referrer_source, '::', 2)`,
+        count: sql<number>`count(*)::int`,
+      })
+        .from(postViews)
+        .where(and(
+          inArray(postViews.postId, postIds),
+          gte(postViews.viewedAt, startDate),
+          lte(postViews.viewedAt, endDate),
+          sql`referrer_source is not null and referrer_source != ''`
+        ))
+        .groupBy(sql<number>`split_part(referrer_source, '::', 1)::int`, sql<string>`split_part(referrer_source, '::', 2)`)
+        .orderBy(desc(sql<number>`count(*)::int`));
+
+      for (const ref of referrers) {
+        if (!topReferrerMap[ref.postId]) {
+          topReferrerMap[ref.postId] = ref.source || '';
+        }
+      }
+    }
+
+    const enrichedData = await Promise.all(data.map(async (item) => {
+      const postData = await this.getPost(item.postId);
+      return {
+        postId: item.postId,
+        title: item.title,
+        slug: item.slug,
+        authorName: item.authorName || '',
+        categories: postData?.categories || [],
+        tags: postData?.tags || [],
+        publishedAt: item.publishedAt,
+        viewsInPeriod: item.viewsInPeriod,
+        visitorsInPeriod: item.visitorsInPeriod,
+        viewsTotal: item.viewsTotal || 0,
+        avgViewsPerDay: Math.round(item.viewsInPeriod / daysDiff),
+        topReferrer: topReferrerMap[item.postId] || '',
+      };
+    }));
+
+    return enrichedData;
+  }
+
   async getReferrerStats(startDate: Date, endDate: Date): Promise<{ referrer: string; visitors: number; pageviews: number }[]> {
     const rows = await db.select({
       referrer: postViews.referrer,

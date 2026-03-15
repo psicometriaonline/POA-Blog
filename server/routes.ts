@@ -2219,6 +2219,59 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/analytics/export", isAuthenticated, async (req, res) => {
+    try {
+      const startDate = new Date(req.query.start as string);
+      const endDate = new Date(req.query.end as string);
+      const sortDir = (req.query.sort as string) === "asc" ? "asc" as const : "desc" as const;
+      const search = req.query.search as string | undefined;
+      const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined;
+      const tagId = req.query.tagId ? parseInt(req.query.tagId as string) : undefined;
+
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return res.status(400).json({ message: "Invalid date range" });
+      }
+
+      const escapeCSVField = (value: string | number | null | undefined): string => {
+        if (value === null || value === undefined) return '""';
+        const str = String(value);
+        if (str.includes('"') || str.includes(';') || str.includes('\n') || str.includes('\r')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return `"${str}"`;
+      };
+
+      const data = await storage.getAnalyticsExportData(startDate, endDate, { search, categoryId, tagId, sortDir });
+
+      const rows = data.map((item) => [
+        escapeCSVField(item.title),
+        escapeCSVField(item.slug),
+        escapeCSVField(item.authorName),
+        escapeCSVField(item.categories.map((c) => c.name).join(" | ")),
+        escapeCSVField(item.tags.map((t) => t.name).join(" | ")),
+        escapeCSVField(item.publishedAt ? new Date(item.publishedAt).toLocaleDateString("pt-BR") : ""),
+        escapeCSVField(item.viewsInPeriod),
+        escapeCSVField(item.visitorsInPeriod),
+        escapeCSVField(item.viewsTotal),
+        escapeCSVField(item.avgViewsPerDay),
+        escapeCSVField(item.topReferrer),
+      ]);
+
+      const csv =
+        "\uFEFF" +
+        "Título;Slug;Autor;Categorias;Tags;Data de Publicação;Visualizações (Período);Visitantes Únicos (Período);Visualizações (Total);Média Views/Dia;Principal Referrer\n" +
+        rows.map((r) => r.join(";")).join("\n");
+
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      res.set("Content-Type", "text/csv; charset=utf-8");
+      res.set("Content-Disposition", `attachment; filename="analytics-report-${dateStr}.csv"`);
+      res.send(csv);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ===== CRAWLING ROUTES (Protected) =====
 
   app.post("/api/admin/crawl/single", isAuthenticated, async (req, res) => {
