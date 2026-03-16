@@ -52,36 +52,36 @@ async function migrateBannerSlots() {
   
   if (!hasLegacySlots) return;
 
-  const MIGRATION_MAP: Record<string, { slots: string[]; distributeByOrder: boolean }> = {
-    sidebar: { slots: ["home_sidebar_recent_1", "home_sidebar_recent_2", "home_sidebar_categories"], distributeByOrder: true },
-    horizontal: { slots: ["home_horizontal"], distributeByOrder: false },
-    academy_form: { slots: ["post_academy_form"], distributeByOrder: false },
-    academy_form_listing: { slots: ["category_academy_form", "tag_academy_form"], distributeByOrder: false },
-  };
+  const legacySidebar = allBanners.filter(b => b.slot === "sidebar").sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || a.id - b.id);
+  const legacyHorizontal = allBanners.filter(b => b.slot === "horizontal").slice(0, 1);
+  const legacyAcademyForm = allBanners.filter(b => b.slot === "academy_form").slice(0, 1);
+  const legacyAcademyFormListing = allBanners.filter(b => b.slot === "academy_form_listing").slice(0, 1);
 
-  for (const [oldSlot, config] of Object.entries(MIGRATION_MAP)) {
-    const legacyBanners = allBanners.filter(b => b.slot === oldSlot).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || a.id - b.id);
-    if (legacyBanners.length === 0) continue;
+  // Distribute sidebar banners across 3 slots by order (no deletion - preserve data)
+  const sidebarSlots = ["home_sidebar_recent_1", "home_sidebar_recent_2", "home_sidebar_categories"];
+  for (let i = 0; i < legacySidebar.length && i < sidebarSlots.length; i++) {
+    await db.update(banners).set({ slot: sidebarSlots[i] }).where(eq(banners.id, legacySidebar[i].id));
+  }
 
-    if (config.distributeByOrder) {
-      // Distribute sidebar banners across multiple slots by order
-      for (let i = 0; i < legacyBanners.length && i < config.slots.length; i++) {
-        await db.update(banners).set({ slot: config.slots[i] }).where(eq(banners.id, legacyBanners[i].id));
-      }
-      // Delete excess banners that don't fit into slots
-      for (let i = config.slots.length; i < legacyBanners.length; i++) {
-        await db.delete(banners).where(eq(banners.id, legacyBanners[i].id));
-      }
-    } else {
-      // Move all to primary slot, delete extras
-      await db.update(banners).set({ slot: config.slots[0] }).where(eq(banners.slot, oldSlot));
-      const updated = await db.select().from(banners).where(eq(banners.slot, config.slots[0]));
-      if (updated.length > 1) {
-        const toDelete = updated.slice(1);
-        for (const b of toDelete) {
-          await db.delete(banners).where(eq(banners.id, b.id));
-        }
-      }
+  // Move horizontal to new slot
+  if (legacyHorizontal.length > 0) {
+    await db.update(banners).set({ slot: "home_horizontal" }).where(eq(banners.id, legacyHorizontal[0].id));
+  }
+
+  // Move academy_form to new slot
+  if (legacyAcademyForm.length > 0) {
+    await db.update(banners).set({ slot: "post_academy_form" }).where(eq(banners.id, legacyAcademyForm[0].id));
+  }
+
+  // academy_form_listing: migrate source to category_academy_form, duplicate to tag_academy_form
+  if (legacyAcademyFormListing.length > 0) {
+    const source = legacyAcademyFormListing[0];
+    await db.update(banners).set({ slot: "category_academy_form" }).where(eq(banners.id, source.id));
+    
+    const existingTag = allBanners.find(b => b.slot === "tag_academy_form");
+    if (!existingTag) {
+      const { id, ...rest } = source;
+      await db.insert(banners).values({ ...rest, slot: "tag_academy_form" });
     }
   }
 }
@@ -1873,7 +1873,7 @@ export async function registerRoutes(
   app.post("/api/admin/banners", isAuthenticated, async (req, res) => {
     try {
       const parsed = insertBannerSchema.parse(req.body);
-      const existing = await storage.getBanners(parsed.slot);
+      const existing = await storage.getBannersBySlot(parsed.slot);
       if (existing.length > 0) {
         return res.status(409).json({ message: `Cada slot pode ter no máximo um banner. O slot "${parsed.slot}" já possui um banner.` });
       }
@@ -1891,7 +1891,7 @@ export async function registerRoutes(
       if (!currentBanner) return res.status(404).json({ message: "Banner not found" });
       
       if (req.body.slot && req.body.slot !== currentBanner.slot) {
-        const existing = await storage.getBanners(req.body.slot);
+        const existing = await storage.getBannersBySlot(req.body.slot);
         if (existing.length > 0) {
           return res.status(409).json({ message: `Cada slot pode ter no máximo um banner. O slot "${req.body.slot}" já possui um banner.` });
         }

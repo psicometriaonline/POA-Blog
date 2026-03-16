@@ -895,6 +895,10 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(banners).orderBy(asc(banners.sortOrder));
   }
 
+  async getBannersBySlot(slot: string): Promise<Banner[]> {
+    return db.select().from(banners).where(eq(banners.slot, slot)).orderBy(asc(banners.sortOrder));
+  }
+
   async getBanner(id: number): Promise<Banner | undefined> {
     const [b] = await db.select().from(banners).where(eq(banners.id, id));
     return b;

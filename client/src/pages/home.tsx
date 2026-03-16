@@ -226,11 +226,12 @@ function SectionRecentPosts({ posts, banner1, banner2 }: { posts: PostWithRelati
   const mainPost = posts[0];
   const bottomPosts = posts.slice(1, 4);
   const mainDate = formatDate(mainPost.publishedAt);
+  const hasSidebar = banner1 || banner2;
 
   return (
     <section className="max-w-7xl mx-auto px-4 py-10" data-testid="section-recent-posts">
       <SectionTitle>Posts Recentes</SectionTitle>
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-stretch">
+      <div className={`grid ${hasSidebar ? "grid-cols-1 lg:grid-cols-[1fr_340px]" : "grid-cols-1"} gap-8 items-stretch`}>
         <div className="flex flex-col h-full">
           <Link href={`/${mainPost.slug}`} data-testid={`card-post-${mainPost.id}`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-0 cursor-pointer hover-elevate active-elevate-2 rounded-xl overflow-hidden shadow-sm border border-border/40">
@@ -283,88 +284,89 @@ function SectionRecentPosts({ posts, banner1, banner2 }: { posts: PostWithRelati
           </div>
         </div>
 
-        <div className="flex flex-col gap-6 h-full" data-testid="sidebar-banners">
-          {banner1 && (
-            <div className="flex-1 border-none p-0">
-              <a href={banner1.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner1.id}`}>
-                <div className="aspect-[1400/788] overflow-hidden rounded-xl shadow-md">
-                  <img src={banner1.imageUrl} alt={banner1.title} className="w-full h-full object-cover" loading="lazy" />
-                </div>
-              </a>
-              {(banner1.showTitle ?? true) && banner1.title && (
-                <div className="mt-3 px-1">
-                  <p 
-                    className={`text-muted-foreground line-clamp-2 mb-2 font-medium ${
-                      banner1.titleAlignment === 'center' ? 'text-center' : 
-                      banner1.titleAlignment === 'right' ? 'text-right' : 'text-left'
-                    }`}
-                    style={{ fontSize: `${banner1.titleFontSize || 14}px` }}
-                  >
-                    {banner1.title}
-                  </p>
-                  {banner1.showButton && banner1.linkUrl && (
-                    <div className={`flex ${
-                      banner1.buttonAlignment === 'center' ? 'justify-center' : 
-                      banner1.buttonAlignment === 'right' ? 'justify-end' : 'justify-start'
-                    }`}>
-                      <a href={banner1.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-banner-cta-${banner1.id}`}>
-                        <Button 
-                          size="sm" 
-                          className={`${banner1.buttonColor || "bg-[#31D5FF]"} text-[#000A24] hover:opacity-90 border-none h-auto py-2 px-4 font-bold rounded-sm shadow-sm`}
-                          style={{ fontSize: `${banner1.buttonFontSize || 12}px` }}
-                          data-testid={`button-banner-cta-${banner1.id}`}
-                        >
-                          {banner1.buttonText || "Saiba mais"}
-                        </Button>
-                      </a>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+        {hasSidebar && (
+          <div className="flex flex-col gap-6 h-full" data-testid="sidebar-banners">
+            {banner1 && (
+              <div className="flex-1 border-none p-0">
+                <a href={banner1.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner1.id}`}>
+                  <div className="aspect-[1400/788] overflow-hidden rounded-xl shadow-md">
+                    <img src={banner1.imageUrl} alt={banner1.title} className="w-full h-full object-cover" loading="lazy" />
+                  </div>
+                </a>
+                {(banner1.showTitle ?? true) && banner1.title && (
+                  <div className="mt-3 px-1">
+                    <p 
+                      className={`text-muted-foreground line-clamp-2 mb-2 font-medium ${
+                        banner1.titleAlignment === 'center' ? 'text-center' : 
+                        banner1.titleAlignment === 'right' ? 'text-right' : 'text-left'
+                      }`}
+                      style={{ fontSize: `${banner1.titleFontSize || 14}px` }}
+                    >
+                      {banner1.title}
+                    </p>
+                    {banner1.showButton && banner1.linkUrl && (
+                      <div className={`flex ${
+                        banner1.buttonAlignment === 'center' ? 'justify-center' : 
+                        banner1.buttonAlignment === 'right' ? 'justify-end' : 'justify-start'
+                      }`}>
+                        <a href={banner1.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-banner-cta-${banner1.id}`}>
+                          <Button 
+                            size="sm" 
+                            className={`${banner1.buttonColor || "bg-[#31D5FF]"} text-[#000A24] hover:opacity-90 border-none h-auto py-2 px-4 font-bold rounded-sm shadow-sm`}
+                            style={{ fontSize: `${banner1.buttonFontSize || 12}px` }}
+                            data-testid={`button-banner-cta-${banner1.id}`}
+                          >
+                            {banner1.buttonText || "Saiba mais"}
+                          </Button>
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
-          {banner2 && (
-            <div className="flex-1 border-none p-0">
-              <a href={banner2.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner2.id}`}>
-                <div className="aspect-[1400/788] overflow-hidden rounded-xl shadow-md">
-                  <img src={banner2.imageUrl} alt={banner2.title} className="w-full h-full object-cover" loading="lazy" />
-                </div>
-              </a>
-              {(banner2.showTitle ?? true) && banner2.title && (
-                <div className="mt-3 px-1">
-                  <p 
-                    className={`text-muted-foreground line-clamp-2 mb-2 font-medium ${
-                      banner2.titleAlignment === 'center' ? 'text-center' : 
-                      banner2.titleAlignment === 'right' ? 'text-right' : 'text-left'
-                    }`}
-                    style={{ fontSize: `${banner2.titleFontSize || 14}px` }}
-                  >
-                    {banner2.title}
-                  </p>
-                  {banner2.showButton && banner2.linkUrl && (
-                    <div className={`flex ${
-                      banner2.buttonAlignment === 'center' ? 'justify-center' : 
-                      banner2.buttonAlignment === 'right' ? 'justify-end' : 'justify-start'
-                    }`}>
-                      <a href={banner2.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-banner-cta-${banner2.id}`}>
-                        <Button 
-                          size="sm" 
-                          className={`${banner2.buttonColor || "bg-[#31D5FF]"} text-[#000A24] hover:opacity-90 border-none h-auto py-2 px-4 font-bold rounded-sm shadow-sm`}
-                          style={{ fontSize: `${banner2.buttonFontSize || 12}px` }}
-                          data-testid={`button-banner-cta-${banner2.id}`}
-                        >
-                          {banner2.buttonText || "Saiba mais"}
-                        </Button>
-                      </a>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-        </div>
+            {banner2 && (
+              <div className="flex-1 border-none p-0">
+                <a href={banner2.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner2.id}`}>
+                  <div className="aspect-[1400/788] overflow-hidden rounded-xl shadow-md">
+                    <img src={banner2.imageUrl} alt={banner2.title} className="w-full h-full object-cover" loading="lazy" />
+                  </div>
+                </a>
+                {(banner2.showTitle ?? true) && banner2.title && (
+                  <div className="mt-3 px-1">
+                    <p 
+                      className={`text-muted-foreground line-clamp-2 mb-2 font-medium ${
+                        banner2.titleAlignment === 'center' ? 'text-center' : 
+                        banner2.titleAlignment === 'right' ? 'text-right' : 'text-left'
+                      }`}
+                      style={{ fontSize: `${banner2.titleFontSize || 14}px` }}
+                    >
+                      {banner2.title}
+                    </p>
+                    {banner2.showButton && banner2.linkUrl && (
+                      <div className={`flex ${
+                        banner2.buttonAlignment === 'center' ? 'justify-center' : 
+                        banner2.buttonAlignment === 'right' ? 'justify-end' : 'justify-start'
+                      }`}>
+                        <a href={banner2.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-banner-cta-${banner2.id}`}>
+                          <Button 
+                            size="sm" 
+                            className={`${banner2.buttonColor || "bg-[#31D5FF]"} text-[#000A24] hover:opacity-90 border-none h-auto py-2 px-4 font-bold rounded-sm shadow-sm`}
+                            style={{ fontSize: `${banner2.buttonFontSize || 12}px` }}
+                            data-testid={`button-banner-cta-${banner2.id}`}
+                          >
+                            {banner2.buttonText || "Saiba mais"}
+                          </Button>
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );
