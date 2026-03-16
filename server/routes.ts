@@ -1516,7 +1516,10 @@ export async function registerRoutes(
   app.get("/api/admin/posts/export", isAuthenticated, async (req, res) => {
     try {
       const search = req.query.search as string | undefined;
-      const allPosts = await storage.getPosts({ limit: 5000, offset: 0, search });
+      const allPosts = await storage.getPosts({ limit: 100000, offset: 0 });
+      const filteredPosts = search 
+        ? allPosts.filter(p => p.title.toLowerCase().includes(search.toLowerCase()))
+        : allPosts;
 
       const internalDomains = ["blog.psicometriaonline.com.br", "www.blog.psicometriaonline.com.br", "blog-academy.replit.app"];
       const hrefRegex = /<a[^>]+href=["']([^"'#?]+)["'][^>]*>/gi;
@@ -1565,12 +1568,12 @@ export async function registerRoutes(
         return `"${str}"`;
       };
 
-      const rows = allPosts.map((p) => [
+      const rows = filteredPosts.map((p) => [
         escapeCSVField(p.title || ""),
         escapeCSVField(p.slug || ""),
         escapeCSVField(p.authorName || ""),
-        escapeCSVField(p.categories.map((c) => c.name).join(" | ")),
-        escapeCSVField(p.tags.map((t) => t.name).join(" | ")),
+        escapeCSVField(p.categories.map((c) => c.name).join(";")),
+        escapeCSVField(p.tags.map((t) => t.name).join(";")),
         escapeCSVField(p.publishedAt ? new Date(p.publishedAt).toLocaleDateString("pt-BR") : ""),
         escapeCSVField(p.status || ""),
         escapeCSVField(inboundMap[p.id] || 0),
