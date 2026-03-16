@@ -801,13 +801,14 @@ export class DatabaseStorage implements IStorage {
     const whereClause = and(...conditions);
     const daysDiff = Math.max(1, Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
 
+    const viewCountExpr = sql<number>`coalesce(count(${postViews.postId})::int, 0)`;
     const data = await db.select({
       postId: posts.id,
       title: posts.title,
       slug: posts.slug,
       authorName: authors.name,
       publishedAt: posts.publishedAt,
-      viewsInPeriod: sql<number>`coalesce(count(${postViews.postId})::int, 0)`,
+      viewsInPeriod: viewCountExpr,
       visitorsInPeriod: sql<number>`count(distinct ${postViews.visitorId})::int`,
       viewsTotal: posts.viewCount,
     })
@@ -820,7 +821,7 @@ export class DatabaseStorage implements IStorage {
       ))
       .where(whereClause)
       .groupBy(posts.id, posts.title, posts.slug, posts.publishedAt, posts.viewCount, authors.name)
-      .orderBy(sortDir === 'desc' ? desc(sql<number>`coalesce(count(${postViews.postId})::int, 0)`) : asc(sql<number>`coalesce(count(${postViews.postId})::int, 0)`)) as any;
+      .orderBy(sortDir === 'desc' ? desc(viewCountExpr) : asc(viewCountExpr));
 
     const postIds = data.map(d => d.postId);
     let topReferrerMap: Record<number, string> = {};
