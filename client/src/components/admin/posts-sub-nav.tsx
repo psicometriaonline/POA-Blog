@@ -48,13 +48,13 @@ export function PostsSubNav({ activePage, showActionButtons = true }: PostsSubNa
             </Button>
           </Link>
           <Link href="/admin/metricas">
-            <Button variant="outline" data-testid="button-analytics">
+            <Button variant={activePage === "metricas" ? "default" : "outline"} data-testid="button-analytics">
               <BarChart3 className="h-4 w-4 mr-1" />
               Métricas
             </Button>
           </Link>
           <Link href="/admin/comentarios">
-            <Button variant="outline" data-testid="button-comments">
+            <Button variant={activePage === "comentarios" ? "default" : "outline"} data-testid="button-comments">
               <MessageSquare className="h-4 w-4 mr-1" />
               Comentários
             </Button>
