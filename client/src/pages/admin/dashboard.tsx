@@ -113,13 +113,21 @@ function LinkCountPopover({ postId, count, type, colorClass }: { postId: number;
 
 function PostsTab({ user }: { user: any }) {
   const { toast } = useToast();
+  const searchString = useSearch();
+  const urlParams = new URLSearchParams(searchString);
+  const subFromUrl = urlParams.get("sub") || "posts";
+
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const [sortBy, setSortBy] = useState<SortField | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-  const [subTab, setSubTab] = useState("posts");
+  const [subTab, setSubTab] = useState(subFromUrl);
   const [previewPostSlug, setPreviewPostSlug] = useState<string>("");
+
+  useEffect(() => {
+    setSubTab(subFromUrl);
+  }, [subFromUrl]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
