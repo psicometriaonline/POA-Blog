@@ -229,8 +229,9 @@ function PostsTab({ user }: { user: any }) {
               download
               data-testid="button-export-posts"
             >
-              <Button variant="outline" size="icon" title="Exportar posts como CSV">
-                <Download className="h-4 w-4" />
+              <Button variant="outline" title="Exportar posts como CSV">
+                <Download className="h-4 w-4 mr-1" />
+                Exportar
               </Button>
             </a>
           </div>
