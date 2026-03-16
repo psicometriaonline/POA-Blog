@@ -1562,7 +1562,7 @@ export async function registerRoutes(
       const escapeCSVField = (value: string | number | null | undefined): string => {
         if (value === null || value === undefined) return '""';
         const str = String(value);
-        if (str.includes('"') || str.includes(',') || str.includes('\n') || str.includes('\r')) {
+        if (str.includes('"') || str.includes(';') || str.includes('\n') || str.includes('\r')) {
           return `"${str.replace(/"/g, '""')}"`;
         }
         return `"${str}"`;
@@ -1572,8 +1572,8 @@ export async function registerRoutes(
         escapeCSVField(p.title || ""),
         escapeCSVField(p.slug || ""),
         escapeCSVField(p.authorName || ""),
-        escapeCSVField(p.categories.map((c) => c.name).join(";")),
-        escapeCSVField(p.tags.map((t) => t.name).join(";")),
+        escapeCSVField(p.categories.map((c) => c.name).join(" | ")),
+        escapeCSVField(p.tags.map((t) => t.name).join(" | ")),
         escapeCSVField(p.publishedAt ? new Date(p.publishedAt).toLocaleDateString("pt-BR") : ""),
         escapeCSVField(p.status || ""),
         escapeCSVField(inboundMap[p.id] || 0),
@@ -1582,8 +1582,8 @@ export async function registerRoutes(
 
       const csv =
         "\uFEFF" +
-        "Título,Slug,Autor,Categorias,Tags,Data de Publicação,Status,Links Recebidos,Links Enviados\n" +
-        rows.map((r) => r.join(",")).join("\n");
+        "Título;Slug;Autor;Categorias;Tags;Data de Publicação;Status;Links Recebidos;Links Enviados\n" +
+        rows.map((r) => r.join(";")).join("\n");
 
       const now = new Date();
       const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
