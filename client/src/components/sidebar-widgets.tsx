@@ -44,15 +44,11 @@ export function SidebarAcademyForm({ slot = "post_academy_form" }: { slot?: stri
         <h3 className="font-bold text-lg leading-tight" data-testid="text-sidebar-academy-title">{title}</h3>
         <p className="text-xs text-muted-foreground mt-1" data-testid="text-sidebar-academy-description">{description}</p>
       </div>
-      <div className="space-y-3">
-        <Input placeholder="Seu nome" className="text-sm" data-testid="input-sidebar-academy-name" />
-        <Input type="email" placeholder="Seu melhor e-mail" className="text-sm" data-testid="input-sidebar-academy-email" />
-        <a href={linkUrl} target="_blank" rel="noopener noreferrer" data-testid="link-sidebar-academy-signup">
-          <Button className="w-full bg-accent-bright text-accent-bright-foreground" data-testid="button-sidebar-academy-signup">
-            {buttonText}
-          </Button>
-        </a>
-      </div>
+      <a href={linkUrl} target="_blank" rel="noopener noreferrer" data-testid="link-sidebar-academy-signup">
+        <Button className="w-full bg-accent-bright text-accent-bright-foreground" data-testid="button-sidebar-academy-signup">
+          {buttonText}
+        </Button>
+      </a>
     </Card>
   );
 }
