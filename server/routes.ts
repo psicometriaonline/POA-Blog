@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema, insertMediaSchema, postCategories, postTags, posts, comments, banners } from "@shared/schema";
+import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema, insertMediaSchema, postCategories, postTags, posts, comments, banners, siteSettings } from "@shared/schema";
 import { eq, and, lte, sql } from "drizzle-orm";
 import { db } from "./db";
 import { crawlMultipleUrls } from "./crawler";
@@ -47,42 +47,56 @@ function slugify(text: string): string {
 }
 
 async function migrateBannerSlots() {
-  const allBanners = await db.select().from(banners);
-  const hasLegacySlots = allBanners.some(b => ["sidebar", "horizontal", "academy_form", "academy_form_listing"].includes(b.slot));
-  
-  if (!hasLegacySlots) return;
-
-  const legacySidebar = allBanners.filter(b => b.slot === "sidebar").sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || a.id - b.id);
-  const legacyHorizontal = allBanners.filter(b => b.slot === "horizontal").slice(0, 1);
-  const legacyAcademyForm = allBanners.filter(b => b.slot === "academy_form").slice(0, 1);
-  const legacyAcademyFormListing = allBanners.filter(b => b.slot === "academy_form_listing").slice(0, 1);
-
-  // Distribute sidebar banners across 3 slots by order (no deletion - preserve data)
-  const sidebarSlots = ["home_sidebar_recent_1", "home_sidebar_recent_2", "home_sidebar_categories"];
-  for (let i = 0; i < legacySidebar.length && i < sidebarSlots.length; i++) {
-    await db.update(banners).set({ slot: sidebarSlots[i] }).where(eq(banners.id, legacySidebar[i].id));
-  }
-
-  // Move horizontal to new slot
-  if (legacyHorizontal.length > 0) {
-    await db.update(banners).set({ slot: "home_horizontal" }).where(eq(banners.id, legacyHorizontal[0].id));
-  }
-
-  // Move academy_form to new slot
-  if (legacyAcademyForm.length > 0) {
-    await db.update(banners).set({ slot: "post_academy_form" }).where(eq(banners.id, legacyAcademyForm[0].id));
-  }
-
-  // academy_form_listing: migrate source to category_academy_form, duplicate to tag_academy_form
-  if (legacyAcademyFormListing.length > 0) {
-    const source = legacyAcademyFormListing[0];
-    await db.update(banners).set({ slot: "category_academy_form" }).where(eq(banners.id, source.id));
+  try {
+    // Check if migration has already completed
+    const migrationFlag = await db.select().from(siteSettings).where(eq(siteSettings.key, "banner_slots_migrated"));
+    if (migrationFlag.length > 0) return; // Already migrated, skip
     
-    const existingTag = allBanners.find(b => b.slot === "tag_academy_form");
-    if (!existingTag) {
-      const { id, ...rest } = source;
-      await db.insert(banners).values({ ...rest, slot: "tag_academy_form" });
+    const allBanners = await db.select().from(banners);
+    const hasLegacySlots = allBanners.some(b => ["sidebar", "horizontal", "academy_form", "academy_form_listing"].includes(b.slot));
+    
+    if (!hasLegacySlots) {
+      await db.insert(siteSettings).values({ key: "banner_slots_migrated", value: "true" }).onConflictDoUpdate({ target: siteSettings.key, set: { value: "true" } });
+      return;
     }
+
+    const legacySidebar = allBanners.filter(b => b.slot === "sidebar").sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || a.id - b.id);
+    const legacyHorizontal = allBanners.filter(b => b.slot === "horizontal").slice(0, 1);
+    const legacyAcademyForm = allBanners.filter(b => b.slot === "academy_form").slice(0, 1);
+    const legacyAcademyFormListing = allBanners.filter(b => b.slot === "academy_form_listing").slice(0, 1);
+
+    // Distribute sidebar banners across 3 slots by order (deterministic, one-shot)
+    const sidebarSlots = ["home_sidebar_recent_1", "home_sidebar_recent_2", "home_sidebar_categories"];
+    for (let i = 0; i < legacySidebar.length && i < sidebarSlots.length; i++) {
+      await db.update(banners).set({ slot: sidebarSlots[i] }).where(eq(banners.id, legacySidebar[i].id));
+    }
+
+    // Move horizontal to new slot
+    if (legacyHorizontal.length > 0) {
+      await db.update(banners).set({ slot: "home_horizontal" }).where(eq(banners.id, legacyHorizontal[0].id));
+    }
+
+    // Move academy_form to new slot
+    if (legacyAcademyForm.length > 0) {
+      await db.update(banners).set({ slot: "post_academy_form" }).where(eq(banners.id, legacyAcademyForm[0].id));
+    }
+
+    // academy_form_listing: migrate source to category_academy_form, duplicate to tag_academy_form
+    if (legacyAcademyFormListing.length > 0) {
+      const source = legacyAcademyFormListing[0];
+      await db.update(banners).set({ slot: "category_academy_form" }).where(eq(banners.id, source.id));
+      
+      const existingTag = allBanners.find(b => b.slot === "tag_academy_form");
+      if (!existingTag) {
+        const { id, ...rest } = source;
+        await db.insert(banners).values({ ...rest, slot: "tag_academy_form" });
+      }
+    }
+
+    // Mark migration as complete
+    await db.insert(siteSettings).values({ key: "banner_slots_migrated", value: "true" }).onConflictDoUpdate({ target: siteSettings.key, set: { value: "true" } });
+  } catch (err) {
+    console.error("Banner slot migration error:", err);
   }
 }
 
