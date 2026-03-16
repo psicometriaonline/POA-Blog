@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema, insertMediaSchema, postCategories, postTags, posts, comments } from "@shared/schema";
+import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema, insertMediaSchema, postCategories, postTags, posts, comments, banners } from "@shared/schema";
 import { eq, and, lte, sql } from "drizzle-orm";
 import { db } from "./db";
 import { crawlMultipleUrls } from "./crawler";
@@ -46,12 +46,44 @@ function slugify(text: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+async function migrateBannerSlots() {
+  const allBanners = await db.select().from(banners);
+  const existingSlots = new Set(allBanners.map(b => b.slot));
+
+  const DUPLICATE_MAP: Record<string, string[]> = {
+    sidebar: ["home_sidebar_recent_1", "post_sidebar"],
+    horizontal: ["home_horizontal"],
+    academy_form: ["post_academy_form"],
+    academy_form_listing: ["category_academy_form", "tag_academy_form"],
+  };
+
+  for (const [oldSlot, newSlots] of Object.entries(DUPLICATE_MAP)) {
+    const legacyBanners = allBanners.filter(b => b.slot === oldSlot);
+    if (legacyBanners.length === 0) continue;
+
+    const primarySlot = newSlots[0];
+    for (const b of legacyBanners) {
+      await db.update(banners).set({ slot: primarySlot }).where(eq(banners.id, b.id));
+    }
+
+    for (const extraSlot of newSlots.slice(1)) {
+      if (!existingSlots.has(extraSlot)) {
+        const source = legacyBanners[0];
+        const { id, ...rest } = source;
+        await db.insert(banners).values({ ...rest, slot: extraSlot });
+      }
+    }
+  }
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  await migrateBannerSlots();
 
   setInterval(async () => {
     try {

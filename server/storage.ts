@@ -959,8 +959,10 @@ export class DatabaseStorage implements IStorage {
 
     const recentPosts = await this.getPosts({ status: "published", limit: 4 });
 
-    const sidebarBanners = await this.getBanners("sidebar");
-    const horizontalBanners = await this.getBanners("horizontal");
+    const [sidebarBanner1] = await this.getBanners("home_sidebar_recent_1");
+    const [sidebarBanner2] = await this.getBanners("home_sidebar_recent_2");
+    const [sidebarBannerCategories] = await this.getBanners("home_sidebar_categories");
+    const horizontalBanners = await this.getBanners("home_horizontal");
 
     const featuredCategorySlug = settings["featured_category_slug"] || "";
     let featuredCategoryPosts: PostWithRelations[] = [];
@@ -1014,7 +1016,9 @@ export class DatabaseStorage implements IStorage {
       settings,
       categories: allCategories,
       recentPosts,
-      sidebarBanners,
+      sidebarBanner1: sidebarBanner1 || null,
+      sidebarBanner2: sidebarBanner2 || null,
+      sidebarBannerCategories: sidebarBannerCategories || null,
       horizontalBanners,
       featuredCategory: featuredCategory || null,
       featuredCategoryPosts,

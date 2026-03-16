@@ -105,7 +105,7 @@ export default function CategoryPage() {
 
         <aside>
           <div className="sticky top-24 space-y-6">
-            <SidebarAcademyForm slot="academy_form_listing" />
+            <SidebarAcademyForm slot="category_academy_form" />
             <SidebarMostRead limit={5} />
           </div>
         </aside>

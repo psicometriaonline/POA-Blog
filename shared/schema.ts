@@ -80,6 +80,17 @@ export const postTagsRelations = relations(postTags, ({ one }) => ({
   tag: one(tags, { fields: [postTags.tagId], references: [tags.id] }),
 }));
 
+export const BANNER_SLOTS: Record<string, string> = {
+  home_sidebar_recent_1: "Home — Sidebar Posts Recentes (1)",
+  home_sidebar_recent_2: "Home — Sidebar Posts Recentes (2)",
+  home_sidebar_categories: "Home — Sidebar Categorias",
+  home_horizontal: "Home — Banner Horizontal",
+  post_sidebar: "Post — Sidebar",
+  post_academy_form: "Post — Academy Form",
+  category_academy_form: "Categorias — Academy Form",
+  tag_academy_form: "Tags — Academy Form",
+};
+
 export const banners = pgTable("banners", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   title: text("title").notNull(),

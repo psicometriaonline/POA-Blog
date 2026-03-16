@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import { BANNER_SLOTS } from "@shared/schema";
 import type { Category, Banner, FreeMaterial } from "@shared/schema";
 import { MediaLibraryModal } from "@/components/media-library-modal";
 
@@ -777,7 +778,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
   const [bannerDescription, setBannerDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
-  const [slot, setSlot] = useState("sidebar");
+  const [slot, setSlot] = useState("home_sidebar_recent_1");
   const [buttonText, setButtonText] = useState("Saiba mais");
   const [buttonColor, setButtonColor] = useState("bg-[#31D5FF]");
   const [buttonAlignment, setButtonAlignment] = useState("left");
@@ -796,7 +797,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
     setBannerDescription("");
     setImageUrl("");
     setLinkUrl("");
-    setSlot("sidebar");
+    setSlot("home_sidebar_recent_1");
     setButtonText("Saiba mais");
     setButtonColor("bg-[#31D5FF]");
     setButtonAlignment("left");
@@ -836,9 +837,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/banners"] });
       queryClient.invalidateQueries({ queryKey: ["/api/home"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/banners?slot=academy_form"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/banners?slot=academy_form_listing"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/banners?slot=sidebar"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/banners"] });
       resetForm();
       toast({ title: editingBanner ? "Banner atualizado" : "Banner criado" });
     },
@@ -874,6 +873,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/banners"] });
       queryClient.invalidateQueries({ queryKey: ["/api/home"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/banners"] });
       toast({ title: "Banner removido" });
     },
   });
@@ -907,10 +907,9 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="sidebar">Sidebar</SelectItem>
-                <SelectItem value="horizontal">Horizontal</SelectItem>
-                <SelectItem value="academy_form">Academy Form (Posts)</SelectItem>
-                <SelectItem value="academy_form_listing">Academy Form (Categorias/Tags)</SelectItem>
+                {Object.entries(BANNER_SLOTS).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -1078,10 +1077,19 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{banner.title}</p>
-                  <p className="text-xs text-muted-foreground">Local: {banner.slot}</p>
+                  <p className="text-xs text-muted-foreground">Local: {BANNER_SLOTS[banner.slot] || banner.slot}</p>
                   {banner.linkUrl && <p className="text-xs text-muted-foreground truncate">Link: {banner.linkUrl}</p>}
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={banner.isActive}
+                    onCheckedChange={async (checked) => {
+                      await apiRequest("PUT", `/api/admin/banners/${banner.id}`, { ...banner, isActive: checked });
+                      queryClient.invalidateQueries({ queryKey: ["/api/admin/banners"] });
+                      queryClient.invalidateQueries({ queryKey: ["/api/home"] });
+                    }}
+                    data-testid={`switch-banner-active-${banner.id}`}
+                  />
                   <Button
                     variant="ghost"
                     size="icon"

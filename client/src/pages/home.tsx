@@ -36,7 +36,9 @@ interface HomeData {
   settings: Record<string, string>;
   categories: Category[];
   recentPosts: PostWithRelations[];
-  sidebarBanners: Banner[];
+  sidebarBanner1: Banner | null;
+  sidebarBanner2: Banner | null;
+  sidebarBannerCategories: Banner | null;
   horizontalBanners: Banner[];
   featuredCategory: Category | null;
   featuredCategoryPosts: PostWithRelations[];
@@ -219,14 +221,11 @@ function BannerHorizontal({ banner }: { banner: Banner }) {
   );
 }
 
-function SectionRecentPosts({ posts, sidebarBanners }: { posts: PostWithRelations[]; sidebarBanners: Banner[] }) {
+function SectionRecentPosts({ posts, banner1, banner2 }: { posts: PostWithRelations[]; banner1: Banner | null; banner2: Banner | null }) {
   if (posts.length === 0) return null;
   const mainPost = posts[0];
   const bottomPosts = posts.slice(1, 4);
   const mainDate = formatDate(mainPost.publishedAt);
-
-  const banner1 = sidebarBanners[0] || null;
-  const banner2 = sidebarBanners[1] || null;
 
   return (
     <section className="max-w-7xl mx-auto px-4 py-10" data-testid="section-recent-posts">
@@ -479,8 +478,7 @@ function SectionNewsletter({ settings }: { settings: Record<string, string> }) {
   );
 }
 
-function SectionMostReadAndCategories({ mostRead, categories: cats, sidebarBanners }: { mostRead: PostWithRelations[]; categories: Category[]; sidebarBanners: Banner[] }) {
-  const belowCatBanner = sidebarBanners[2] || null;
+function SectionMostReadAndCategories({ mostRead, categories: cats, sidebarBannerCategories }: { mostRead: PostWithRelations[]; categories: Category[]; sidebarBannerCategories: Banner | null }) {
   return (
     <section className="max-w-7xl mx-auto px-4 py-10" data-testid="section-most-read">
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
@@ -506,10 +504,10 @@ function SectionMostReadAndCategories({ mostRead, categories: cats, sidebarBanne
               ))}
             </div>
           </div>
-          {belowCatBanner && (
-            <a href={belowCatBanner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-below-categories-${belowCatBanner.id}`}>
+          {sidebarBannerCategories && (
+            <a href={sidebarBannerCategories.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-below-categories-${sidebarBannerCategories.id}`}>
               <div className="overflow-hidden rounded-xl shadow-md">
-                <img src={belowCatBanner.imageUrl} alt={belowCatBanner.title} className="w-full h-auto object-cover" loading="lazy" />
+                <img src={sidebarBannerCategories.imageUrl} alt={sidebarBannerCategories.title} className="w-full h-auto object-cover" loading="lazy" />
               </div>
             </a>
           )}
@@ -622,7 +620,7 @@ export default function Home() {
       {/* HeroBar is rendered in App.tsx shared layout */}
 
       {/* 2. Recent posts (main + sidebar) with sidebar banners on the right */}
-      <SectionRecentPosts posts={data.recentPosts} sidebarBanners={data.sidebarBanners} />
+      <SectionRecentPosts posts={data.recentPosts} banner1={data.sidebarBanner1} banner2={data.sidebarBanner2} />
 
       {/* 3. Horizontal banner (full width) */}
       <SectionHorizontalBanner banners={data.horizontalBanners} />
@@ -634,7 +632,7 @@ export default function Home() {
       <SectionNewsletter settings={data.settings} />
 
       {/* 6. Most read + categories sidebar */}
-      <SectionMostReadAndCategories mostRead={data.mostRead} categories={data.categories} sidebarBanners={data.sidebarBanners} />
+      <SectionMostReadAndCategories mostRead={data.mostRead} categories={data.categories} sidebarBannerCategories={data.sidebarBannerCategories} />
 
       {/* 7. Diverse categories (3 columns) */}
       <SectionDiverseCategories sections={data.diverseSections} />

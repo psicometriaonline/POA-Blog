@@ -15,7 +15,7 @@ function formatDate(date: string | Date | null) {
   return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
 }
 
-export function SidebarAcademyForm({ slot = "academy_form" }: { slot?: string }) {
+export function SidebarAcademyForm({ slot = "post_academy_form" }: { slot?: string }) {
   const { data: banners } = useQuery<Banner[]>({
     queryKey: [`/api/banners?slot=${slot}`],
   });

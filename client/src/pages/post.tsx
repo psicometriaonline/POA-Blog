@@ -665,7 +665,7 @@ function TableOfContents({ contentRef, postId }: { contentRef: React.RefObject<H
 
 function SidebarBanner() {
   const { data: banners } = useQuery<Banner[]>({
-    queryKey: ["/api/banners?slot=sidebar"],
+    queryKey: ["/api/banners?slot=post_sidebar"],
   });
   const banner = (banners || []).sort((a, b) => a.sortOrder - b.sortOrder)[0];
   if (!banner) return null;
@@ -745,7 +745,7 @@ function SuggestedPosts({ postId }: { postId: number }) {
 
 function AcademyForm() {
   const { data: banners } = useQuery<Banner[]>({
-    queryKey: ["/api/banners?slot=academy_form"],
+    queryKey: ["/api/banners?slot=post_academy_form"],
   });
   const banner = (banners || []).sort((a, b) => a.sortOrder - b.sortOrder)[0];
 
