@@ -827,8 +827,8 @@ export class DatabaseStorage implements IStorage {
     
     if (postIds.length > 0) {
       const referrers = await db.select({
-        postId: sql<number>`split_part(referrer_source, '::', 1)::int`,
-        source: sql<string>`split_part(referrer_source, '::', 2)`,
+        postId: postViews.postId,
+        referrer: postViews.referrer,
         count: sql<number>`count(*)::int`,
       })
         .from(postViews)
@@ -836,14 +836,14 @@ export class DatabaseStorage implements IStorage {
           inArray(postViews.postId, postIds),
           gte(postViews.viewedAt, startDate),
           lte(postViews.viewedAt, endDate),
-          sql`referrer_source is not null and referrer_source != ''`
+          sql`${postViews.referrer} is not null and ${postViews.referrer} != ''`
         ))
-        .groupBy(sql<number>`split_part(referrer_source, '::', 1)::int`, sql<string>`split_part(referrer_source, '::', 2)`)
-        .orderBy(desc(sql<number>`count(*)::int`));
+        .groupBy(postViews.postId, postViews.referrer)
+        .orderBy(postViews.postId, desc(sql<number>`count(*)::int`));
 
       for (const ref of referrers) {
         if (!topReferrerMap[ref.postId]) {
-          topReferrerMap[ref.postId] = ref.source || '';
+          topReferrerMap[ref.postId] = ref.referrer || '';
         }
       }
     }
