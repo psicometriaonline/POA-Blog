@@ -452,6 +452,13 @@ function PostsTab({ user }: { user: any }) {
 
 function CategoriesTab({ settings, categories }: { settings: Record<string, string>; categories: Category[] }) {
   const [subTab, setSubTab] = useState("manage");
+  const [previewCategorySlug, setPreviewCategorySlug] = useState<string>("");
+
+  useEffect(() => {
+    if (!previewCategorySlug && categories.length > 0) {
+      setPreviewCategorySlug(categories[0].slug);
+    }
+  }, [categories, previewCategorySlug]);
 
   return (
     <Tabs value={subTab} onValueChange={setSubTab}>
@@ -459,6 +466,10 @@ function CategoriesTab({ settings, categories }: { settings: Record<string, stri
         <TabsList data-testid="tabs-categories-sub">
           <TabsTrigger value="manage" data-testid="tab-categories-manage">Gerenciar</TabsTrigger>
           <TabsTrigger value="settings" data-testid="tab-categories-settings">Configurações da Página</TabsTrigger>
+          <TabsTrigger value="preview" data-testid="tab-categories-preview">
+            <Eye className="h-3.5 w-3.5 mr-1" />
+            Preview
+          </TabsTrigger>
         </TabsList>
       </div>
 
@@ -468,6 +479,17 @@ function CategoriesTab({ settings, categories }: { settings: Record<string, stri
 
       <TabsContent value="settings" className="mt-0">
         <CategoryPageTab settings={settings} categories={categories} />
+      </TabsContent>
+
+      <TabsContent value="preview" className="mt-0">
+        <PagePreview
+          path={previewCategorySlug ? `/categoria/${previewCategorySlug}` : "/"}
+          label="Preview da Página de Categorias"
+          selector={previewCategorySlug}
+          selectorLabel="Categoria"
+          selectorItems={categories.map(c => ({ value: c.slug, label: c.name }))}
+          onSelectorChange={setPreviewCategorySlug}
+        />
       </TabsContent>
     </Tabs>
   );
