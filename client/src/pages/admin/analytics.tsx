@@ -487,8 +487,8 @@ export default function AnalyticsPage() {
               size="sm"
               onClick={() => {
                 const params = new URLSearchParams({
-                  start: start.toISOString().split('T')[0],
-                  end: end.toISOString().split('T')[0],
+                  start: start.toISOString(),
+                  end: end.toISOString(),
                   sort: sortDir,
                   ...(searchText && { search: searchText }),
                   ...(filterCategoryId && { categoryId: filterCategoryId }),
