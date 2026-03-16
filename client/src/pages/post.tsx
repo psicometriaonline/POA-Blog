@@ -749,31 +749,29 @@ function AcademyForm() {
   });
   const banner = (banners || []).sort((a, b) => a.sortOrder - b.sortOrder)[0];
 
-  const title = banner?.title || "Psicometria Online Academy";
-  const description = banner?.description || "Estamos formando os pesquisadores mais competentes do país. Seja um deles.";
-  const buttonText = banner?.buttonText || "Saiba mais";
-  const linkUrl = banner?.linkUrl || "https://www.academy.psicometriaonline.com.br/blog";
-  const imageUrl = banner?.imageUrl;
+  if (!banner) return null;
 
   return (
     <Card className="p-5 bg-primary/5 border-primary/20" data-testid="card-academy-form">
-      {imageUrl && (
+      {banner.imageUrl && (
         <div className="aspect-[1400/788] overflow-hidden rounded-md mb-4">
           <img
-            src={imageUrl}
-            alt={title}
+            src={banner.imageUrl}
+            alt={banner.title}
             className="w-full h-full object-cover"
             loading="lazy"
           />
         </div>
       )}
       <div className="text-center mb-4">
-        <h3 className="font-bold text-lg leading-tight" data-testid="text-academy-title">{title}</h3>
-        <p className="text-xs text-muted-foreground mt-1" data-testid="text-academy-description">{description}</p>
+        <h3 className="font-bold text-lg leading-tight" data-testid="text-academy-title">{banner.title}</h3>
+        {banner.description && (
+          <p className="text-xs text-muted-foreground mt-1" data-testid="text-academy-description">{banner.description}</p>
+        )}
       </div>
-      <a href={linkUrl} target="_blank" rel="noopener noreferrer">
+      <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer">
         <Button className="w-full bg-accent-bright text-accent-bright-foreground hover:bg-accent-bright/90" data-testid="button-academy-signup">
-          {buttonText}
+          {banner.buttonText || "Saiba mais"}
         </Button>
       </a>
     </Card>

@@ -364,11 +364,6 @@ function SectionRecentPosts({ posts, banner1, banner2 }: { posts: PostWithRelati
             </div>
           )}
 
-          {!banner1 && !banner2 && (
-            <div className="aspect-[1400/788] rounded-md border p-4 flex items-center justify-center">
-              <p className="text-sm text-muted-foreground">Espaço para banner</p>
-            </div>
-          )}
         </div>
       </div>
     </section>

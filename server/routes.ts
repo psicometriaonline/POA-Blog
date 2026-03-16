@@ -48,29 +48,39 @@ function slugify(text: string): string {
 
 async function migrateBannerSlots() {
   const allBanners = await db.select().from(banners);
-  const existingSlots = new Set(allBanners.map(b => b.slot));
+  const hasLegacySlots = allBanners.some(b => ["sidebar", "horizontal", "academy_form", "academy_form_listing"].includes(b.slot));
+  
+  if (!hasLegacySlots) return;
 
-  const DUPLICATE_MAP: Record<string, string[]> = {
-    sidebar: ["home_sidebar_recent_1", "post_sidebar"],
-    horizontal: ["home_horizontal"],
-    academy_form: ["post_academy_form"],
-    academy_form_listing: ["category_academy_form", "tag_academy_form"],
+  const MIGRATION_MAP: Record<string, { slots: string[]; distributeByOrder: boolean }> = {
+    sidebar: { slots: ["home_sidebar_recent_1", "home_sidebar_recent_2", "home_sidebar_categories"], distributeByOrder: true },
+    horizontal: { slots: ["home_horizontal"], distributeByOrder: false },
+    academy_form: { slots: ["post_academy_form"], distributeByOrder: false },
+    academy_form_listing: { slots: ["category_academy_form", "tag_academy_form"], distributeByOrder: false },
   };
 
-  for (const [oldSlot, newSlots] of Object.entries(DUPLICATE_MAP)) {
-    const legacyBanners = allBanners.filter(b => b.slot === oldSlot);
+  for (const [oldSlot, config] of Object.entries(MIGRATION_MAP)) {
+    const legacyBanners = allBanners.filter(b => b.slot === oldSlot).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || a.id - b.id);
     if (legacyBanners.length === 0) continue;
 
-    const primarySlot = newSlots[0];
-    for (const b of legacyBanners) {
-      await db.update(banners).set({ slot: primarySlot }).where(eq(banners.id, b.id));
-    }
-
-    for (const extraSlot of newSlots.slice(1)) {
-      if (!existingSlots.has(extraSlot)) {
-        const source = legacyBanners[0];
-        const { id, ...rest } = source;
-        await db.insert(banners).values({ ...rest, slot: extraSlot });
+    if (config.distributeByOrder) {
+      // Distribute sidebar banners across multiple slots by order
+      for (let i = 0; i < legacyBanners.length && i < config.slots.length; i++) {
+        await db.update(banners).set({ slot: config.slots[i] }).where(eq(banners.id, legacyBanners[i].id));
+      }
+      // Delete excess banners that don't fit into slots
+      for (let i = config.slots.length; i < legacyBanners.length; i++) {
+        await db.delete(banners).where(eq(banners.id, legacyBanners[i].id));
+      }
+    } else {
+      // Move all to primary slot, delete extras
+      await db.update(banners).set({ slot: config.slots[0] }).where(eq(banners.slot, oldSlot));
+      const updated = await db.select().from(banners).where(eq(banners.slot, config.slots[0]));
+      if (updated.length > 1) {
+        const toDelete = updated.slice(1);
+        for (const b of toDelete) {
+          await db.delete(banners).where(eq(banners.id, b.id));
+        }
       }
     }
   }
@@ -1863,6 +1873,10 @@ export async function registerRoutes(
   app.post("/api/admin/banners", isAuthenticated, async (req, res) => {
     try {
       const parsed = insertBannerSchema.parse(req.body);
+      const existing = await storage.getBanners(parsed.slot);
+      if (existing.length > 0) {
+        return res.status(409).json({ message: `Cada slot pode ter no máximo um banner. O slot "${parsed.slot}" já possui um banner.` });
+      }
       const b = await storage.createBanner(parsed);
       res.status(201).json(b);
     } catch (error: any) {
@@ -1872,7 +1886,18 @@ export async function registerRoutes(
 
   app.put("/api/admin/banners/:id", isAuthenticated, async (req, res) => {
     try {
-      const b = await storage.updateBanner(parseInt(req.params.id), req.body);
+      const bannerId = parseInt(req.params.id);
+      const currentBanner = await storage.getBanner(bannerId);
+      if (!currentBanner) return res.status(404).json({ message: "Banner not found" });
+      
+      if (req.body.slot && req.body.slot !== currentBanner.slot) {
+        const existing = await storage.getBanners(req.body.slot);
+        if (existing.length > 0) {
+          return res.status(409).json({ message: `Cada slot pode ter no máximo um banner. O slot "${req.body.slot}" já possui um banner.` });
+        }
+      }
+      
+      const b = await storage.updateBanner(bannerId, req.body);
       if (!b) return res.status(404).json({ message: "Banner not found" });
       res.json(b);
     } catch (error: any) {
