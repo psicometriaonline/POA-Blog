@@ -16,7 +16,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { HomePageTab, CategoryPageTab, TagPageTab } from "./home-settings";
+import { HomePageTab, CategoryPageTab, TagPageTab, FilteredBannersTab } from "./home-settings";
 import { CategoriesManagerContent } from "./manage-categories";
 import { TagsManagerContent } from "./manage-tags";
 import { ContainersContent } from "./containers";
@@ -179,6 +179,10 @@ function PostsTab({ user }: { user: any }) {
     setPage(0);
   };
 
+  const bannerQuery = useQuery<Banner[]>({
+    queryKey: ["/api/admin/banners"],
+  });
+
   const handleDeletePost = async (id: number) => {
     try {
       await apiRequest("DELETE", `/api/admin/posts/${id}`);
@@ -210,8 +214,17 @@ function PostsTab({ user }: { user: any }) {
 
   return (
     <div className="space-y-6">
-      <PostsSubNav activePage={subTab as "posts" | "containers" | "import" | "preview"} />
+      <PostsSubNav activePage={subTab as "posts" | "containers" | "import" | "banners" | "preview"} />
       <Tabs value={subTab} onValueChange={setSubTab}>
+        <TabsContent value="banners" className="mt-0">
+          <FilteredBannersTab 
+            banners={bannerQuery.data || []} 
+            isLoading={bannerQuery.isLoading} 
+            slots={["post_sidebar", "post_academy_form"]}
+            defaultSlot="post_sidebar"
+          />
+        </TabsContent>
+
         <TabsContent value="posts" className="mt-0">
           <div className="flex items-center gap-2 mb-4">
             <div className="relative flex-1 min-w-[200px]">
@@ -466,6 +479,7 @@ function CategoriesTab({ settings, categories }: { settings: Record<string, stri
       <div className="sticky top-[var(--admin-subheader-top)] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3">
         <TabsList data-testid="tabs-categories-sub">
           <TabsTrigger value="manage" data-testid="tab-categories-manage">Gerenciar</TabsTrigger>
+          <TabsTrigger value="banners" data-testid="tab-categories-banners">Banners</TabsTrigger>
           <TabsTrigger value="settings" data-testid="tab-categories-settings">Configurações da Página</TabsTrigger>
           <TabsTrigger value="preview" data-testid="tab-categories-preview">
             <Eye className="h-3.5 w-3.5 mr-1" />
@@ -476,6 +490,15 @@ function CategoriesTab({ settings, categories }: { settings: Record<string, stri
 
       <TabsContent value="manage" className="mt-0">
         <CategoriesManagerContent />
+      </TabsContent>
+
+      <TabsContent value="banners" className="mt-0">
+        <FilteredBannersTab 
+          banners={bannerQuery.data || []} 
+          isLoading={bannerQuery.isLoading} 
+          slots={["category_academy_form"]}
+          defaultSlot="category_academy_form"
+        />
       </TabsContent>
 
       <TabsContent value="settings" className="mt-0">
@@ -511,6 +534,7 @@ function TagsTab({ settings, categories, allTags }: { settings: Record<string, s
       <div className="sticky top-[var(--admin-subheader-top)] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 -mx-4 px-4 py-3">
         <TabsList data-testid="tabs-tags-sub">
           <TabsTrigger value="manage" data-testid="tab-tags-manage">Gerenciar</TabsTrigger>
+          <TabsTrigger value="banners" data-testid="tab-tags-banners">Banners</TabsTrigger>
           <TabsTrigger value="settings" data-testid="tab-tags-settings">Configurações da Página</TabsTrigger>
           <TabsTrigger value="preview" data-testid="tab-tags-preview">
             <Eye className="h-3.5 w-3.5 mr-1" />
@@ -521,6 +545,15 @@ function TagsTab({ settings, categories, allTags }: { settings: Record<string, s
 
       <TabsContent value="manage" className="mt-0">
         <TagsManagerContent />
+      </TabsContent>
+
+      <TabsContent value="banners" className="mt-0">
+        <FilteredBannersTab 
+          banners={bannerQuery.data || []} 
+          isLoading={bannerQuery.isLoading} 
+          slots={["tag_academy_form"]}
+          defaultSlot="tag_academy_form"
+        />
       </TabsContent>
 
       <TabsContent value="settings" className="mt-0">

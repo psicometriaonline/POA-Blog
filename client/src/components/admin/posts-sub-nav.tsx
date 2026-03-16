@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, BarChart3, MessageSquare, Eye } from "lucide-react";
 
-type ActivePage = "posts" | "containers" | "import" | "preview" | "metricas" | "comentarios";
+type ActivePage = "posts" | "containers" | "import" | "preview" | "banners" | "metricas" | "comentarios";
 
 interface PostsSubNavProps {
   activePage: ActivePage;
@@ -28,6 +28,11 @@ export function PostsSubNav({ activePage, showActionButtons = true }: PostsSubNa
           <TabsTrigger value="import" data-testid="tab-posts-import" asChild>
             <Link href="/admin?tab=posts&sub=import">
               <span>Importar Posts</span>
+            </Link>
+          </TabsTrigger>
+          <TabsTrigger value="banners" data-testid="tab-posts-banners" asChild>
+            <Link href="/admin?tab=posts&sub=banners">
+              <span>Banners</span>
             </Link>
           </TabsTrigger>
           <TabsTrigger value="preview" data-testid="tab-posts-preview" asChild>

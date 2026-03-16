@@ -770,7 +770,17 @@ export function TagPageTab({ settings, categories }: { settings: Record<string, 
   );
 }
 
-function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: boolean }) {
+export function FilteredBannersTab({ 
+  banners, 
+  isLoading, 
+  slots, 
+  defaultSlot 
+}: { 
+  banners: Banner[]; 
+  isLoading: boolean; 
+  slots: string[];
+  defaultSlot?: string;
+}) {
   const { toast } = useToast();
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
   
@@ -778,7 +788,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
   const [bannerDescription, setBannerDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
-  const [slot, setSlot] = useState("home_sidebar_recent_1");
+  const [slot, setSlot] = useState(defaultSlot || slots[0] || "home_sidebar_recent_1");
   const [buttonText, setButtonText] = useState("Saiba mais");
   const [buttonColor, setButtonColor] = useState("bg-[#31D5FF]");
   const [buttonAlignment, setButtonAlignment] = useState("left");
@@ -797,7 +807,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
     setBannerDescription("");
     setImageUrl("");
     setLinkUrl("");
-    setSlot("home_sidebar_recent_1");
+    setSlot(defaultSlot || slots[0] || "home_sidebar_recent_1");
     setButtonText("Saiba mais");
     setButtonColor("bg-[#31D5FF]");
     setButtonAlignment("left");
@@ -907,7 +917,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(BANNER_SLOTS).map(([key, label]) => (
+                {Object.entries(BANNER_SLOTS).filter(([key]) => slots.includes(key)).map(([key, label]) => (
                   <SelectItem key={key} value={key}>{label}</SelectItem>
                 ))}
               </SelectContent>
@@ -1070,7 +1080,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
           <p className="text-muted-foreground text-sm">Nenhum banner cadastrado.</p>
         ) : (
           <div className="space-y-3">
-            {banners.map((banner) => (
+            {banners.filter(b => slots.includes(b.slot)).map((banner) => (
               <div key={banner.id} className="flex items-center gap-4 p-3 border rounded-md flex-wrap">
                 {banner.imageUrl && (
                   <img src={banner.imageUrl} alt={banner.title} className="h-12 w-20 object-cover rounded-md flex-shrink-0" />
@@ -1115,6 +1125,15 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
       </Card>
     </div>
   );
+}
+
+function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: boolean }) {
+  return <FilteredBannersTab 
+    banners={banners} 
+    isLoading={isLoading} 
+    slots={Object.keys(BANNER_SLOTS)}
+    defaultSlot="home_sidebar_recent_1"
+  />;
 }
 
 function MaterialsTab({ materials, isLoading }: { materials: FreeMaterial[]; isLoading: boolean }) {
