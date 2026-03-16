@@ -464,7 +464,7 @@ function PostsTab({ user }: { user: any }) {
   );
 }
 
-function CategoriesTab({ settings, categories }: { settings: Record<string, string>; categories: Category[] }) {
+function CategoriesTab({ settings, categories, bannerQuery }: { settings: Record<string, string>; categories: Category[]; bannerQuery: ReturnType<typeof useQuery<Banner[]>> }) {
   const [subTab, setSubTab] = useState("manage");
   const [previewCategorySlug, setPreviewCategorySlug] = useState<string>("");
 
@@ -519,7 +519,7 @@ function CategoriesTab({ settings, categories }: { settings: Record<string, stri
   );
 }
 
-function TagsTab({ settings, categories, allTags }: { settings: Record<string, string>; categories: Category[]; allTags: TagType[] }) {
+function TagsTab({ settings, categories, allTags, bannerQuery }: { settings: Record<string, string>; categories: Category[]; allTags: TagType[]; bannerQuery: ReturnType<typeof useQuery<Banner[]>> }) {
   const [subTab, setSubTab] = useState("manage");
   const [previewTagSlug, setPreviewTagSlug] = useState<string>("");
 
@@ -692,11 +692,11 @@ export default function AdminDashboard() {
       )}
 
       {activeTab === "categories" && (
-        <CategoriesTab settings={settings || {}} categories={categories || []} />
+        <CategoriesTab settings={settings || {}} categories={categories || []} bannerQuery={bannerQuery} />
       )}
 
       {activeTab === "tags" && (
-        <TagsTab settings={settings || {}} categories={categories || []} allTags={allTags || []} />
+        <TagsTab settings={settings || {}} categories={categories || []} allTags={allTags || []} bannerQuery={bannerQuery} />
       )}
 
       {activeTab === "database" && (
