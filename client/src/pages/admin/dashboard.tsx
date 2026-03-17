@@ -111,7 +111,7 @@ function LinkCountPopover({ postId, count, type, colorClass }: { postId: number;
   );
 }
 
-function PostsTab({ user }: { user: any }) {
+function PostsTab({ user, bannerQuery }: { user: any; bannerQuery: ReturnType<typeof useQuery<Banner[]>> }) {
   const { toast } = useToast();
   const searchString = useSearch();
   const urlParams = new URLSearchParams(searchString);
@@ -178,10 +178,6 @@ function PostsTab({ user }: { user: any }) {
     }
     setPage(0);
   };
-
-  const bannerQuery = useQuery<Banner[]>({
-    queryKey: ["/api/admin/banners"],
-  });
 
   const handleDeletePost = async (id: number) => {
     try {
@@ -648,6 +644,11 @@ export default function AdminDashboard() {
     enabled: !!user,
   });
 
+  const bannerQuery = useQuery<Banner[]>({
+    queryKey: ["/api/admin/banners"],
+    enabled: !!user,
+  });
+
   if (authLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -688,7 +689,7 @@ export default function AdminDashboard() {
       )}
 
       {activeTab === "posts" && (
-        <PostsTab user={user} />
+        <PostsTab user={user} bannerQuery={bannerQuery} />
       )}
 
       {activeTab === "categories" && (
