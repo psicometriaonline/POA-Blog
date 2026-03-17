@@ -8,6 +8,7 @@ import { Link } from "wouter";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { PostWithRelations, Banner, Category } from "@shared/schema";
+import { parseBannerButtonColor } from "@/lib/banner-utils";
 
 function formatDate(date: string | Date | null) {
   if (!date) return null;
@@ -22,6 +23,12 @@ export function SidebarAcademyForm({ slot = "post_academy_form" }: { slot?: stri
 
   if (!banner) return null;
 
+  const showTitle = banner.showTitle ?? true;
+  const showButton = banner.showButton ?? true;
+  const btnColor = parseBannerButtonColor(banner.buttonColor);
+  const titleAlignClass = banner.titleAlignment === 'right' ? 'text-right' : banner.titleAlignment === 'left' ? 'text-left' : 'text-center';
+  const btnAlignClass = banner.buttonAlignment === 'right' ? 'justify-end' : banner.buttonAlignment === 'left' ? 'justify-start' : 'justify-center';
+
   return (
     <Card className="p-5 bg-primary/5 border-primary/20" data-testid="card-sidebar-academy-form">
       {banner.imageUrl && (
@@ -35,17 +42,42 @@ export function SidebarAcademyForm({ slot = "post_academy_form" }: { slot?: stri
           />
         </div>
       )}
-      <div className="text-center mb-4">
-        <h3 className="font-bold text-lg leading-tight" data-testid="text-sidebar-academy-title">{banner.title}</h3>
-        {banner.description && (
+      {showTitle && (
+        <div className={`${titleAlignClass} mb-4`}>
+          <h3 className="font-bold leading-tight" style={{ fontSize: `${banner.titleFontSize || 18}px` }} data-testid="text-sidebar-academy-title">{banner.title}</h3>
+          {banner.description && (
+            <p className="text-xs text-muted-foreground mt-1" data-testid="text-sidebar-academy-description">{banner.description}</p>
+          )}
+        </div>
+      )}
+      {!showTitle && banner.description && (
+        <div className={`${titleAlignClass} mb-4`}>
           <p className="text-xs text-muted-foreground mt-1" data-testid="text-sidebar-academy-description">{banner.description}</p>
-        )}
-      </div>
-      <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid="link-sidebar-academy-signup">
-        <Button className="w-full bg-accent-bright text-accent-bright-foreground" data-testid="button-sidebar-academy-signup">
-          {banner.buttonText || "Saiba mais"}
-        </Button>
-      </a>
+        </div>
+      )}
+      {showButton && (
+        <div
+          className={`flex ${btnAlignClass}`}
+          style={{
+            transform: banner.buttonPosX || banner.buttonPosY
+              ? `translate(${banner.buttonPosX || 0}px, ${banner.buttonPosY || 0}px)`
+              : undefined
+          }}
+        >
+          <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid="link-sidebar-academy-signup">
+            <Button
+              className="text-white hover:opacity-90"
+              style={{
+                backgroundColor: btnColor,
+                fontSize: `${banner.buttonFontSize || 14}px`,
+              }}
+              data-testid="button-sidebar-academy-signup"
+            >
+              {banner.buttonText || "Saiba mais"}
+            </Button>
+          </a>
+        </div>
+      )}
     </Card>
   );
 }

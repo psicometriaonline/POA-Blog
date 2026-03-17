@@ -790,7 +790,7 @@ export function FilteredBannersTab({
   const [linkUrl, setLinkUrl] = useState("");
   const [slot, setSlot] = useState(defaultSlot || slots[0] || "home_sidebar_recent_1");
   const [buttonText, setButtonText] = useState("Saiba mais");
-  const [buttonColor, setButtonColor] = useState("bg-[#31D5FF]");
+  const [buttonColor, setButtonColor] = useState("#31D5FF");
   const [buttonAlignment, setButtonAlignment] = useState("left");
   const [showButton, setShowButton] = useState(false);
   const [titleAlignment, setTitleAlignment] = useState("left");
@@ -809,7 +809,7 @@ export function FilteredBannersTab({
     setLinkUrl("");
     setSlot(defaultSlot || slots[0] || "home_sidebar_recent_1");
     setButtonText("Saiba mais");
-    setButtonColor("bg-[#31D5FF]");
+    setButtonColor("#31D5FF");
     setButtonAlignment("left");
     setShowButton(false);
     setTitleAlignment("left");
@@ -864,7 +864,7 @@ export function FilteredBannersTab({
     setLinkUrl(banner.linkUrl || "");
     setSlot(banner.slot);
     setButtonText(banner.buttonText || "Saiba mais");
-    setButtonColor(banner.buttonColor || "bg-[#31D5FF]");
+    setButtonColor(banner.buttonColor || "#31D5FF");
     setButtonAlignment(banner.buttonAlignment || "left");
     setShowButton(banner.showButton ?? false);
     setTitleAlignment(banner.titleAlignment || "left");
@@ -1010,8 +1010,11 @@ export function FilteredBannersTab({
                 <Input id="banner-button-text" value={buttonText} onChange={(e) => setButtonText(e.target.value)} data-testid="input-banner-button-text" />
               </div>
               <div>
-                <Label htmlFor="banner-button-color">Cor do Botão (Classe Tailwind)</Label>
-                <Input id="banner-button-color" value={buttonColor} onChange={(e) => setButtonColor(e.target.value)} data-testid="input-banner-button-color" placeholder="bg-accent-bright" />
+                <Label htmlFor="banner-button-color">Cor do Botão (Hex)</Label>
+                <div className="flex gap-2 items-center">
+                  <Input id="banner-button-color" value={buttonColor} onChange={(e) => setButtonColor(e.target.value)} data-testid="input-banner-button-color" placeholder="#31D5FF" className="flex-1" />
+                  <div className="h-9 w-9 rounded-md border flex-shrink-0" style={{ backgroundColor: buttonColor }} />
+                </div>
               </div>
               <div>
                 <Label htmlFor="banner-button-alignment">Alinhamento do Botão</Label>

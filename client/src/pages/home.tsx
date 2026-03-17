@@ -31,6 +31,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { PostCard } from "@/components/post-card";
 import DOMPurify from "dompurify";
+import { parseBannerButtonColor } from "@/lib/banner-utils";
 
 interface HomeData {
   settings: Record<string, string>;
@@ -161,17 +162,63 @@ function PostCardHorizontal({ post }: { post: PostWithRelations }) {
 }
 
 function BannerSidebar({ banner }: { banner: Banner }) {
+  const showTitle = banner.showTitle ?? true;
+  const showButton = banner.showButton ?? false;
+  const btnColor = parseBannerButtonColor(banner.buttonColor);
+  const titleAlignClass = banner.titleAlignment === 'center' ? 'text-center' : banner.titleAlignment === 'right' ? 'text-right' : 'text-left';
+  const btnAlignClass = banner.buttonAlignment === 'center' ? 'justify-center' : banner.buttonAlignment === 'right' ? 'justify-end' : 'justify-start';
+
   return (
-    <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner.id}`}>
-      <Card className="overflow-visible hover-elevate cursor-pointer border-none shadow-none bg-transparent">
-        <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto rounded-xl shadow-md" loading="lazy" />
-      </Card>
-    </a>
+    <div data-testid={`banner-sidebar-${banner.id}`}>
+      <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer">
+        <Card className="overflow-visible hover-elevate cursor-pointer border-none shadow-none bg-transparent">
+          <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto rounded-xl shadow-md" loading="lazy" />
+        </Card>
+      </a>
+      {showTitle && banner.title && (
+        <div className="mt-3 px-1">
+          <p
+            className={`text-muted-foreground line-clamp-2 mb-2 font-medium ${titleAlignClass}`}
+            style={{ fontSize: `${banner.titleFontSize || 14}px` }}
+          >
+            {banner.title}
+          </p>
+        </div>
+      )}
+      {banner.description && (
+        <p className={`text-xs text-muted-foreground mt-1 px-1 ${titleAlignClass}`}>{banner.description}</p>
+      )}
+      {showButton && banner.linkUrl && (
+        <div
+          className={`flex mt-2 px-1 ${btnAlignClass}`}
+          style={{
+            transform: banner.buttonPosX || banner.buttonPosY
+              ? `translate(${banner.buttonPosX || 0}px, ${banner.buttonPosY || 0}px)`
+              : undefined
+          }}
+        >
+          <a href={banner.linkUrl} target="_blank" rel="noopener noreferrer">
+            <Button
+              size="sm"
+              className="text-white hover:opacity-90 border-none h-auto py-2 px-4 font-bold rounded-sm shadow-sm"
+              style={{
+                backgroundColor: btnColor,
+                fontSize: `${banner.buttonFontSize || 12}px`,
+              }}
+              data-testid={`button-banner-cta-sidebar-${banner.id}`}
+            >
+              {banner.buttonText || "Saiba mais"}
+            </Button>
+          </a>
+        </div>
+      )}
+    </div>
   );
 }
 
 function BannerHorizontal({ banner }: { banner: Banner }) {
   const showTitle = banner.showTitle ?? true;
+  const btnColor = parseBannerButtonColor(banner.buttonColor);
   return (
     <div className="relative group overflow-hidden rounded-xl border-none" data-testid={`banner-horizontal-${banner.id}`}>
       <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" className="block w-full">
@@ -205,8 +252,8 @@ function BannerHorizontal({ banner }: { banner: Banner }) {
               >
                 <a href={banner.linkUrl} target="_blank" rel="noopener noreferrer">
                   <Button 
-                    className={`${banner.buttonColor || "bg-[#31D5FF]"} text-[#000A24] hover:opacity-90 border-none shadow-lg h-auto py-2.5 px-8 rounded-sm font-semibold`}
-                    style={{ fontSize: `${banner.buttonFontSize || 14}px` }}
+                    className="text-[#000A24] hover:opacity-90 border-none shadow-lg h-auto py-2.5 px-8 rounded-sm font-semibold"
+                    style={{ backgroundColor: btnColor, fontSize: `${banner.buttonFontSize || 14}px` }}
                     data-testid={`button-banner-cta-horiz-${banner.id}`}
                   >
                     {banner.buttonText || "Saiba mais"}
@@ -312,8 +359,8 @@ function SectionRecentPosts({ posts, banner1, banner2 }: { posts: PostWithRelati
                         <a href={banner1.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-banner-cta-${banner1.id}`}>
                           <Button 
                             size="sm" 
-                            className={`${banner1.buttonColor || "bg-[#31D5FF]"} text-[#000A24] hover:opacity-90 border-none h-auto py-2 px-4 font-bold rounded-sm shadow-sm`}
-                            style={{ fontSize: `${banner1.buttonFontSize || 12}px` }}
+                            className="text-[#000A24] hover:opacity-90 border-none h-auto py-2 px-4 font-bold rounded-sm shadow-sm"
+                            style={{ backgroundColor: parseBannerButtonColor(banner1.buttonColor), fontSize: `${banner1.buttonFontSize || 12}px` }}
                             data-testid={`button-banner-cta-${banner1.id}`}
                           >
                             {banner1.buttonText || "Saiba mais"}
@@ -352,8 +399,8 @@ function SectionRecentPosts({ posts, banner1, banner2 }: { posts: PostWithRelati
                         <a href={banner2.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`link-banner-cta-${banner2.id}`}>
                           <Button 
                             size="sm" 
-                            className={`${banner2.buttonColor || "bg-[#31D5FF]"} text-[#000A24] hover:opacity-90 border-none h-auto py-2 px-4 font-bold rounded-sm shadow-sm`}
-                            style={{ fontSize: `${banner2.buttonFontSize || 12}px` }}
+                            className="text-[#000A24] hover:opacity-90 border-none h-auto py-2 px-4 font-bold rounded-sm shadow-sm"
+                            style={{ backgroundColor: parseBannerButtonColor(banner2.buttonColor), fontSize: `${banner2.buttonFontSize || 12}px` }}
                             data-testid={`button-banner-cta-${banner2.id}`}
                           >
                             {banner2.buttonText || "Saiba mais"}
