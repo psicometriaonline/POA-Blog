@@ -549,11 +549,7 @@ function SectionMostReadAndCategories({ mostRead, categories: cats, sidebarBanne
             </div>
           </div>
           {sidebarBannerCategories && (
-            <a href={sidebarBannerCategories.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-below-categories-${sidebarBannerCategories.id}`}>
-              <div className="overflow-hidden rounded-xl shadow-md">
-                <img src={sidebarBannerCategories.imageUrl} alt={sidebarBannerCategories.title} className="w-full h-auto object-cover" loading="lazy" />
-              </div>
-            </a>
+            <BannerSidebar banner={sidebarBannerCategories} />
           )}
         </div>
       </div>
