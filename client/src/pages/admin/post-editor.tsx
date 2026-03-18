@@ -30,6 +30,7 @@ import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table
 import Highlight from "@tiptap/extension-highlight";
 import { MathInline, MathBlock } from "@/lib/tiptap-math";
 import { CitationBox } from "@/lib/tiptap-citation";
+import { createCustomCodeBlockExtension } from "@/lib/tiptap-code-block";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 
@@ -77,10 +78,7 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
       LinkExtension.configure({ openOnClick: false }),
       ImageExtension,
       Placeholder.configure({ placeholder: "Escreva o conteudo do post aqui..." }),
-      CodeBlockLowlight.configure({
-        lowlight,
-        defaultLanguage: "r",
-      }),
+      createCustomCodeBlockExtension(lowlight),
       Table.configure({ resizable: true }),
       TableRow,
       TableCell,
@@ -125,7 +123,17 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
 
   const insertCodeBlock = useCallback(() => {
     if (!editor) return;
-    editor.chain().focus().toggleCodeBlock().run();
+    const startLine = window.prompt("Número da linha inicial (padrão: 1):", "1");
+    if (startLine !== null) {
+      const lineNum = parseInt(startLine) || 1;
+      editor.chain().focus().toggleCodeBlock().run();
+      if (lineNum > 1) {
+        const node = editor.view.state.selection.$anchor.parent;
+        if (node.type.name === "codeBlock") {
+          editor.chain().focus().updateAttributes("codeBlock", { dataStart: lineNum }).run();
+        }
+      }
+    }
   }, [editor]);
 
   if (!editor) return null;

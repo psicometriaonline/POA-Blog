@@ -36,7 +36,7 @@ import xml from "highlight.js/lib/languages/xml";
 import json from "highlight.js/lib/languages/json";
 import yaml from "highlight.js/lib/languages/yaml";
 import latex from "highlight.js/lib/languages/latex";
-import "highlight.js/styles/github-dark.css";
+import "highlight.js/styles/atom-one-dark.css";
 
 hljs.registerLanguage("python", python);
 hljs.registerLanguage("r", r);
@@ -233,7 +233,8 @@ function renderMathAndCode(contentRef: React.RefObject<HTMLDivElement | null>) {
     wrapper.appendChild(pre);
 
     // Add line numbers if applicable
-    const lines = code.textContent?.split("\n") || [];
+    const codeText = code.textContent || "";
+    const lines = codeText.split("\n");
     if (lines.length > 0) {
       const lineNumbers = document.createElement("div");
       lineNumbers.className = "line-numbers";
@@ -243,7 +244,7 @@ function renderMathAndCode(contentRef: React.RefObject<HTMLDivElement | null>) {
         span.textContent = String(startLine + i);
         lineNumbers.appendChild(span);
       }
-      pre.insertBefore(lineNumbers, code);
+      code.insertBefore(lineNumbers, code.firstChild);
       pre.classList.add("has-line-numbers");
     }
 
@@ -259,10 +260,11 @@ function renderMathAndCode(contentRef: React.RefObject<HTMLDivElement | null>) {
       if (!codeEl) return;
       
       // Get text excluding line numbers
-      const text = Array.from(codeEl.childNodes)
-        .filter(node => !node.parentElement?.classList.contains('line-numbers'))
-        .map(node => node.textContent)
-        .join("");
+      let text = codeEl.textContent || "";
+      const lineNumbersDiv = codeEl.querySelector(".line-numbers");
+      if (lineNumbersDiv) {
+        text = text.replace(lineNumbersDiv.textContent || "", "").trim();
+      }
 
       const showSuccess = () => {
         btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check text-green-500"><polyline points="20 6 9 17 4 12"/></svg>';
