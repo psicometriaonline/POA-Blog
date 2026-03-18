@@ -215,62 +215,73 @@ function renderMathAndCode(contentRef: React.RefObject<HTMLDivElement | null>) {
     } catch {}
   });
 
+  el.querySelectorAll("pre").forEach((preEl) => {
+    if (!preEl.querySelector("code") && preEl.textContent?.trim()) {
+      const codeEl = document.createElement("code");
+      const brushMatch = preEl.className.match(/brush:\s*(\w+)/);
+      if (brushMatch) {
+        codeEl.className = `language-${brushMatch[1]}`;
+      }
+      while (preEl.firstChild) {
+        codeEl.appendChild(preEl.firstChild);
+      }
+      preEl.appendChild(codeEl);
+      preEl.className = preEl.className.replace(/brush:[^;]+;?/g, "").trim();
+    }
+  });
+
   el.querySelectorAll("pre code").forEach((block) => {
     if (!(block as HTMLElement).dataset.highlighted) {
       hljs.highlightElement(block as HTMLElement);
     }
   });
 
-  el.querySelectorAll("pre").forEach((pre) => {
-    if (pre.querySelector(".copy-code-btn")) return;
+  el.querySelectorAll("pre").forEach((preEl) => {
+    if (preEl.querySelector(".copy-code-btn")) return;
 
-    const code = pre.querySelector("code");
-    if (!code) return;
+    const codeEl = preEl.querySelector("code");
+    if (!codeEl) return;
 
     const wrapper = document.createElement("div");
-    wrapper.style.position = "relative";
-    pre.parentNode?.insertBefore(wrapper, pre);
-    wrapper.appendChild(pre);
+    wrapper.className = "code-block-wrapper";
+    preEl.parentNode?.insertBefore(wrapper, preEl);
+    wrapper.appendChild(preEl);
 
-    // Add line numbers if applicable
-    const codeText = code.textContent || "";
-    const lines = codeText.split("\n");
-    if (lines.length > 0) {
+    const codeText = codeEl.textContent || "";
+    const rawLines = codeText.split("\n");
+    if (rawLines[rawLines.length - 1] === "") rawLines.pop();
+
+    if (rawLines.length > 0) {
       const lineNumbers = document.createElement("div");
       lineNumbers.className = "line-numbers";
-      const startLine = parseInt(pre.getAttribute("data-start") || "1");
-      for (let i = 0; i < lines.length; i++) {
+      lineNumbers.setAttribute("aria-hidden", "true");
+      const startLine = parseInt(preEl.getAttribute("data-start") || "1");
+      for (let i = 0; i < rawLines.length; i++) {
         const span = document.createElement("span");
         span.textContent = String(startLine + i);
         lineNumbers.appendChild(span);
       }
-      pre.insertBefore(lineNumbers, code);
-      pre.classList.add("has-line-numbers");
+      preEl.insertBefore(lineNumbers, codeEl);
+      preEl.classList.add("has-line-numbers");
     }
 
     const btn = document.createElement("button");
     btn.className = "copy-code-btn";
-    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
     btn.title = "Copiar código";
     btn.setAttribute("data-testid", "button-copy-code");
     btn.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const codeEl = pre.querySelector("code");
-      if (!codeEl) return;
-      
-      // Get text excluding line numbers
-      let text = codeEl.textContent || "";
-      const pre = codeEl.parentElement;
-      const lineNumbersDiv = pre?.querySelector(".line-numbers");
-      if (lineNumbersDiv) {
-        text = text.replace(lineNumbersDiv.textContent || "", "").trim();
-      }
+      const codeContent = preEl.querySelector("code");
+      if (!codeContent) return;
+
+      const text = (codeContent.textContent || "").trim();
 
       const showSuccess = () => {
-        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check text-green-500"><polyline points="20 6 9 17 4 12"/></svg>';
+        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-500"><polyline points="20 6 9 17 4 12"/></svg>';
         setTimeout(() => {
-          btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+          btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
         }, 2000);
       };
 
