@@ -1371,14 +1371,33 @@ function CitationSettingsTab({ settings }: { settings: Record<string, string> })
   const [citationTemplate, setCitationTemplate] = useState("");
   const [citationSourceName, setCitationSourceName] = useState("Blog Psicometria Online");
   const [citationBaseUrl, setCitationBaseUrl] = useState("https://www.blog.psicometriaonline.com.br");
-  const [citationCapExceptions, setCitationCapExceptions] = useState("");
+  const [capExceptionsList, setCapExceptionsList] = useState<string[]>([]);
+  const [newException, setNewException] = useState("");
 
   useEffect(() => {
     setCitationTemplate(settings["citation_template"] || "{sobrenome}, {iniciais}. ({ano}, {dia} de {mês}). {titulo}. _{fonte}_. {url}");
     setCitationSourceName(settings["citation_source_name"] || "Blog Psicometria Online");
     setCitationBaseUrl(settings["citation_base_url"] || "https://www.blog.psicometriaonline.com.br");
-    setCitationCapExceptions(settings["citation_capitalization_exceptions"] || "");
+    const raw = settings["citation_capitalization_exceptions"] || "";
+    const parsed = raw.split(",").map(s => s.trim()).filter(Boolean);
+    setCapExceptionsList(parsed.sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" })));
   }, [settings]);
+
+  const addException = () => {
+    const trimmed = newException.trim();
+    if (!trimmed) return;
+    if (capExceptionsList.some(e => e.toLowerCase() === trimmed.toLowerCase())) {
+      toast({ title: "Duplicado", description: `"${trimmed}" já está na lista.`, variant: "destructive" });
+      return;
+    }
+    const updated = [...capExceptionsList, trimmed].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+    setCapExceptionsList(updated);
+    setNewException("");
+  };
+
+  const removeException = (word: string) => {
+    setCapExceptionsList(capExceptionsList.filter(e => e !== word));
+  };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -1386,7 +1405,7 @@ function CitationSettingsTab({ settings }: { settings: Record<string, string> })
         citation_template: citationTemplate,
         citation_source_name: citationSourceName,
         citation_base_url: citationBaseUrl,
-        citation_capitalization_exceptions: citationCapExceptions,
+        citation_capitalization_exceptions: capExceptionsList.join(", "),
       });
     },
     onSuccess: () => {
@@ -1441,15 +1460,52 @@ function CitationSettingsTab({ settings }: { settings: Record<string, string> })
         </div>
 
         <div>
-          <Label htmlFor="citation-cap-exceptions">Exceções de Capitalização (separadas por vírgula)</Label>
-          <Input
-            id="citation-cap-exceptions"
-            value={citationCapExceptions}
-            onChange={(e) => setCitationCapExceptions(e.target.value)}
-            data-testid="input-citation-cap-exceptions"
-            placeholder="Ex: Pearson, Spearman, JASP, R, Python"
-          />
-          <p className="text-xs text-muted-foreground mt-1">Palavras que mantêm sua capitalização original no título da citação.</p>
+          <Label>Exceções de Capitalização</Label>
+          <p className="text-xs text-muted-foreground mb-2">Palavras que mantêm sua capitalização original no título da citação.</p>
+          <div className="flex gap-2 mb-3">
+            <Input
+              value={newException}
+              onChange={(e) => setNewException(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addException(); } }}
+              placeholder="Ex: Pearson"
+              data-testid="input-citation-new-exception"
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addException}
+              disabled={!newException.trim()}
+              data-testid="button-add-exception"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Adicionar
+            </Button>
+          </div>
+          {capExceptionsList.length > 0 && (
+            <div className="flex flex-wrap gap-2 p-3 border rounded-md bg-muted/30">
+              {capExceptionsList.map((word) => (
+                <span
+                  key={word}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-sm bg-primary/10 text-primary border border-primary/20"
+                >
+                  {word}
+                  <button
+                    type="button"
+                    onClick={() => removeException(word)}
+                    className="ml-0.5 hover:text-destructive transition-colors"
+                    data-testid={`button-remove-exception-${word}`}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          {capExceptionsList.length === 0 && (
+            <p className="text-xs text-muted-foreground italic">Nenhuma exceção cadastrada.</p>
+          )}
         </div>
       </div>
 
