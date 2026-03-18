@@ -141,6 +141,7 @@ export function HomePageTab({ settings, categories, banners, bannersLoading, mat
           <TabsTrigger value="materials" data-testid="tab-materials">Materiais</TabsTrigger>
           <TabsTrigger value="menu" data-testid="tab-menu">Menu</TabsTrigger>
           <TabsTrigger value="header-cta" data-testid="tab-header-cta">Menu - Botão CTA</TabsTrigger>
+          <TabsTrigger value="citation" data-testid="tab-citation">Citação</TabsTrigger>
           <TabsTrigger value="footer" data-testid="tab-footer">Rodapé</TabsTrigger>
           <TabsTrigger value="preview" data-testid="tab-home-preview">
             <Eye className="h-3.5 w-3.5 mr-1" />
@@ -172,6 +173,9 @@ export function HomePageTab({ settings, categories, banners, bannersLoading, mat
       </TabsContent>
       <TabsContent value="header-cta">
         <HeaderCtaSettingsTab settings={settings} />
+      </TabsContent>
+      <TabsContent value="citation">
+        <CitationSettingsTab settings={settings} />
       </TabsContent>
       <TabsContent value="footer">
         <FooterSettingsTab settings={settings} />
@@ -1354,6 +1358,105 @@ function HeaderCtaSettingsTab({ settings }: { settings: Record<string, string> }
         onClick={() => saveMutation.mutate()}
         disabled={saveMutation.isPending}
         data-testid="button-save-header-cta"
+      >
+        <Save className="h-4 w-4 mr-1" />
+        {saveMutation.isPending ? "Salvando..." : "Salvar"}
+      </Button>
+    </Card>
+  );
+}
+
+function CitationSettingsTab({ settings }: { settings: Record<string, string> }) {
+  const { toast } = useToast();
+  const [citationTemplate, setCitationTemplate] = useState("");
+  const [citationSourceName, setCitationSourceName] = useState("Blog Psicometria Online");
+  const [citationBaseUrl, setCitationBaseUrl] = useState("https://www.blog.psicometriaonline.com.br");
+  const [citationCapExceptions, setCitationCapExceptions] = useState("");
+
+  useEffect(() => {
+    setCitationTemplate(settings["citation_template"] || "{sobrenome}, {iniciais}. ({ano}, {dia} de {mês}). {titulo}. _{fonte}_. {url}");
+    setCitationSourceName(settings["citation_source_name"] || "Blog Psicometria Online");
+    setCitationBaseUrl(settings["citation_base_url"] || "https://www.blog.psicometriaonline.com.br");
+    setCitationCapExceptions(settings["citation_capitalization_exceptions"] || "");
+  }, [settings]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("PUT", "/api/admin/settings", {
+        citation_template: citationTemplate,
+        citation_source_name: citationSourceName,
+        citation_base_url: citationBaseUrl,
+        citation_capitalization_exceptions: citationCapExceptions,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      toast({ title: "Salvo", description: "Configurações de citação atualizadas." });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Falha ao salvar.", variant: "destructive" });
+    },
+  });
+
+  return (
+    <Card className="p-6 space-y-6">
+      <div>
+        <h3 className="font-semibold text-lg mb-1">Configurações de Citação</h3>
+        <p className="text-sm text-muted-foreground mb-4">Configure o formato e fonte para citações automáticas dos posts.</p>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="citation-template">Template de Citação</Label>
+          <Textarea
+            id="citation-template"
+            value={citationTemplate}
+            onChange={(e) => setCitationTemplate(e.target.value)}
+            data-testid="input-citation-template"
+            rows={2}
+            className="font-mono text-sm"
+          />
+          <p className="text-xs text-muted-foreground mt-1">Placeholders: {"{sobrenome}"}, {"{iniciais}"}, {"{ano}"}, {"{dia}"}, {"{mês}"}, {"{titulo}"}, {"{fonte}"}, {"{url}"}</p>
+        </div>
+
+        <div>
+          <Label htmlFor="citation-source-name">Nome da Fonte</Label>
+          <Input
+            id="citation-source-name"
+            value={citationSourceName}
+            onChange={(e) => setCitationSourceName(e.target.value)}
+            data-testid="input-citation-source-name"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="citation-base-url">URL Base</Label>
+          <Input
+            id="citation-base-url"
+            value={citationBaseUrl}
+            onChange={(e) => setCitationBaseUrl(e.target.value)}
+            data-testid="input-citation-base-url"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="citation-cap-exceptions">Exceções de Capitalização (separadas por vírgula)</Label>
+          <Input
+            id="citation-cap-exceptions"
+            value={citationCapExceptions}
+            onChange={(e) => setCitationCapExceptions(e.target.value)}
+            data-testid="input-citation-cap-exceptions"
+            placeholder="Ex: Pearson, Spearman, JASP, R, Python"
+          />
+          <p className="text-xs text-muted-foreground mt-1">Palavras que mantêm sua capitalização original no título da citação.</p>
+        </div>
+      </div>
+
+      <Button
+        onClick={() => saveMutation.mutate()}
+        disabled={saveMutation.isPending}
+        data-testid="button-save-citation"
       >
         <Save className="h-4 w-4 mr-1" />
         {saveMutation.isPending ? "Salvando..." : "Salvar"}

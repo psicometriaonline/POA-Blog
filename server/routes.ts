@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema, insertMediaSchema, postCategories, postTags, posts, comments, banners, siteSettings } from "@shared/schema";
+import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema, insertMediaSchema, authors, postCategories, postTags, posts, comments, banners, siteSettings } from "@shared/schema";
 import { eq, and, lte, sql } from "drizzle-orm";
 import { db } from "./db";
 import { crawlMultipleUrls } from "./crawler";
@@ -44,6 +44,46 @@ function slugify(text: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+async function migrateAuthors() {
+  try {
+    const migrationFlag = await db.select().from(siteSettings).where(eq(siteSettings.key, "authors_synced"));
+    if (migrationFlag.length > 0) return;
+
+    const allPosts = await db.select({ id: posts.id, authorName: posts.authorName, authorId: posts.authorId }).from(posts);
+    
+    const uniqueAuthorNames = [...new Set(allPosts.map(p => p.authorName).filter(Boolean) as string[])];
+    
+    if (uniqueAuthorNames.length === 0) {
+      await db.insert(siteSettings).values({ key: "authors_synced", value: "true" }).onConflictDoUpdate({ target: siteSettings.key, set: { value: "true" } });
+      return;
+    }
+
+    const existingAuthors = await db.select().from(authors);
+    const authorMap = new Map(existingAuthors.map(a => [a.name.toLowerCase(), a]));
+
+    for (const authorName of uniqueAuthorNames) {
+      const lowerName = authorName.toLowerCase();
+      if (!authorMap.has(lowerName)) {
+        const newAuthor = await db.insert(authors).values({ name: authorName }).returning();
+        authorMap.set(lowerName, newAuthor[0]);
+      }
+    }
+
+    for (const post of allPosts) {
+      if (post.authorName && !post.authorId) {
+        const author = authorMap.get(post.authorName.toLowerCase());
+        if (author) {
+          await db.update(posts).set({ authorId: author.id }).where(eq(posts.id, post.id));
+        }
+      }
+    }
+
+    await db.insert(siteSettings).values({ key: "authors_synced", value: "true" }).onConflictDoUpdate({ target: siteSettings.key, set: { value: "true" } });
+  } catch (err) {
+    console.error("Authors migration error:", err);
+  }
 }
 
 async function migrateBannerSlots() {
@@ -107,6 +147,7 @@ export async function registerRoutes(
   await setupAuth(app);
   registerAuthRoutes(app);
 
+  await migrateAuthors();
   await migrateBannerSlots();
 
   setInterval(async () => {

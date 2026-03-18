@@ -314,19 +314,33 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
               const lastName = nameParts[nameParts.length - 1];
               const firstInitial = nameParts[0].charAt(0);
               
+              const citationSourceName = settings?.["citation_source_name"] || "Blog Psicometria Online";
+              const citationBaseUrl = settings?.["citation_base_url"] || "https://www.blog.psicometriaonline.com.br";
+              const capExceptionsStr = settings?.["citation_capitalization_exceptions"] || "";
+              const capExceptions = new Set(capExceptionsStr.split(",").map(s => s.trim().toLowerCase()).filter(Boolean));
+              
               let fmtTitle = title.trim();
               if (fmtTitle.includes(':')) {
                 const [m, s] = fmtTitle.split(':');
-                const fp = (str) => str.trim().charAt(0).toUpperCase() + str.trim().slice(1).toLowerCase();
-                fmtTitle = `${fp(m)}: ${fp(s)}`;
+                const formatPart = (str: string) => {
+                  const trimmed = str.trim();
+                  if (capExceptions.has(trimmed.toLowerCase())) return trimmed;
+                  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+                };
+                fmtTitle = `${formatPart(m)}: ${formatPart(s)}`;
               } else {
-                fmtTitle = fmtTitle.charAt(0).toUpperCase() + fmtTitle.slice(1).toLowerCase();
+                const trimmed = fmtTitle;
+                if (capExceptions.has(trimmed.toLowerCase())) {
+                  fmtTitle = trimmed;
+                } else {
+                  fmtTitle = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+                }
               }
               
               const endsWithPunctuation = /[.!?;:…]$/.test(fmtTitle);
               const titleWithSeparator = endsWithPunctuation ? fmtTitle : fmtTitle + ".";
               
-              const htmlCitation = `<div class="citation-box"><p>${lastName}, ${firstInitial}. (${now.getFullYear()}, ${now.getDate()} de ${months[now.getMonth()]}). ${titleWithSeparator} <em>Blog Psicometria Online</em>. https://www.blog.psicometriaonline.com.br/${slug}</p></div>`;
+              const htmlCitation = `<div class="citation-box"><p>${lastName}, ${firstInitial}. (${now.getFullYear()}, ${now.getDate()} de ${months[now.getMonth()]}). ${titleWithSeparator} <em>${citationSourceName}</em>. ${citationBaseUrl}/${slug}</p></div>`;
               editor.chain().focus().insertContent(htmlCitation).run();
             }
           }}
@@ -485,6 +499,11 @@ export default function PostEditor() {
     enabled: !!user,
   });
 
+  const { data: settings } = useQuery<Record<string, string>>({
+    queryKey: ["/api/admin/settings"],
+    enabled: !!user,
+  });
+
   const createCategoryMutation = useMutation({
     mutationFn: async (name: string) => {
       const catSlug = slugify(name);
@@ -552,6 +571,10 @@ export default function PostEditor() {
   }, [title, slugManual]);
 
   const handleSave = () => {
+    if (!authorId) {
+      toast({ title: "Erro", description: "Você precisa selecionar um autor para salvar o post.", variant: "destructive" });
+      return;
+    }
     if (selectedCategories.length === 0) {
       toast({ title: "Erro", description: "Você precisa definir pelo menos uma categoria para salvar o post.", variant: "destructive" });
       return;
@@ -856,9 +879,9 @@ export default function PostEditor() {
           </Card>
 
           <Card className="p-4">
-            <Label className="mb-2 block">Autor</Label>
+            <Label className="mb-2 block">Autor <span className="text-red-500">*</span></Label>
             <Select value={authorId} onValueChange={setAuthorId}>
-              <SelectTrigger data-testid="select-author">
+              <SelectTrigger data-testid="select-author" className={!authorId ? "border-red-500" : ""}>
                 <SelectValue placeholder="Selecionar autor..." />
               </SelectTrigger>
               <SelectContent>
