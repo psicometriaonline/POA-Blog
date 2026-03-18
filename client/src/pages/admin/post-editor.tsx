@@ -590,13 +590,59 @@ export default function PostEditor() {
     saveMutation.mutate();
   };
 
+  const generateCitationHtml = () => {
+    const selectedAuthor = allAuthors?.find(a => a.id === parseInt(authorId));
+    const authorName = selectedAuthor?.name || "Autor";
+    const now = new Date();
+    const months = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+    const nameParts = authorName.trim().split(/\s+/);
+    const lastName = nameParts[nameParts.length - 1];
+    const firstInitial = nameParts[0].charAt(0);
+
+    const citationSourceName = settings?.["citation_source_name"] || "Blog Psicometria Online";
+    const citationBaseUrl = settings?.["citation_base_url"] || "https://www.blog.psicometriaonline.com.br";
+    const capExceptionsStr = settings?.["citation_capitalization_exceptions"] || "";
+    const capExceptions = new Set(capExceptionsStr.split(",").map(s => s.trim().toLowerCase()).filter(Boolean));
+
+    let fmtTitle = title.trim();
+    if (fmtTitle.includes(':')) {
+      const [m, s] = fmtTitle.split(':');
+      const formatPart = (str: string) => {
+        const trimmed = str.trim();
+        if (capExceptions.has(trimmed.toLowerCase())) return trimmed;
+        return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+      };
+      fmtTitle = `${formatPart(m)}: ${formatPart(s)}`;
+    } else {
+      const trimmed = fmtTitle;
+      if (capExceptions.has(trimmed.toLowerCase())) {
+        fmtTitle = trimmed;
+      } else {
+        fmtTitle = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+      }
+    }
+
+    const endsWithPunctuation = /[.!?;:…]$/.test(fmtTitle);
+    const titleWithSeparator = endsWithPunctuation ? fmtTitle : fmtTitle + ".";
+
+    return `<div class="citation-box"><p>${lastName}, ${firstInitial}. (${now.getFullYear()}, ${now.getDate()} de ${months[now.getMonth()]}). ${titleWithSeparator} <em>${citationSourceName}</em>. ${citationBaseUrl}/${slug}</p></div>`;
+  };
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const selectedAuthor = allAuthors?.find(a => a.id === parseInt(authorId));
+      let finalContent = content;
+      const hasCitation = finalContent.includes('class="citation-box"') || finalContent.includes("class='citation-box'");
+      if (!hasCitation && title && slug) {
+        finalContent = finalContent + generateCitationHtml();
+      } else if (hasCitation && title && slug) {
+        finalContent = finalContent.replace(/<div class="citation-box">[\s\S]*?<\/div>/, generateCitationHtml());
+      }
       const body = {
         title,
         slug,
-        content,
+        content: finalContent,
         excerpt: excerpt || null,
         featuredImage: featuredImage || null,
         authorId: authorId ? parseInt(authorId) : null,

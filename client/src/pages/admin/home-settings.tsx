@@ -141,7 +141,6 @@ export function HomePageTab({ settings, categories, banners, bannersLoading, mat
           <TabsTrigger value="materials" data-testid="tab-materials">Materiais</TabsTrigger>
           <TabsTrigger value="menu" data-testid="tab-menu">Menu</TabsTrigger>
           <TabsTrigger value="header-cta" data-testid="tab-header-cta">Menu - Botão CTA</TabsTrigger>
-          <TabsTrigger value="citation" data-testid="tab-citation">Citação</TabsTrigger>
           <TabsTrigger value="footer" data-testid="tab-footer">Rodapé</TabsTrigger>
           <TabsTrigger value="preview" data-testid="tab-home-preview">
             <Eye className="h-3.5 w-3.5 mr-1" />
@@ -173,9 +172,6 @@ export function HomePageTab({ settings, categories, banners, bannersLoading, mat
       </TabsContent>
       <TabsContent value="header-cta">
         <HeaderCtaSettingsTab settings={settings} />
-      </TabsContent>
-      <TabsContent value="citation">
-        <CitationSettingsTab settings={settings} />
       </TabsContent>
       <TabsContent value="footer">
         <FooterSettingsTab settings={settings} />
@@ -1366,7 +1362,16 @@ function HeaderCtaSettingsTab({ settings }: { settings: Record<string, string> }
   );
 }
 
-function CitationSettingsTab({ settings }: { settings: Record<string, string> }) {
+const DEFAULT_CAP_EXCEPTIONS = [
+  "APA", "ANOVA", "ANCOVA", "BDI", "BFI", "Big Five", "CFA", "CFI", "CIT",
+  "Cohen", "Cronbach", "EFA", "Eysenck", "Fisher", "Gauss", "GFI",
+  "ICC", "IRT", "JASP", "KMO", "Kolmogorov-Smirnov", "Likert",
+  "MANOVA", "MBTI", "MMPI", "NEO-PI-R", "Pearson", "RMSEA", "SEM",
+  "Shapiro-Wilk", "Spearman", "SPSS", "TRI", "Tukey", "Wilcoxon",
+  "Wechsler", "WISC", "WAIS"
+];
+
+export function CitationSettingsTab({ settings }: { settings: Record<string, string> }) {
   const { toast } = useToast();
   const [citationTemplate, setCitationTemplate] = useState("");
   const [citationSourceName, setCitationSourceName] = useState("Blog Psicometria Online");
@@ -1380,7 +1385,8 @@ function CitationSettingsTab({ settings }: { settings: Record<string, string> })
     setCitationBaseUrl(settings["citation_base_url"] || "https://www.blog.psicometriaonline.com.br");
     const raw = settings["citation_capitalization_exceptions"] || "";
     const parsed = raw.split(",").map(s => s.trim()).filter(Boolean);
-    setCapExceptionsList(parsed.sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" })));
+    const list = parsed.length > 0 ? parsed : [...DEFAULT_CAP_EXCEPTIONS];
+    setCapExceptionsList(list.sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" })));
   }, [settings]);
 
   const addException = () => {

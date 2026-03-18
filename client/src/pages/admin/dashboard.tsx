@@ -16,7 +16,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { HomePageTab, CategoryPageTab, TagPageTab, FilteredBannersTab } from "./home-settings";
+import { HomePageTab, CategoryPageTab, TagPageTab, FilteredBannersTab, CitationSettingsTab } from "./home-settings";
 import { CategoriesManagerContent } from "./manage-categories";
 import { TagsManagerContent } from "./manage-tags";
 import { ContainersContent } from "./containers";
@@ -111,7 +111,7 @@ function LinkCountPopover({ postId, count, type, colorClass }: { postId: number;
   );
 }
 
-function PostsTab({ user, bannerQuery }: { user: any; bannerQuery: ReturnType<typeof useQuery<Banner[]>> }) {
+function PostsTab({ user, bannerQuery, settings }: { user: any; bannerQuery: ReturnType<typeof useQuery<Banner[]>>; settings: Record<string, string> }) {
   const { toast } = useToast();
   const searchString = useSearch();
   const urlParams = new URLSearchParams(searchString);
@@ -210,7 +210,7 @@ function PostsTab({ user, bannerQuery }: { user: any; bannerQuery: ReturnType<ty
 
   return (
     <div className="space-y-6">
-      <PostsSubNav activePage={subTab as "posts" | "containers" | "import" | "banners" | "preview"} />
+      <PostsSubNav activePage={subTab as "posts" | "containers" | "import" | "banners" | "preview" | "citation"} />
       <Tabs value={subTab} onValueChange={setSubTab}>
         <TabsContent value="banners" className="mt-0">
           <FilteredBannersTab 
@@ -455,6 +455,10 @@ function PostsTab({ user, bannerQuery }: { user: any; bannerQuery: ReturnType<ty
             onSelectorChange={setPreviewPostSlug}
           />
         </TabsContent>
+
+        <TabsContent value="citation" className="mt-0">
+          <CitationSettingsTab settings={settings} />
+        </TabsContent>
       </Tabs>
     </div>
   );
@@ -689,7 +693,7 @@ export default function AdminDashboard() {
       )}
 
       {activeTab === "posts" && (
-        <PostsTab user={user} bannerQuery={bannerQuery} />
+        <PostsTab user={user} bannerQuery={bannerQuery} settings={settings || {}} />
       )}
 
       {activeTab === "categories" && (
