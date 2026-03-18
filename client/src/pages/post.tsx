@@ -244,7 +244,7 @@ function renderMathAndCode(contentRef: React.RefObject<HTMLDivElement | null>) {
         span.textContent = String(startLine + i);
         lineNumbers.appendChild(span);
       }
-      code.insertBefore(lineNumbers, code.firstChild);
+      pre.insertBefore(lineNumbers, code);
       pre.classList.add("has-line-numbers");
     }
 
@@ -261,7 +261,8 @@ function renderMathAndCode(contentRef: React.RefObject<HTMLDivElement | null>) {
       
       // Get text excluding line numbers
       let text = codeEl.textContent || "";
-      const lineNumbersDiv = codeEl.querySelector(".line-numbers");
+      const pre = codeEl.parentElement;
+      const lineNumbersDiv = pre?.querySelector(".line-numbers");
       if (lineNumbersDiv) {
         text = text.replace(lineNumbersDiv.textContent || "", "").trim();
       }
