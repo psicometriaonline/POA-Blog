@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Code, Sigma, Plus, Image as ImageIcon, Link2, CheckCircle, XCircle, AlertTriangle, Loader2, ChevronDown, ChevronRight, Copy, Bold, Italic, Heading2, Heading3, List, ListOrdered, Quote, Table2, Type, Highlighter } from "lucide-react";
+import { ArrowLeft, Save, Eye, Code, Sigma, Plus, Image as ImageIcon, Link2, CheckCircle, XCircle, AlertTriangle, Loader2, ChevronDown, ChevronRight, Copy, Bold, Italic, Heading2, Heading3, List, ListOrdered, Quote, Table2, Type, Highlighter } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { MediaLibraryModal } from "@/components/media-library-modal";
 import { SeoPanel } from "@/components/seo-panel";
@@ -880,14 +880,32 @@ export default function PostEditor() {
             {isNew ? "Novo Post" : "Editar Post"}
           </h1>
         </div>
-        <Button
-          onClick={handleSave}
-          disabled={saveMutation.isPending || !title || !content}
-          data-testid="button-save-post"
-        >
-          <Save className="h-4 w-4 mr-1" />
-          {saveMutation.isPending ? "Salvando..." : "Salvar"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {!isNew && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                const previewSlug = slug || slugify(title);
+                if (previewSlug) {
+                  window.open(`/${previewSlug}?preview`, "_blank", "noopener,noreferrer");
+                }
+              }}
+              disabled={!slug && !title}
+              data-testid="button-preview-post"
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              Preview
+            </Button>
+          )}
+          <Button
+            onClick={handleSave}
+            disabled={saveMutation.isPending || !title || !content}
+            data-testid="button-save-post"
+          >
+            <Save className="h-4 w-4 mr-1" />
+            {saveMutation.isPending ? "Salvando..." : "Salvar"}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

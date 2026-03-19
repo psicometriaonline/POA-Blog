@@ -829,6 +829,8 @@ export default function PostPage() {
   const [location] = useLocation();
   const contentRef = useRef<HTMLDivElement>(null);
 
+  const isPreview = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("preview");
+
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     const t1 = setTimeout(() => {
@@ -840,8 +842,15 @@ export default function PostPage() {
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [location]);
 
+  const apiPath = isPreview ? `/api/admin/posts/slug/${slug}` : `/api/posts/slug/${slug}`;
+
   const { data: post, isLoading } = useQuery<PostWithRelations>({
-    queryKey: [`/api/posts/slug/${slug}`],
+    queryKey: [apiPath],
+    queryFn: async () => {
+      const res = await fetch(apiPath, { credentials: "include" });
+      if (!res.ok) throw new Error("Post not found");
+      return res.json();
+    },
   });
 
   const { data: containerData } = useQuery<{ images: ImageBankItem[]; rule: ContainerRule }[]>({
@@ -910,6 +919,11 @@ export default function PostPage() {
 
   return (
     <>
+      {isPreview && (
+        <div className="bg-yellow-500 text-yellow-950 text-center py-2 px-4 text-sm font-medium" data-testid="banner-preview-mode">
+          Modo Preview — Esta é uma pré-visualização do post. {post.status !== "published" && `Status: ${post.status}`}
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-4 py-8">
         <Breadcrumb post={post} />
         <SocialShare post={post} />
