@@ -636,7 +636,7 @@ export default function PostEditor() {
   const [linkCheckLoading, setLinkCheckLoading] = useState(false);
 
   const { data: post, isLoading: postLoading } = useQuery<PostWithRelations>({
-    queryKey: [`/api/posts/${params.id}`],
+    queryKey: [`/api/admin/posts/${params.id}`],
     enabled: !isNew && !!user,
   });
 

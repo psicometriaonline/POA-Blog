@@ -663,7 +663,7 @@ export async function registerRoutes(
     try {
       const limit = parseInt(req.query.limit as string) || 12;
       const offset = parseInt(req.query.offset as string) || 0;
-      const status = (req.query.status as string) || "published";
+      const status = "published";
       const posts = await storage.getPosts({ status, limit, offset });
       const total = await storage.getPostCount(status);
       res.json({ posts, total, limit, offset });
@@ -718,6 +718,10 @@ export async function registerRoutes(
       const post = await storage.getPostBySlug(req.params.slug);
       if (!post) return res.status(404).json({ message: "Post not found" });
 
+      if (post.status !== "published") {
+        return res.status(404).json({ message: "Post not found" });
+      }
+
       let visitorId = (req as any).cookies?.visitor_id;
       if (!visitorId) {
         const { randomUUID } = await import("crypto");
@@ -744,10 +748,23 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/posts/slug/:slug", isAuthenticated, async (req, res) => {
+    try {
+      const post = await storage.getPostBySlug(req.params.slug);
+      if (!post) return res.status(404).json({ message: "Post not found" });
+      res.json(post);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/posts/:id", async (req, res) => {
     try {
       const post = await storage.getPost(parseInt(req.params.id));
       if (!post) return res.status(404).json({ message: "Post not found" });
+      if (post.status !== "published") {
+        return res.status(404).json({ message: "Post not found" });
+      }
       res.json(post);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1313,6 +1330,16 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Error creating post:", error);
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/posts/:id", isAuthenticated, async (req, res) => {
+    try {
+      const post = await storage.getPost(parseInt(req.params.id));
+      if (!post) return res.status(404).json({ message: "Post not found" });
+      res.json(post);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 

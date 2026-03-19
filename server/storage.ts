@@ -372,7 +372,7 @@ export class DatabaseStorage implements IStorage {
     if (postIds.length === 0) return [];
 
     let postsQuery = db.select().from(posts)
-      .where(inArray(posts.id, postIds))
+      .where(and(inArray(posts.id, postIds), eq(posts.status, "published")))
       .orderBy(desc(posts.publishedAt), desc(posts.createdAt))
       .$dynamic();
 
@@ -388,7 +388,8 @@ export class DatabaseStorage implements IStorage {
     if (!cat) return 0;
     const [result] = await db.select({ count: sql<number>`count(*)::int` })
       .from(postCategories)
-      .where(eq(postCategories.categoryId, cat.id));
+      .innerJoin(posts, eq(posts.id, postCategories.postId))
+      .where(and(eq(postCategories.categoryId, cat.id), eq(posts.status, "published")));
     return result.count;
   }
 
@@ -404,7 +405,7 @@ export class DatabaseStorage implements IStorage {
     if (postIds.length === 0) return [];
 
     let postsQuery = db.select().from(posts)
-      .where(inArray(posts.id, postIds))
+      .where(and(inArray(posts.id, postIds), eq(posts.status, "published")))
       .orderBy(desc(posts.publishedAt), desc(posts.createdAt))
       .$dynamic();
 
@@ -420,7 +421,8 @@ export class DatabaseStorage implements IStorage {
     if (!tag) return 0;
     const [result] = await db.select({ count: sql<number>`count(*)::int` })
       .from(postTags)
-      .where(eq(postTags.tagId, tag.id));
+      .innerJoin(posts, eq(posts.id, postTags.postId))
+      .where(and(eq(postTags.tagId, tag.id), eq(posts.status, "published")));
     return result.count;
   }
 
@@ -445,6 +447,8 @@ export class DatabaseStorage implements IStorage {
       endDate.setHours(23, 59, 59, 999);
       conditions.push(lte(posts.publishedAt, endDate));
     }
+
+    conditions.push(eq(posts.status, "published"));
 
     return conditions;
   }
