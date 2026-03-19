@@ -964,10 +964,10 @@ export default function PostPage() {
               </h1>
             </Card>
 
-            <Card className="p-6 mb-6" data-testid="card-post-content">
+            <Card className="p-6 mb-6 overflow-hidden" data-testid="card-post-content">
               <div
                 ref={contentRef}
-                className="prose prose-lg dark:prose-invert max-w-none"
+                className="prose prose-lg dark:prose-invert max-w-none overflow-x-auto"
                 data-testid="div-post-content"
               >
                 {post.featuredImage && (

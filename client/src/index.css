@@ -182,10 +182,29 @@ html {
   }
 }
 
+.prose {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
 .prose img {
   @apply rounded-md;
   max-width: 100%;
   height: auto;
+}
+
+.prose figure {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.prose figure img {
+  max-width: 100%;
+  height: auto;
+}
+
+.prose iframe {
+  max-width: 100%;
 }
 
 .prose h1, .prose h2, .prose h3, .prose h4 {
@@ -215,6 +234,9 @@ html {
 
 .prose table {
   @apply w-full border-collapse my-4;
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 .prose table th,
