@@ -270,18 +270,37 @@ export function analyzeSEO(input: SeoAnalysisInput): SeoCheck[] {
   return checks;
 }
 
+const BLOG_PRODUCTION_HOST = "blog.psicometriaonline.com.br";
+
+function getHrefHostname(href: string): string | null {
+  try {
+    const url = new URL(href, window.location.origin);
+    return url.hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function isBlogHostname(hostname: string): boolean {
+  const current = window.location.hostname.toLowerCase();
+  return hostname === current || hostname === BLOG_PRODUCTION_HOST;
+}
+
 function isExternalHref(href: string): boolean {
   if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return false;
   if (!href.startsWith("http") && !href.startsWith("//")) return false;
-  return !href.includes(window.location.hostname) && !href.includes("psicometriaonline");
+  const hostname = getHrefHostname(href);
+  if (!hostname) return false;
+  return !isBlogHostname(hostname);
 }
 
 function isInternalHref(href: string): boolean {
   if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return false;
   if (href.startsWith("/") && !href.startsWith("//")) return true;
-  if (href.includes(window.location.hostname) || href.includes("psicometriaonline")) return true;
   if (!href.startsWith("http") && !href.startsWith("//")) return true;
-  return false;
+  const hostname = getHrefHostname(href);
+  if (!hostname) return false;
+  return isBlogHostname(hostname);
 }
 
 function checkInternalLinks(content: string): SeoCheck {
