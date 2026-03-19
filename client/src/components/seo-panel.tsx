@@ -122,9 +122,15 @@ export function SeoPanel({
     enabled: debouncedKeyword.trim().length > 0,
   });
 
+  const { data: siteSettings } = useQuery<Record<string, string>>({
+    queryKey: ["/api/settings"],
+    staleTime: 5 * 60 * 1000,
+  });
+  const blogBaseUrl = siteSettings?.citation_base_url;
+
   const seoChecks = useMemo(() =>
-    analyzeSEO({ focusKeyword, seoTitle, metaDescription, title, slug, content, excerpt }),
-    [focusKeyword, seoTitle, metaDescription, title, slug, content, excerpt]
+    analyzeSEO({ focusKeyword, seoTitle, metaDescription, title, slug, content, excerpt, blogBaseUrl }),
+    [focusKeyword, seoTitle, metaDescription, title, slug, content, excerpt, blogBaseUrl]
   );
 
   const readabilityChecks = useMemo(() =>

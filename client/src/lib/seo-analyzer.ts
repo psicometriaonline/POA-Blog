@@ -18,6 +18,7 @@ interface SeoAnalysisInput {
   slug: string;
   content: string;
   excerpt: string;
+  blogBaseUrl?: string;
 }
 
 function slugifyKeyword(keyword: string): string {
@@ -43,7 +44,7 @@ function startsWithKeyword(text: string, keyword: string): boolean {
 
 export function analyzeSEO(input: SeoAnalysisInput): SeoCheck[] {
   const checks: SeoCheck[] = [];
-  const { focusKeyword, seoTitle, metaDescription, title, slug, content, excerpt } = input;
+  const { focusKeyword, seoTitle, metaDescription, title, slug, content, excerpt, blogBaseUrl } = input;
   const plainText = stripHtml(content);
   const wordCount = countWords(plainText);
 
@@ -58,8 +59,8 @@ export function analyzeSEO(input: SeoAnalysisInput): SeoCheck[] {
       { id: "text-length", label: "Comprimento do texto", status: wordCount >= 300 ? "good" : "problem", message: wordCount >= 300 ? `O texto contém ${wordCount} palavras. Ótimo!` : `O texto contém ${wordCount} palavras. Adicione mais conteúdo (mínimo recomendado: 300 palavras).` },
       checkImages(content),
       checkUniqueH1(content),
-      checkInternalLinks(content),
-      checkExternalLinks(content),
+      checkInternalLinks(content, blogBaseUrl),
+      checkExternalLinks(content, blogBaseUrl),
     );
     return checks;
   }
@@ -262,15 +263,13 @@ export function analyzeSEO(input: SeoAnalysisInput): SeoCheck[] {
       : `O texto contém ${wordCount} palavras. Adicione mais conteúdo (mínimo recomendado: 300 palavras).`,
   });
 
-  checks.push(checkInternalLinks(content));
-  checks.push(checkExternalLinks(content));
+  checks.push(checkInternalLinks(content, blogBaseUrl));
+  checks.push(checkExternalLinks(content, blogBaseUrl));
   checks.push(checkImages(content));
   checks.push(checkUniqueH1(content));
 
   return checks;
 }
-
-const BLOG_PRODUCTION_HOST = "blog.psicometriaonline.com.br";
 
 function getHrefHostname(href: string): string | null {
   try {
@@ -281,32 +280,51 @@ function getHrefHostname(href: string): string | null {
   }
 }
 
-function isBlogHostname(hostname: string): boolean {
-  const current = window.location.hostname.toLowerCase();
-  return hostname === current || hostname === BLOG_PRODUCTION_HOST;
+function stripWww(hostname: string): string {
+  return hostname.startsWith("www.") ? hostname.slice(4) : hostname;
 }
 
-function isExternalHref(href: string): boolean {
+function getBlogHostnames(blogBaseUrl?: string): string[] {
+  const hosts = new Set<string>();
+  hosts.add(window.location.hostname.toLowerCase());
+  if (blogBaseUrl) {
+    try {
+      const parsed = new URL(blogBaseUrl);
+      const h = parsed.hostname.toLowerCase();
+      hosts.add(h);
+      hosts.add(stripWww(h));
+    } catch {}
+  }
+  return Array.from(hosts);
+}
+
+function isBlogHostname(hostname: string, blogHosts: string[]): boolean {
+  const normalized = stripWww(hostname);
+  return blogHosts.some(h => normalized === stripWww(h));
+}
+
+function isExternalHref(href: string, blogHosts: string[]): boolean {
   if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return false;
   if (!href.startsWith("http") && !href.startsWith("//")) return false;
   const hostname = getHrefHostname(href);
   if (!hostname) return false;
-  return !isBlogHostname(hostname);
+  return !isBlogHostname(hostname, blogHosts);
 }
 
-function isInternalHref(href: string): boolean {
+function isInternalHref(href: string, blogHosts: string[]): boolean {
   if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return false;
   if (href.startsWith("/") && !href.startsWith("//")) return true;
   if (!href.startsWith("http") && !href.startsWith("//")) return true;
   const hostname = getHrefHostname(href);
   if (!hostname) return false;
-  return isBlogHostname(hostname);
+  return isBlogHostname(hostname, blogHosts);
 }
 
-function checkInternalLinks(content: string): SeoCheck {
+function checkInternalLinks(content: string, blogBaseUrl?: string): SeoCheck {
+  const blogHosts = getBlogHostnames(blogBaseUrl);
   const doc = new DOMParser().parseFromString(content, "text/html");
   const links = doc.querySelectorAll("a[href]");
-  const internal = Array.from(links).filter(a => isInternalHref(a.getAttribute("href") || ""));
+  const internal = Array.from(links).filter(a => isInternalHref(a.getAttribute("href") || "", blogHosts));
   return {
     id: "internal-links",
     label: "Links internos",
@@ -317,10 +335,11 @@ function checkInternalLinks(content: string): SeoCheck {
   };
 }
 
-function checkExternalLinks(content: string): SeoCheck {
+function checkExternalLinks(content: string, blogBaseUrl?: string): SeoCheck {
+  const blogHosts = getBlogHostnames(blogBaseUrl);
   const doc = new DOMParser().parseFromString(content, "text/html");
   const links = doc.querySelectorAll("a[href]");
-  const external = Array.from(links).filter(a => isExternalHref(a.getAttribute("href") || ""));
+  const external = Array.from(links).filter(a => isExternalHref(a.getAttribute("href") || "", blogHosts));
   return {
     id: "external-links",
     label: "Links externos",
