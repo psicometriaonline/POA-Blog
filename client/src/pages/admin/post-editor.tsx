@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Code, Sigma, Plus, Image as ImageIcon, Link2, CheckCircle, XCircle, AlertTriangle, Loader2, ChevronDown, ChevronRight, Copy, Bold, Italic, Heading2, Heading3, List, ListOrdered, Quote, Table2, Type } from "lucide-react";
+import { ArrowLeft, Save, Code, Sigma, Plus, Image as ImageIcon, Link2, CheckCircle, XCircle, AlertTriangle, Loader2, ChevronDown, ChevronRight, Copy, Bold, Italic, Heading2, Heading3, List, ListOrdered, Quote, Table2, Type, Highlighter } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { MediaLibraryModal } from "@/components/media-library-modal";
 import { SeoPanel } from "@/components/seo-panel";
@@ -215,7 +215,7 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
     { icon: <Heading3 className="h-3.5 w-3.5" />, action: () => editor.chain().focus().toggleHeading({ level: 3 }).run(), active: editor.isActive("heading", { level: 3 }), label: "H3" },
     { icon: <Link2 className="h-3.5 w-3.5" />, action: () => { const url = window.prompt("URL do link:"); if (url) editor.chain().focus().setLink({ href: url }).run(); }, active: editor.isActive("link"), label: "Link" },
     { icon: <Code className="h-3.5 w-3.5" />, action: () => editor.chain().focus().toggleCode().run(), active: editor.isActive("code"), label: "Código" },
-    { icon: <Quote className="h-3.5 w-3.5" />, action: () => editor.chain().focus().toggleBlockquote().run(), active: editor.isActive("blockquote"), label: "Citação" },
+    { icon: <Highlighter className="h-3.5 w-3.5" />, action: () => editor.chain().focus().toggleHighlight().run(), active: editor.isActive("highlight"), label: "Destaque" },
   ];
 
   const floatingButtons = [
@@ -223,8 +223,8 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
     { icon: <Code className="h-4 w-4" />, action: () => { insertCodeBlock(); setFloatingMenuOpen(false); }, label: "Código" },
     { icon: <Sigma className="h-4 w-4" />, action: () => { insertMath(true); setFloatingMenuOpen(false); }, label: "Equação" },
     { icon: <Table2 className="h-4 w-4" />, action: () => { const rows = window.prompt("Linhas:", "3"); const cols = window.prompt("Colunas:", "3"); if (rows && cols) { editor.chain().focus().insertTable({ rows: parseInt(rows), cols: parseInt(cols), withHeaderRow: true }).run(); } setFloatingMenuOpen(false); }, label: "Tabela" },
+    { icon: <Quote className="h-4 w-4" />, action: () => { editor.chain().focus().toggleBlockquote().run(); setFloatingMenuOpen(false); }, label: "Citação" },
     { icon: <List className="h-4 w-4" />, action: () => { editor.chain().focus().toggleBulletList().run(); setFloatingMenuOpen(false); }, label: "Lista" },
-    { icon: <ListOrdered className="h-4 w-4" />, action: () => { editor.chain().focus().toggleOrderedList().run(); setFloatingMenuOpen(false); }, label: "1. Lista" },
   ];
 
   return (
