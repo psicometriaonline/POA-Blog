@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Code, Sigma, Plus, Image as ImageIcon, Link2, CheckCircle, XCircle, AlertTriangle, Loader2, ChevronDown, ChevronRight, Copy } from "lucide-react";
+import { ArrowLeft, Save, Code, Sigma, Plus, Image as ImageIcon, Link2, CheckCircle, XCircle, AlertTriangle, Loader2, ChevronDown, ChevronRight, Copy, Bold, Italic, Heading2, Heading3, List, ListOrdered, Quote, Table2, Type } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { MediaLibraryModal } from "@/components/media-library-modal";
 import { SeoPanel } from "@/components/seo-panel";
@@ -136,10 +136,158 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
     }
   }, [editor]);
 
+  const [bubbleMenuPos, setBubbleMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const [floatingMenuPos, setFloatingMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const [floatingMenuOpen, setFloatingMenuOpen] = useState(false);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+  const bubbleRef = useRef<HTMLDivElement>(null);
+  const floatingRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!editor) return;
+
+    const updateBubble = () => {
+      const { from, to, empty } = editor.state.selection;
+      if (empty || from === to || editor.isActive("codeBlock")) {
+        setBubbleMenuPos(null);
+        return;
+      }
+      const containerRect = editorContainerRef.current?.getBoundingClientRect();
+      if (!containerRect) return;
+      const coords = editor.view.coordsAtPos(from);
+      const endCoords = editor.view.coordsAtPos(to);
+      const midX = (coords.left + endCoords.left) / 2 - containerRect.left;
+      const topY = coords.top - containerRect.top - 48;
+      setBubbleMenuPos({ top: topY, left: Math.max(0, midX - 120) });
+    };
+
+    const updateFloating = () => {
+      const { $anchor, empty } = editor.state.selection;
+      if (!empty) {
+        setFloatingMenuPos(null);
+        setFloatingMenuOpen(false);
+        return;
+      }
+      const block = $anchor.parent;
+      const isEmptyBlock = block.content.size === 0 && block.type.name === "paragraph";
+      if (!isEmptyBlock) {
+        setFloatingMenuPos(null);
+        setFloatingMenuOpen(false);
+        return;
+      }
+      const containerRect = editorContainerRef.current?.getBoundingClientRect();
+      if (!containerRect) return;
+      const coords = editor.view.coordsAtPos($anchor.pos);
+      setFloatingMenuPos({
+        top: coords.top - containerRect.top - 4,
+        left: coords.left - containerRect.left - 36,
+      });
+    };
+
+    editor.on("selectionUpdate", updateBubble);
+    editor.on("selectionUpdate", updateFloating);
+    editor.on("transaction", updateBubble);
+
+    return () => {
+      editor.off("selectionUpdate", updateBubble);
+      editor.off("selectionUpdate", updateFloating);
+      editor.off("transaction", updateBubble);
+    };
+  }, [editor]);
+
+  useEffect(() => {
+    if (!bubbleMenuPos && !floatingMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (floatingRef.current && !floatingRef.current.contains(e.target as Node)) {
+        setFloatingMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [bubbleMenuPos, floatingMenuOpen]);
+
   if (!editor) return null;
 
+  const bubbleButtons = [
+    { icon: <Bold className="h-3.5 w-3.5" />, action: () => editor.chain().focus().toggleBold().run(), active: editor.isActive("bold"), label: "Negrito" },
+    { icon: <Italic className="h-3.5 w-3.5" />, action: () => editor.chain().focus().toggleItalic().run(), active: editor.isActive("italic"), label: "Itálico" },
+    { icon: <Heading2 className="h-3.5 w-3.5" />, action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(), active: editor.isActive("heading", { level: 2 }), label: "H2" },
+    { icon: <Heading3 className="h-3.5 w-3.5" />, action: () => editor.chain().focus().toggleHeading({ level: 3 }).run(), active: editor.isActive("heading", { level: 3 }), label: "H3" },
+    { icon: <Link2 className="h-3.5 w-3.5" />, action: () => { const url = window.prompt("URL do link:"); if (url) editor.chain().focus().setLink({ href: url }).run(); }, active: editor.isActive("link"), label: "Link" },
+    { icon: <Code className="h-3.5 w-3.5" />, action: () => editor.chain().focus().toggleCode().run(), active: editor.isActive("code"), label: "Código" },
+    { icon: <Quote className="h-3.5 w-3.5" />, action: () => editor.chain().focus().toggleBlockquote().run(), active: editor.isActive("blockquote"), label: "Citação" },
+  ];
+
+  const floatingButtons = [
+    { icon: <ImageIcon className="h-4 w-4" />, action: () => { onOpenMediaLib?.(); setFloatingMenuOpen(false); }, label: "Imagem" },
+    { icon: <Code className="h-4 w-4" />, action: () => { insertCodeBlock(); setFloatingMenuOpen(false); }, label: "Código" },
+    { icon: <Sigma className="h-4 w-4" />, action: () => { insertMath(true); setFloatingMenuOpen(false); }, label: "Equação" },
+    { icon: <Table2 className="h-4 w-4" />, action: () => { const rows = window.prompt("Linhas:", "3"); const cols = window.prompt("Colunas:", "3"); if (rows && cols) { editor.chain().focus().insertTable({ rows: parseInt(rows), cols: parseInt(cols), withHeaderRow: true }).run(); } setFloatingMenuOpen(false); }, label: "Tabela" },
+    { icon: <List className="h-4 w-4" />, action: () => { editor.chain().focus().toggleBulletList().run(); setFloatingMenuOpen(false); }, label: "Lista" },
+    { icon: <ListOrdered className="h-4 w-4" />, action: () => { editor.chain().focus().toggleOrderedList().run(); setFloatingMenuOpen(false); }, label: "1. Lista" },
+  ];
+
   return (
-    <div>
+    <div ref={editorContainerRef} className="relative">
+      {bubbleMenuPos && (
+        <div
+          ref={bubbleRef}
+          className="absolute z-50 flex items-center gap-0.5 rounded-lg border bg-popover p-1 shadow-lg animate-in fade-in-0 zoom-in-95"
+          style={{ top: bubbleMenuPos.top, left: bubbleMenuPos.left }}
+          data-testid="bubble-menu"
+        >
+          {bubbleButtons.map((btn, i) => (
+            <button
+              key={i}
+              type="button"
+              className={`inline-flex items-center justify-center rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground ${btn.active ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}
+              onClick={btn.action}
+              title={btn.label}
+              data-testid={`bubble-${btn.label.toLowerCase()}`}
+            >
+              {btn.icon}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {floatingMenuPos && (
+        <div
+          ref={floatingRef}
+          className="absolute z-50"
+          style={{ top: floatingMenuPos.top, left: floatingMenuPos.left }}
+          data-testid="floating-menu"
+        >
+          {!floatingMenuOpen ? (
+            <button
+              type="button"
+              className="flex items-center justify-center w-7 h-7 rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground/60 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
+              onClick={() => setFloatingMenuOpen(true)}
+              title="Inserir bloco"
+              data-testid="floating-menu-trigger"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          ) : (
+            <div className="flex items-center gap-1 rounded-lg border bg-popover p-1.5 shadow-lg animate-in fade-in-0 slide-in-from-left-2" data-testid="floating-menu-panel">
+              {floatingButtons.map((btn, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className="inline-flex flex-col items-center justify-center rounded-md px-2.5 py-1.5 text-xs transition-colors hover:bg-accent hover:text-accent-foreground text-muted-foreground gap-0.5"
+                  onClick={btn.action}
+                  title={btn.label}
+                  data-testid={`floating-${btn.label.toLowerCase()}`}
+                >
+                  {btn.icon}
+                  <span className="text-[10px]">{btn.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center gap-1 flex-wrap border-b p-2 bg-muted/30 rounded-t-md">
         <Button
           type="button"
