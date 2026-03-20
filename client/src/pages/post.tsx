@@ -17,8 +17,9 @@ import { ptBR } from "date-fns/locale";
 import DOMPurify from "dompurify";
 import { useEffect, useRef, useState } from "react";
 
-import { Calendar, User, Tag, ChevronRight, Send, MessageSquare, List } from "lucide-react";
+import { Calendar, User, Tag, ChevronRight, Send, MessageSquare, List, Pencil } from "lucide-react";
 import { SiFacebook, SiLinkedin, SiWhatsapp, SiX } from "react-icons/si";
+import { useAuth } from "@/hooks/use-auth";
 import { parseBannerButtonColor } from "@/lib/banner-utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -828,6 +829,7 @@ export default function PostPage() {
   const { slug } = useParams<{ slug: string }>();
   const [location] = useLocation();
   const contentRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   const isPreview = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("preview");
 
@@ -1013,6 +1015,19 @@ export default function PostPage() {
           </aside>
         </div>
       </div>
+
+      {user && (
+        <Link href={`/admin/post/${post.id}`}>
+          <button
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-3 shadow-lg hover:bg-primary/90 transition-colors"
+            data-testid="button-floating-edit"
+            title="Editar este post"
+          >
+            <Pencil className="h-4 w-4" />
+            <span className="text-sm font-medium">Editar</span>
+          </button>
+        </Link>
+      )}
     </>
   );
 }

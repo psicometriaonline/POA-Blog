@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Eye, Code, Sigma, Plus, Image as ImageIcon, Link2, CheckCircle, XCircle, AlertTriangle, Loader2, ChevronDown, ChevronRight, Copy, Bold, Italic, Heading2, Heading3, List, ListOrdered, Quote, Table2, Type, Highlighter } from "lucide-react";
+import { ArrowLeft, Save, Eye, Code, Sigma, Plus, Image as ImageIcon, Link2, CheckCircle, XCircle, AlertTriangle, Loader2, ChevronDown, ChevronRight, Copy, Bold, Italic, Heading2, Heading3, List, ListOrdered, Quote, Table2, Type, Highlighter, ExternalLink, Palette } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { MediaLibraryModal } from "@/components/media-library-modal";
 import { SeoPanel } from "@/components/seo-panel";
@@ -28,11 +28,84 @@ import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import Highlight from "@tiptap/extension-highlight";
+import { TextStyle } from "@tiptap/extension-text-style";
+import { FontFamily } from "@tiptap/extension-font-family";
+import { Color } from "@tiptap/extension-color";
 import { MathInline, MathBlock } from "@/lib/tiptap-math";
 import { CitationBox } from "@/lib/tiptap-citation";
 import { createCustomCodeBlockExtension } from "@/lib/tiptap-code-block";
 import katex from "katex";
 import "katex/dist/katex.min.css";
+
+import { Extension } from "@tiptap/core";
+
+const FontSize = Extension.create({
+  name: "fontSize",
+  addGlobalAttributes() {
+    return [
+      {
+        types: ["textStyle"],
+        attributes: {
+          fontSize: {
+            default: null,
+            parseHTML: (element) => element.style.fontSize?.replace(/['"]+/g, "") || null,
+            renderHTML: (attributes) => {
+              if (!attributes.fontSize) return {};
+              return { style: `font-size: ${attributes.fontSize}` };
+            },
+          },
+        },
+      },
+    ];
+  },
+  addCommands() {
+    return {
+      setFontSize: (fontSize: string) => ({ chain }: any) => {
+        return chain().setMark("textStyle", { fontSize }).run();
+      },
+      unsetFontSize: () => ({ chain }: any) => {
+        return chain().setMark("textStyle", { fontSize: null }).removeEmptyTextStyle().run();
+      },
+    } as any;
+  },
+});
+
+const FONT_FAMILIES = [
+  { value: "", label: "Padrão" },
+  { value: "Georgia, serif", label: "Georgia" },
+  { value: "Times New Roman, serif", label: "Times New Roman" },
+  { value: "Arial, sans-serif", label: "Arial" },
+  { value: "Helvetica, sans-serif", label: "Helvetica" },
+  { value: "Verdana, sans-serif", label: "Verdana" },
+  { value: "Courier New, monospace", label: "Courier New" },
+  { value: "Inter, sans-serif", label: "Inter" },
+];
+
+const FONT_SIZES = [
+  { value: "", label: "Padrão" },
+  { value: "12px", label: "12px" },
+  { value: "14px", label: "14px" },
+  { value: "16px", label: "16px" },
+  { value: "18px", label: "18px" },
+  { value: "20px", label: "20px" },
+  { value: "24px", label: "24px" },
+  { value: "28px", label: "28px" },
+  { value: "32px", label: "32px" },
+];
+
+const TEXT_COLORS = [
+  { value: "", label: "Padrão", color: "#000000" },
+  { value: "#000000", label: "Preto", color: "#000000" },
+  { value: "#374151", label: "Cinza escuro", color: "#374151" },
+  { value: "#6B7280", label: "Cinza", color: "#6B7280" },
+  { value: "#DC2626", label: "Vermelho", color: "#DC2626" },
+  { value: "#EA580C", label: "Laranja", color: "#EA580C" },
+  { value: "#CA8A04", label: "Amarelo", color: "#CA8A04" },
+  { value: "#16A34A", label: "Verde", color: "#16A34A" },
+  { value: "#2563EB", label: "Azul", color: "#2563EB" },
+  { value: "#7C3AED", label: "Roxo", color: "#7C3AED" },
+  { value: "#DB2777", label: "Rosa", color: "#DB2777" },
+];
 
 const lowlight = createLowlight(common);
 
@@ -87,6 +160,10 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
       MathInline,
       MathBlock,
       Highlight.configure({ multicolor: true }),
+      TextStyle,
+      FontFamily,
+      FontSize,
+      Color,
     ],
     content,
     onUpdate: ({ editor }) => {
@@ -289,6 +366,68 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
       )}
 
       <div className="flex items-center gap-1 flex-wrap border-b p-2 bg-muted/30 rounded-t-md">
+        <select
+          className="h-8 rounded-md border bg-background px-2 text-xs"
+          value={editor.getAttributes("textStyle").fontFamily || ""}
+          onChange={(e) => {
+            if (e.target.value) {
+              editor.chain().focus().setFontFamily(e.target.value).run();
+            } else {
+              editor.chain().focus().unsetFontFamily().run();
+            }
+          }}
+          data-testid="select-font-family"
+          title="Fonte"
+        >
+          {FONT_FAMILIES.map((f) => (
+            <option key={f.value} value={f.value}>{f.label}</option>
+          ))}
+        </select>
+        <select
+          className="h-8 rounded-md border bg-background px-2 text-xs w-[72px]"
+          value={editor.getAttributes("textStyle").fontSize || ""}
+          onChange={(e) => {
+            if (e.target.value) {
+              (editor.commands as any).setFontSize(e.target.value);
+            } else {
+              (editor.commands as any).unsetFontSize();
+            }
+          }}
+          data-testid="select-font-size"
+          title="Tamanho"
+        >
+          {FONT_SIZES.map((s) => (
+            <option key={s.value} value={s.value}>{s.label}</option>
+          ))}
+        </select>
+        <div className="relative" data-testid="color-picker-wrapper">
+          <input
+            type="color"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            value={editor.getAttributes("textStyle").color || "#000000"}
+            onChange={(e) => {
+              editor.chain().focus().setColor(e.target.value).run();
+            }}
+            data-testid="input-text-color"
+            title="Cor do texto"
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="pointer-events-none"
+            tabIndex={-1}
+          >
+            <Palette className="h-4 w-4" />
+            <span
+              className="w-4 h-1 block rounded-sm ml-0.5"
+              style={{ backgroundColor: editor.getAttributes("textStyle").color || "#000000" }}
+            />
+          </Button>
+        </div>
+
+        <div className="w-px h-6 bg-border mx-1" />
+
         <Button
           type="button"
           size="sm"
@@ -881,6 +1020,18 @@ export default function PostEditor() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          {!isNew && status === "published" && slug && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                window.open(`/${slug}`, "_blank", "noopener,noreferrer");
+              }}
+              data-testid="button-goto-published"
+            >
+              <ExternalLink className="h-4 w-4 mr-1" />
+              Ver publicado
+            </Button>
+          )}
           {!isNew && (
             <Button
               variant="outline"
