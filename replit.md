@@ -39,6 +39,10 @@ Key features include:
 - **WordPress Imports:** Images downloaded from WordPress during migration are automatically stored as binary data in the database.
 - **Production Resilience:** Images survive container restarts and deployments; no data loss occurs due to ephemeral filesystem.
 
+## Performance Optimizations
+- **Content stripping in listing endpoints:** All post listing API endpoints (`/api/home`, `/api/posts`, `/api/posts/search`, `/api/posts/recent`, `/api/posts/most-read-global`, `/api/categories/:slug/posts`, `/api/tags/:slug/posts`, `/api/diverse-sections`, `/api/posts/:id/suggested`, `/api/posts/:id/most-read`, `/api/posts/:id/most-read-category`, `/api/admin/posts`) strip the `content` field from post objects before sending JSON responses. This dramatically reduces response sizes (from several MB to ~50KB for the home page) since post content contains base64-encoded images. Full content is only returned by individual post endpoints (`/api/posts/slug/:slug`, `/api/admin/posts/:id`).
+- **Database indexes:** Composite and single-column indexes on `posts.status`, `posts.published_at`, and `(status, published_at)` for faster filtered/sorted queries.
+
 ## External Dependencies
 - **PostgreSQL:** Primary database for all application data.
 - **Replit Auth:** For secure administrator authentication.

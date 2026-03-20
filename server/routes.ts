@@ -37,6 +37,32 @@ const upload = multer({
   },
 });
 
+function stripPostContent<T extends { content?: string | null }>(post: T): Omit<T, 'content'> & { content: string } {
+  const { content, ...rest } = post;
+  return { ...rest, content: "" } as any;
+}
+
+function stripPostsContent<T extends { content?: string | null }>(postsList: T[]): T[] {
+  return postsList.map(p => stripPostContent(p)) as T[];
+}
+
+function stripHomeDataContent(data: any): any {
+  if (!data) return data;
+  return {
+    ...data,
+    recentPosts: data.recentPosts ? stripPostsContent(data.recentPosts) : [],
+    featuredCategoryPosts: data.featuredCategoryPosts ? stripPostsContent(data.featuredCategoryPosts) : [],
+    mostRead: data.mostRead ? stripPostsContent(data.mostRead) : [],
+    randomPosts: data.randomPosts ? stripPostsContent(data.randomPosts) : [],
+    diverseSections: data.diverseSections ? data.diverseSections.map((s: any) => ({
+      ...s,
+      posts: stripPostsContent(s.posts),
+    })) : [],
+    rowSection1: data.rowSection1 ? { ...data.rowSection1, posts: stripPostsContent(data.rowSection1.posts) } : null,
+    rowSection2: data.rowSection2 ? { ...data.rowSection2, posts: stripPostsContent(data.rowSection2.posts) } : null,
+  };
+}
+
 function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -653,7 +679,7 @@ export async function registerRoutes(
   app.get("/api/home", async (_req, res) => {
     try {
       const data = await storage.getHomePageData();
-      res.json(data);
+      res.json(stripHomeDataContent(data));
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -666,7 +692,7 @@ export async function registerRoutes(
       const status = "published";
       const posts = await storage.getPosts({ status, limit, offset });
       const total = await storage.getPostCount(status);
-      res.json({ posts, total, limit, offset });
+      res.json({ posts: stripPostsContent(posts), total, limit, offset });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -687,7 +713,7 @@ export async function registerRoutes(
       const searchOptions = { limit, offset, searchIn, categoryId, tagId, dateFrom, dateTo, sort };
       const posts = await storage.searchPosts(query, searchOptions);
       const total = await storage.searchPostCount(query, { searchIn, categoryId, tagId, dateFrom, dateTo });
-      res.json({ posts, total, limit, offset });
+      res.json({ posts: stripPostsContent(posts), total, limit, offset });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -697,7 +723,7 @@ export async function registerRoutes(
     try {
       const limit = parseInt(req.query.limit as string) || 4;
       const mostRead = await storage.getMostReadGlobal(0, limit);
-      res.json(mostRead);
+      res.json(stripPostsContent(mostRead));
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -707,7 +733,7 @@ export async function registerRoutes(
     try {
       const limit = parseInt(req.query.limit as string) || 4;
       const recentPosts = await storage.getPosts({ status: "published", limit });
-      res.json(recentPosts);
+      res.json(stripPostsContent(recentPosts));
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -815,7 +841,7 @@ export async function registerRoutes(
       const posts = await storage.getPostsByCategory(req.params.slug, { limit, offset });
       const total = await storage.getPostCountByCategory(req.params.slug);
       const category = await storage.getCategoryBySlug(req.params.slug);
-      res.json({ posts, total, limit, offset, category });
+      res.json({ posts: stripPostsContent(posts), total, limit, offset, category });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -837,7 +863,7 @@ export async function registerRoutes(
       const posts = await storage.getPostsByTag(req.params.slug, { limit, offset });
       const total = await storage.getPostCountByTag(req.params.slug);
       const tag = await storage.getTagBySlug(req.params.slug);
-      res.json({ posts, total, limit, offset, tag });
+      res.json({ posts: stripPostsContent(posts), total, limit, offset, tag });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -998,7 +1024,7 @@ export async function registerRoutes(
       const categoryId = parseInt(req.query.categoryId as string);
       if (!categoryId) return res.json([]);
       const mostRead = await storage.getMostReadByCategory(categoryId, postId, 3);
-      res.json(mostRead);
+      res.json(stripPostsContent(mostRead));
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -1012,7 +1038,7 @@ export async function registerRoutes(
       const tagIds = post.tags.map((t: any) => t.id);
       const categoryIds = post.categories.map((c: any) => c.id);
       const suggested = await storage.getSuggestedPosts(postId, tagIds, categoryIds, 3);
-      res.json(suggested);
+      res.json(stripPostsContent(suggested));
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -1023,7 +1049,7 @@ export async function registerRoutes(
       const postId = parseInt(req.params.id);
       const limit = parseInt(req.query.limit as string) || 3;
       const mostRead = await storage.getMostReadGlobal(postId, limit);
-      res.json(mostRead);
+      res.json(stripPostsContent(mostRead));
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -1043,7 +1069,7 @@ export async function registerRoutes(
         const cat = await storage.getCategoryBySlug(slug.trim());
         if (cat) {
           const catPosts = await storage.getPostsByCategory(slug.trim(), { limit: 4 });
-          sections.push({ category: cat, posts: catPosts });
+          sections.push({ category: cat, posts: stripPostsContent(catPosts) });
         }
       }
       res.json(sections);
@@ -1266,7 +1292,7 @@ export async function registerRoutes(
         const sortMap = sortBy === "inboundLinks" ? inboundMap : outboundMap;
         allFiltered.sort((a, b) => sortOrder === "asc" ? (sortMap[a.id] || 0) - (sortMap[b.id] || 0) : (sortMap[b.id] || 0) - (sortMap[a.id] || 0));
         const paginated = allFiltered.slice(offset, offset + limit);
-        res.json({ posts: paginated, total, limit, offset });
+        res.json({ posts: stripPostsContent(paginated), total, limit, offset });
       } else if (sortBy === "categories" || sortBy === "tags") {
         const allFiltered = await storage.getPosts({ status, limit: 5000, offset: 0, search });
         const total = allFiltered.length;
@@ -1282,11 +1308,11 @@ export async function registerRoutes(
         });
 
         const paginated = allFiltered.slice(offset, offset + limit);
-        res.json({ posts: paginated, total, limit, offset });
+        res.json({ posts: stripPostsContent(paginated), total, limit, offset });
       } else {
         const fetchedPosts = await storage.getPosts({ status, limit, offset, search, sortBy, sortOrder });
         const total = await storage.getPostCount(status, search);
-        res.json({ posts: fetchedPosts, total, limit, offset });
+        res.json({ posts: stripPostsContent(fetchedPosts), total, limit, offset });
       }
     } catch (error: any) {
       res.status(500).json({ message: error.message });

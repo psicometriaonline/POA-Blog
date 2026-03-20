@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, primaryKey, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -45,7 +45,11 @@ export const posts = pgTable("posts", {
   publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("posts_status_idx").on(table.status),
+  index("posts_published_at_idx").on(table.publishedAt),
+  index("posts_status_published_at_idx").on(table.status, table.publishedAt),
+]);
 
 export const postCategories = pgTable("post_categories", {
   postId: integer("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
