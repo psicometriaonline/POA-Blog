@@ -966,7 +966,7 @@ export default function PostEditor() {
       toast({ title: isNew ? "Post criado com sucesso" : "Post atualizado com sucesso" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/posts?limit=50&offset=0"] });
       queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string)?.startsWith("/api/posts") });
-      setLocation("/admin");
+      setLocation("/admin?tab=posts");
     },
     onError: (error: any) => {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
@@ -1010,7 +1010,7 @@ export default function PostEditor() {
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
         <div className="flex items-center gap-2">
-          <Link href="/admin">
+          <Link href="/admin?tab=posts">
             <Button variant="ghost" size="icon" data-testid="button-back-admin">
               <ArrowLeft className="h-4 w-4" />
             </Button>
