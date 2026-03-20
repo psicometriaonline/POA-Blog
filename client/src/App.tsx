@@ -84,8 +84,8 @@ function App() {
         <TooltipProvider>
           <div className="min-h-screen flex flex-col">
             <BlogHeader />
-            <SharedHeroBar />
             <main className="flex-1 pt-16">
+              <SharedHeroBar />
               <Router />
             </main>
             <SharedFreeMaterials />
