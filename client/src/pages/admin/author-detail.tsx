@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link, useParams, useLocation } from "wouter";
+import { Link, useParams } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +46,6 @@ export default function AuthorDetail() {
   const authorId = parseInt(id || "0");
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
-  const [, navigate] = useLocation();
 
   const { data: authors, isLoading: authorsLoading } = useQuery<Author[]>({
     queryKey: ["/api/authors"],
