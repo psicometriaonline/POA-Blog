@@ -197,7 +197,7 @@ export default function AuthorDetail() {
                               </Button>
                             </a>
                           )}
-                          <Link href={`/admin/metricas?post=${post.id}`}>
+                          <Link href={`/admin/metricas?postId=${post.id}`}>
                             <Button size="icon" variant="ghost" title="Métricas" data-testid={`button-metrics-post-${post.id}`}>
                               <BarChart3 className="h-4 w-4" />
                             </Button>
