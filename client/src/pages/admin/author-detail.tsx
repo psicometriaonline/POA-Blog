@@ -60,7 +60,7 @@ export default function AuthorDetail() {
       if (!res.ok) throw new Error("Erro ao carregar posts do autor");
       return res.json();
     },
-    enabled: !!authorId,
+    enabled: !!authorId && !!user,
   });
 
   const deleteMutation = useMutation({
