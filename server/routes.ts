@@ -144,6 +144,26 @@ async function migrateBannerSlots() {
   }
 }
 
+const DEFAULT_REPLY_TEMPLATE = `Olá! Agradecemos pelo seu comentário e pela sua participação no nosso blog. Confira abaixo a nossa resposta:
+
+[Escreva sua resposta aqui]
+
+Esperamos ter ajudado! Caso tenha outras dúvidas, fique à vontade para comentar novamente.
+
+Atenciosamente,
+Equipe Psicometria Online`;
+
+async function seedDefaultSettings() {
+  try {
+    const existing = await storage.getSetting("comment_reply_template");
+    if (!existing) {
+      await storage.setSetting("comment_reply_template", DEFAULT_REPLY_TEMPLATE);
+    }
+  } catch (err) {
+    console.error("Seed default settings error:", err);
+  }
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -153,6 +173,7 @@ export async function registerRoutes(
 
   await migrateAuthors();
   await migrateBannerSlots();
+  await seedDefaultSettings();
 
   setInterval(async () => {
     try {

@@ -585,7 +585,9 @@ export default function ManageComments() {
                               Cancelar
                             </Button>
                             <span className="text-xs text-muted-foreground ml-2">
-                              Uma notificação será enviada para {comment.authorEmail}
+                              {comment.authorEmail
+                                ? `Notificação será enviada para ${comment.authorEmail}`
+                                : "Sem e-mail do autor — notificação não será enviada"}
                             </span>
                           </div>
                         </div>
