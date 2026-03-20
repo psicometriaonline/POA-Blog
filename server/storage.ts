@@ -141,6 +141,32 @@ export interface IStorage {
   getTotalViews(startDate: Date, endDate: Date, postId?: number): Promise<number>;
 }
 
+const postListColumns = {
+  id: posts.id,
+  title: posts.title,
+  slug: posts.slug,
+  excerpt: posts.excerpt,
+  featuredImage: posts.featuredImage,
+  status: posts.status,
+  authorId: posts.authorId,
+  authorName: posts.authorName,
+  sourceUrl: posts.sourceUrl,
+  viewCount: posts.viewCount,
+  disabledContainers: posts.disabledContainers,
+  seoTitle: posts.seoTitle,
+  metaDescription: posts.metaDescription,
+  focusKeyword: posts.focusKeyword,
+  publishedAt: posts.publishedAt,
+  createdAt: posts.createdAt,
+  updatedAt: posts.updatedAt,
+};
+
+type PostListRow = typeof posts.$inferSelect & { content: string };
+
+function toPostListRow(row: Record<string, unknown>): PostListRow {
+  return { ...row, content: "" } as PostListRow;
+}
+
 async function enrichPostsWithRelations(rawPosts: Post[]): Promise<PostWithRelations[]> {
   if (rawPosts.length === 0) return [];
 
@@ -301,9 +327,10 @@ export class DatabaseStorage implements IStorage {
     return (result.rows as any[]).map(r => r.post_id);
   }
 
-  async getPosts(options?: { status?: string; limit?: number; offset?: number; search?: string; sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<PostWithRelations[]> {
+  async getPosts(options?: { status?: string; limit?: number; offset?: number; search?: string; sortBy?: string; sortOrder?: "asc" | "desc"; includeContent?: boolean }): Promise<PostWithRelations[]> {
     const sortOrder = options?.sortOrder || "desc";
     const orderFn = sortOrder === "asc" ? asc : desc;
+    const includeContent = options?.includeContent ?? false;
 
     let orderClauses: any[];
     switch (options?.sortBy) {
@@ -320,7 +347,9 @@ export class DatabaseStorage implements IStorage {
         orderClauses = [desc(posts.publishedAt), desc(posts.createdAt)];
     }
 
-    let query = db.select().from(posts).orderBy(...orderClauses).$dynamic();
+    let query = includeContent
+      ? db.select().from(posts).orderBy(...orderClauses).$dynamic()
+      : db.select(postListColumns).from(posts).orderBy(...orderClauses).$dynamic();
 
     const conditions = [];
     if (options?.status) conditions.push(eq(posts.status, options.status));
@@ -331,7 +360,10 @@ export class DatabaseStorage implements IStorage {
     if (options?.offset) query = query.offset(options.offset);
 
     const rawPosts = await query;
-    return enrichPostsWithRelations(rawPosts);
+    const postsWithContent = includeContent
+      ? rawPosts as Post[]
+      : (rawPosts as any[]).map(toPostListRow);
+    return enrichPostsWithRelations(postsWithContent);
   }
 
   async getPostCount(status?: string, search?: string): Promise<number> {
@@ -371,7 +403,7 @@ export class DatabaseStorage implements IStorage {
     const postIds = pcRows.map(r => r.postId);
     if (postIds.length === 0) return [];
 
-    let postsQuery = db.select().from(posts)
+    let postsQuery = db.select(postListColumns).from(posts)
       .where(and(inArray(posts.id, postIds), eq(posts.status, "published")))
       .orderBy(desc(posts.publishedAt), desc(posts.createdAt))
       .$dynamic();
@@ -380,7 +412,7 @@ export class DatabaseStorage implements IStorage {
     if (options?.offset) postsQuery = postsQuery.offset(options.offset);
 
     const rawPosts = await postsQuery;
-    return enrichPostsWithRelations(rawPosts);
+    return enrichPostsWithRelations((rawPosts as any[]).map(toPostListRow));
   }
 
   async getPostCountByCategory(categorySlug: string): Promise<number> {
@@ -404,7 +436,7 @@ export class DatabaseStorage implements IStorage {
     const postIds = ptRows.map(r => r.postId);
     if (postIds.length === 0) return [];
 
-    let postsQuery = db.select().from(posts)
+    let postsQuery = db.select(postListColumns).from(posts)
       .where(and(inArray(posts.id, postIds), eq(posts.status, "published")))
       .orderBy(desc(posts.publishedAt), desc(posts.createdAt))
       .$dynamic();
@@ -413,7 +445,7 @@ export class DatabaseStorage implements IStorage {
     if (options?.offset) postsQuery = postsQuery.offset(options.offset);
 
     const rawPosts = await postsQuery;
-    return enrichPostsWithRelations(rawPosts);
+    return enrichPostsWithRelations((rawPosts as any[]).map(toPostListRow));
   }
 
   async getPostCountByTag(tagSlug: string): Promise<number> {
@@ -498,9 +530,9 @@ export class DatabaseStorage implements IStorage {
 
       const ids = matchedIds.map(r => r.id);
       const idOrder = new Map(ids.map((id, i) => [id, i]));
-      const rawPosts = await db.select().from(posts).where(inArray(posts.id, ids));
+      const rawPosts = await db.select(postListColumns).from(posts).where(inArray(posts.id, ids));
       rawPosts.sort((a, b) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0));
-      return enrichPostsWithRelations(rawPosts);
+      return enrichPostsWithRelations((rawPosts as any[]).map(toPostListRow));
     }
 
     let orderClause;
@@ -519,8 +551,8 @@ export class DatabaseStorage implements IStorage {
     if (matchedIds.length === 0) return [];
 
     const ids = matchedIds.map(r => r.id);
-    const rawPosts = await db.select().from(posts).where(inArray(posts.id, ids)).orderBy(...orderClause);
-    return enrichPostsWithRelations(rawPosts);
+    const rawPosts = await db.select(postListColumns).from(posts).where(inArray(posts.id, ids)).orderBy(...orderClause);
+    return enrichPostsWithRelations((rawPosts as any[]).map(toPostListRow));
   }
 
   async searchPostCount(query: string, options?: { searchIn?: string; categoryId?: number; tagId?: number; dateFrom?: string; dateTo?: string }): Promise<number> {
@@ -983,11 +1015,11 @@ export class DatabaseStorage implements IStorage {
     }
 
     const mostReadCount = parseInt(settings["most_read_count"] || "9") || 9;
-    const mostReadRaw = await db.select().from(posts)
+    const mostReadRaw = await db.select(postListColumns).from(posts)
       .where(eq(posts.status, "published"))
       .orderBy(desc(posts.viewCount), desc(posts.publishedAt))
       .limit(mostReadCount);
-    const mostRead = await enrichPostsWithRelations(mostReadRaw);
+    const mostRead = await enrichPostsWithRelations((mostReadRaw as any[]).map(toPostListRow));
 
     const diverseCatSlugs = (settings["diverse_category_slugs"] || "").split(",").filter(Boolean);
     const diverseSections: { category: Category; posts: PostWithRelations[] }[] = [];
@@ -1014,11 +1046,11 @@ export class DatabaseStorage implements IStorage {
 
     const materials = await this.getFreeMaterials();
 
-    const randomRaw = await db.select().from(posts)
+    const randomRaw = await db.select(postListColumns).from(posts)
       .where(eq(posts.status, "published"))
       .orderBy(sql`RANDOM()`)
       .limit(6);
-    const randomPosts = await enrichPostsWithRelations(randomRaw);
+    const randomPosts = await enrichPostsWithRelations((randomRaw as any[]).map(toPostListRow));
 
     return {
       settings,
@@ -1045,11 +1077,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(postCategories.categoryId, categoryId));
     const ids = postIdsInCategory.map(r => r.postId).filter(id => id !== excludePostId);
     if (ids.length === 0) return [];
-    const rawPosts = await db.select().from(posts)
+    const rawPosts = await db.select(postListColumns).from(posts)
       .where(and(inArray(posts.id, ids), eq(posts.status, "published")))
       .orderBy(desc(posts.viewCount), desc(posts.publishedAt))
       .limit(limit);
-    return enrichPostsWithRelations(rawPosts);
+    return enrichPostsWithRelations((rawPosts as any[]).map(toPostListRow));
   }
 
   async getSuggestedPosts(postId: number, tagIds: number[], categoryIds: number[], limit = 3): Promise<PostWithRelations[]> {
@@ -1101,8 +1133,8 @@ export class DatabaseStorage implements IStorage {
     }
 
     if (collected.length === 0) return [];
-    const rawPosts = await db.select().from(posts).where(inArray(posts.id, collected));
-    return enrichPostsWithRelations(rawPosts);
+    const rawPosts = await db.select(postListColumns).from(posts).where(inArray(posts.id, collected));
+    return enrichPostsWithRelations((rawPosts as any[]).map(toPostListRow));
   }
 
   async getMostReadGlobal(excludePostId: number, limit = 3): Promise<PostWithRelations[]> {
@@ -1125,19 +1157,19 @@ export class DatabaseStorage implements IStorage {
     if (topPosts.length === 0) {
       const fallbackConditions = [eq(posts.status, "published")];
       if (excludePostId > 0) fallbackConditions.push(sql`${posts.id} != ${excludePostId}` as any);
-      const fallback = await db.select().from(posts)
+      const fallback = await db.select(postListColumns).from(posts)
         .where(and(...fallbackConditions))
         .orderBy(desc(posts.viewCount))
         .limit(limit);
-      return enrichPostsWithRelations(fallback);
+      return enrichPostsWithRelations((fallback as any[]).map(toPostListRow));
     }
 
     const shuffled = topPosts.sort(() => Math.random() - 0.5);
     const selectedIds = shuffled.slice(0, limit).map(p => p.postId);
 
-    const rawPosts = await db.select().from(posts)
+    const rawPosts = await db.select(postListColumns).from(posts)
       .where(and(inArray(posts.id, selectedIds), eq(posts.status, "published")));
-    return enrichPostsWithRelations(rawPosts);
+    return enrichPostsWithRelations((rawPosts as any[]).map(toPostListRow));
   }
 
   async getCommentsByPost(postId: number): Promise<Comment[]> {

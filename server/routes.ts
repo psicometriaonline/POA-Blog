@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema, insertMediaSchema, authors, postCategories, postTags, posts, comments, banners, siteSettings } from "@shared/schema";
+import { type PostWithRelations, insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema, insertMediaSchema, authors, postCategories, postTags, posts, comments, banners, siteSettings } from "@shared/schema";
 import { eq, and, lte, sql } from "drizzle-orm";
 import { db } from "./db";
 import { crawlMultipleUrls } from "./crawler";
@@ -37,30 +37,8 @@ const upload = multer({
   },
 });
 
-function stripPostContent<T extends { content?: string | null }>(post: T): Omit<T, 'content'> & { content: string } {
-  const { content, ...rest } = post;
-  return { ...rest, content: "" } as any;
-}
-
-function stripPostsContent<T extends { content?: string | null }>(postsList: T[]): T[] {
-  return postsList.map(p => stripPostContent(p)) as T[];
-}
-
-function stripHomeDataContent(data: any): any {
-  if (!data) return data;
-  return {
-    ...data,
-    recentPosts: data.recentPosts ? stripPostsContent(data.recentPosts) : [],
-    featuredCategoryPosts: data.featuredCategoryPosts ? stripPostsContent(data.featuredCategoryPosts) : [],
-    mostRead: data.mostRead ? stripPostsContent(data.mostRead) : [],
-    randomPosts: data.randomPosts ? stripPostsContent(data.randomPosts) : [],
-    diverseSections: data.diverseSections ? data.diverseSections.map((s: any) => ({
-      ...s,
-      posts: stripPostsContent(s.posts),
-    })) : [],
-    rowSection1: data.rowSection1 ? { ...data.rowSection1, posts: stripPostsContent(data.rowSection1.posts) } : null,
-    rowSection2: data.rowSection2 ? { ...data.rowSection2, posts: stripPostsContent(data.rowSection2.posts) } : null,
-  };
+function stripPostsContent(postsList: PostWithRelations[]): PostWithRelations[] {
+  return postsList.map(({ content, ...rest }) => ({ ...rest, content: "" }));
 }
 
 function slugify(text: string): string {
@@ -679,7 +657,7 @@ export async function registerRoutes(
   app.get("/api/home", async (_req, res) => {
     try {
       const data = await storage.getHomePageData();
-      res.json(stripHomeDataContent(data));
+      res.json(data);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -877,7 +855,7 @@ export async function registerRoutes(
       const allCatPosts = await storage.getPostsByCategory(req.params.slug, { limit: 5000, offset: 0 });
       const totalViews = allCatPosts.reduce((sum, p) => sum + (p.viewCount || 0), 0);
 
-      const allPosts = await storage.getPosts({ limit: 5000, offset: 0 });
+      const allPosts = await storage.getPosts({ limit: 5000, offset: 0, includeContent: true });
       const slugToId = new Map<string, number>();
       for (const p of allPosts) slugToId.set(p.slug, p.id);
 
@@ -942,7 +920,7 @@ export async function registerRoutes(
       const allTagPosts = await storage.getPostsByTag(req.params.slug, { limit: 5000, offset: 0 });
       const totalViews = allTagPosts.reduce((sum, p) => sum + (p.viewCount || 0), 0);
 
-      const allPosts = await storage.getPosts({ limit: 5000, offset: 0 });
+      const allPosts = await storage.getPosts({ limit: 5000, offset: 0, includeContent: true });
       const slugToId = new Map<string, number>();
       for (const p of allPosts) slugToId.set(p.slug, p.id);
 
@@ -1259,7 +1237,7 @@ export async function registerRoutes(
       const sortOrder = (req.query.sortOrder as string) === "asc" ? "asc" : "desc";
 
       if (sortBy === "inboundLinks" || sortBy === "outboundLinks") {
-        const allFiltered = await storage.getPosts({ status, limit: 5000, offset: 0, search });
+        const allFiltered = await storage.getPosts({ status, limit: 5000, offset: 0, search, includeContent: true });
         const total = allFiltered.length;
 
         const slugToId = new Map<string, number>();
@@ -1596,7 +1574,7 @@ export async function registerRoutes(
 
   app.get("/api/admin/posts/link-counts", isAuthenticated, async (req, res) => {
     try {
-      const allPosts = await storage.getPosts({ limit: 5000, offset: 0 });
+      const allPosts = await storage.getPosts({ limit: 5000, offset: 0, includeContent: true });
       const slugToId = new Map<string, number>();
       for (const p of allPosts) {
         slugToId.set(p.slug, p.id);
@@ -1748,7 +1726,7 @@ export async function registerRoutes(
   app.get("/api/admin/posts/:id/internal-links", isAuthenticated, async (req, res) => {
     try {
       const postId = parseInt(req.params.id);
-      const allPosts = await storage.getPosts({ limit: 5000, offset: 0 });
+      const allPosts = await storage.getPosts({ limit: 5000, offset: 0, includeContent: true });
       const slugToPost = new Map<string, { id: number; title: string; slug: string }>();
       const idToPost = new Map<number, { id: number; title: string; slug: string }>();
       for (const p of allPosts) {
