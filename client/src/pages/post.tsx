@@ -560,17 +560,21 @@ function CommentsSection({ postId }: { postId: number }) {
                     </div>
                     <p className="text-sm leading-relaxed" data-testid={`text-comment-content-${c.id}`}>{c.content}</p>
                   </div>
-                  {replies.map((r) => (
-                    <div key={r.id} className="ml-8 mt-2 border rounded-md p-4 bg-primary/5 border-primary/20" data-testid={`comment-reply-${r.id}`}>
+                  {replies.map((r) => {
+                    const isTeam = r.authorName.toLowerCase().includes("equipe") || r.authorName.toLowerCase().includes("psicometria");
+                    return (
+                    <div key={r.id} className={`ml-8 mt-2 border rounded-md p-4 ${isTeam ? "bg-primary/5 border-primary/20" : "bg-muted/30"}`} data-testid={`comment-reply-${r.id}`}>
                       <div className="flex items-center gap-2 mb-2">
-                        <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold text-sm">
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm ${isTeam ? "bg-primary/15 text-primary" : "bg-accent-bright/15 text-accent-bright"}`}>
                           {r.authorName.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-sm" data-testid={`text-comment-author-${r.id}`}>{r.authorName}</p>
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0" data-testid={`badge-team-${r.id}`}>
-                            Equipe
-                          </Badge>
+                          {isTeam && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0" data-testid={`badge-team-${r.id}`}>
+                              Equipe
+                            </Badge>
+                          )}
                         </div>
                         {r.createdAt && (
                           <p className="text-xs text-muted-foreground">
@@ -580,7 +584,8 @@ function CommentsSection({ postId }: { postId: number }) {
                       </div>
                       <p className="text-sm leading-relaxed" data-testid={`text-comment-content-${r.id}`}>{r.content}</p>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               );
             })}
