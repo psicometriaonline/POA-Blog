@@ -1391,6 +1391,157 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/posts/link-counts", isAuthenticated, async (req, res) => {
+    try {
+      const allPosts = await storage.getPosts({ limit: 5000, offset: 0, includeContent: true });
+      const slugToId = new Map<string, number>();
+      for (const p of allPosts) {
+        slugToId.set(p.slug, p.id);
+      }
+
+      const hrefRegex = /<a[^>]+href=["']([^"'#?]+)["'][^>]*>/gi;
+      const outbound: Record<number, Set<number>> = {};
+      const inbound: Record<number, Set<number>> = {};
+
+      for (const p of allPosts) {
+        outbound[p.id] = new Set();
+        if (!inbound[p.id]) inbound[p.id] = new Set();
+      }
+
+      const internalDomains = [
+        "blog.psicometriaonline.com.br",
+        "www.blog.psicometriaonline.com.br",
+        "blog-academy.replit.app",
+      ];
+
+      for (const p of allPosts) {
+        const content = p.content || "";
+        let match;
+        hrefRegex.lastIndex = 0;
+        const seenSlugs = new Set<string>();
+        while ((match = hrefRegex.exec(content)) !== null) {
+          let href = match[1];
+          let slug: string | null = null;
+
+          if (href.startsWith("http://") || href.startsWith("https://")) {
+            try {
+              const url = new URL(href);
+              if (!internalDomains.includes(url.hostname)) continue;
+              slug = url.pathname.replace(/^\//, "").replace(/\/$/, "");
+            } catch {
+              continue;
+            }
+          } else {
+            slug = href.replace(/^\//, "").replace(/\/$/, "");
+          }
+
+          if (!slug || seenSlugs.has(slug)) continue;
+          seenSlugs.add(slug);
+          const targetId = slugToId.get(slug);
+          if (targetId && targetId !== p.id) {
+            outbound[p.id].add(targetId);
+            if (!inbound[targetId]) inbound[targetId] = new Set();
+            inbound[targetId].add(p.id);
+          }
+        }
+      }
+
+      const result: Record<number, { inbound: number; outbound: number }> = {};
+      for (const p of allPosts) {
+        result[p.id] = {
+          inbound: inbound[p.id]?.size || 0,
+          outbound: outbound[p.id]?.size || 0,
+        };
+      }
+
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/posts/export", isAuthenticated, async (req, res) => {
+    try {
+      const search = req.query.search as string | undefined;
+      const allPosts = await storage.getPosts({ limit: 100000, offset: 0, includeContent: true });
+      const filteredPosts = search 
+        ? allPosts.filter(p => p.title.toLowerCase().includes(search.toLowerCase()))
+        : allPosts;
+
+      const internalDomains = ["blog.psicometriaonline.com.br", "www.blog.psicometriaonline.com.br", "blog-academy.replit.app"];
+      const hrefRegex = /<a[^>]+href=["']([^"'#?]+)["'][^>]*>/gi;
+      const slugToId = new Map<string, number>();
+      for (const p of allPosts) slugToId.set(p.slug, p.id);
+
+      const inboundMap: Record<number, number> = {};
+      const outboundMap: Record<number, number> = {};
+      for (const p of allPosts) { inboundMap[p.id] = 0; outboundMap[p.id] = 0; }
+
+      for (const p of allPosts) {
+        const content = p.content || "";
+        let match;
+        hrefRegex.lastIndex = 0;
+        const seenSlugs = new Set<string>();
+        while ((match = hrefRegex.exec(content)) !== null) {
+          let href = match[1];
+          let slug: string | null = null;
+          if (href.startsWith("http://") || href.startsWith("https://")) {
+            try {
+              const url = new URL(href);
+              if (!internalDomains.includes(url.hostname)) continue;
+              slug = url.pathname.replace(/^\//, "").replace(/\/$/, "");
+            } catch {
+              continue;
+            }
+          } else {
+            slug = href.replace(/^\//, "").replace(/\/$/, "");
+          }
+          if (!slug || seenSlugs.has(slug)) continue;
+          seenSlugs.add(slug);
+          const targetId = slugToId.get(slug);
+          if (targetId && targetId !== p.id) {
+            outboundMap[p.id]++;
+            inboundMap[targetId]++;
+          }
+        }
+      }
+
+      const escapeCSVField = (value: string | number | null | undefined): string => {
+        if (value === null || value === undefined) return '""';
+        const str = String(value);
+        if (str.includes('"') || str.includes(';') || str.includes('\n') || str.includes('\r')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return `"${str}"`;
+      };
+
+      const rows = filteredPosts.map((p) => [
+        escapeCSVField(p.title || ""),
+        escapeCSVField(p.slug || ""),
+        escapeCSVField(p.authorName || ""),
+        escapeCSVField(p.categories.map((c) => c.name).join(" | ")),
+        escapeCSVField(p.tags.map((t) => t.name).join(" | ")),
+        escapeCSVField(p.publishedAt ? new Date(p.publishedAt).toLocaleDateString("pt-BR") : ""),
+        escapeCSVField(p.status || ""),
+        escapeCSVField(inboundMap[p.id] || 0),
+        escapeCSVField(outboundMap[p.id] || 0),
+      ]);
+
+      const csv =
+        "\uFEFF" +
+        "Título;Slug;Autor;Categorias;Tags;Data de Publicação;Status;Links Recebidos;Links Enviados\n" +
+        rows.map((r) => r.join(";")).join("\n");
+
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      res.set("Content-Type", "text/csv; charset=utf-8");
+      res.set("Content-Disposition", `attachment; filename="posts-export-${dateStr}.csv"`);
+      res.send(csv);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.post("/api/admin/posts", isAuthenticated, async (req, res) => {
     try {
       const { categoryIds, tagIds, ...postData } = req.body;
@@ -1645,157 +1796,6 @@ export async function registerRoutes(
       }
 
       res.json(suggestions);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.get("/api/admin/posts/link-counts", isAuthenticated, async (req, res) => {
-    try {
-      const allPosts = await storage.getPosts({ limit: 5000, offset: 0, includeContent: true });
-      const slugToId = new Map<string, number>();
-      for (const p of allPosts) {
-        slugToId.set(p.slug, p.id);
-      }
-
-      const hrefRegex = /<a[^>]+href=["']([^"'#?]+)["'][^>]*>/gi;
-      const outbound: Record<number, Set<number>> = {};
-      const inbound: Record<number, Set<number>> = {};
-
-      for (const p of allPosts) {
-        outbound[p.id] = new Set();
-        if (!inbound[p.id]) inbound[p.id] = new Set();
-      }
-
-      const internalDomains = [
-        "blog.psicometriaonline.com.br",
-        "www.blog.psicometriaonline.com.br",
-        "blog-academy.replit.app",
-      ];
-
-      for (const p of allPosts) {
-        const content = p.content || "";
-        let match;
-        hrefRegex.lastIndex = 0;
-        const seenSlugs = new Set<string>();
-        while ((match = hrefRegex.exec(content)) !== null) {
-          let href = match[1];
-          let slug: string | null = null;
-
-          if (href.startsWith("http://") || href.startsWith("https://")) {
-            try {
-              const url = new URL(href);
-              if (!internalDomains.includes(url.hostname)) continue;
-              slug = url.pathname.replace(/^\//, "").replace(/\/$/, "");
-            } catch {
-              continue;
-            }
-          } else {
-            slug = href.replace(/^\//, "").replace(/\/$/, "");
-          }
-
-          if (!slug || seenSlugs.has(slug)) continue;
-          seenSlugs.add(slug);
-          const targetId = slugToId.get(slug);
-          if (targetId && targetId !== p.id) {
-            outbound[p.id].add(targetId);
-            if (!inbound[targetId]) inbound[targetId] = new Set();
-            inbound[targetId].add(p.id);
-          }
-        }
-      }
-
-      const result: Record<number, { inbound: number; outbound: number }> = {};
-      for (const p of allPosts) {
-        result[p.id] = {
-          inbound: inbound[p.id]?.size || 0,
-          outbound: outbound[p.id]?.size || 0,
-        };
-      }
-
-      res.json(result);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.get("/api/admin/posts/export", isAuthenticated, async (req, res) => {
-    try {
-      const search = req.query.search as string | undefined;
-      const allPosts = await storage.getPosts({ limit: 100000, offset: 0, includeContent: true });
-      const filteredPosts = search 
-        ? allPosts.filter(p => p.title.toLowerCase().includes(search.toLowerCase()))
-        : allPosts;
-
-      const internalDomains = ["blog.psicometriaonline.com.br", "www.blog.psicometriaonline.com.br", "blog-academy.replit.app"];
-      const hrefRegex = /<a[^>]+href=["']([^"'#?]+)["'][^>]*>/gi;
-      const slugToId = new Map<string, number>();
-      for (const p of allPosts) slugToId.set(p.slug, p.id);
-
-      const inboundMap: Record<number, number> = {};
-      const outboundMap: Record<number, number> = {};
-      for (const p of allPosts) { inboundMap[p.id] = 0; outboundMap[p.id] = 0; }
-
-      for (const p of allPosts) {
-        const content = p.content || "";
-        let match;
-        hrefRegex.lastIndex = 0;
-        const seenSlugs = new Set<string>();
-        while ((match = hrefRegex.exec(content)) !== null) {
-          let href = match[1];
-          let slug: string | null = null;
-          if (href.startsWith("http://") || href.startsWith("https://")) {
-            try {
-              const url = new URL(href);
-              if (!internalDomains.includes(url.hostname)) continue;
-              slug = url.pathname.replace(/^\//, "").replace(/\/$/, "");
-            } catch {
-              continue;
-            }
-          } else {
-            slug = href.replace(/^\//, "").replace(/\/$/, "");
-          }
-          if (!slug || seenSlugs.has(slug)) continue;
-          seenSlugs.add(slug);
-          const targetId = slugToId.get(slug);
-          if (targetId && targetId !== p.id) {
-            outboundMap[p.id]++;
-            inboundMap[targetId]++;
-          }
-        }
-      }
-
-      const escapeCSVField = (value: string | number | null | undefined): string => {
-        if (value === null || value === undefined) return '""';
-        const str = String(value);
-        if (str.includes('"') || str.includes(';') || str.includes('\n') || str.includes('\r')) {
-          return `"${str.replace(/"/g, '""')}"`;
-        }
-        return `"${str}"`;
-      };
-
-      const rows = filteredPosts.map((p) => [
-        escapeCSVField(p.title || ""),
-        escapeCSVField(p.slug || ""),
-        escapeCSVField(p.authorName || ""),
-        escapeCSVField(p.categories.map((c) => c.name).join(" | ")),
-        escapeCSVField(p.tags.map((t) => t.name).join(" | ")),
-        escapeCSVField(p.publishedAt ? new Date(p.publishedAt).toLocaleDateString("pt-BR") : ""),
-        escapeCSVField(p.status || ""),
-        escapeCSVField(inboundMap[p.id] || 0),
-        escapeCSVField(outboundMap[p.id] || 0),
-      ]);
-
-      const csv =
-        "\uFEFF" +
-        "Título;Slug;Autor;Categorias;Tags;Data de Publicação;Status;Links Recebidos;Links Enviados\n" +
-        rows.map((r) => r.join(";")).join("\n");
-
-      const now = new Date();
-      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-      res.set("Content-Type", "text/csv; charset=utf-8");
-      res.set("Content-Disposition", `attachment; filename="posts-export-${dateStr}.csv"`);
-      res.send(csv);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
