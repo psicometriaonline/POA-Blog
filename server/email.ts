@@ -1,5 +1,14 @@
 import nodemailer from "nodemailer";
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function getTransporter() {
   const host = process.env.SMTP_HOST;
   const port = parseInt(process.env.SMTP_PORT || "587");
@@ -69,20 +78,20 @@ export async function sendCommentReplyNotification({
           <tr>
             <td style="padding:32px;">
               <p style="color:#333;font-size:15px;line-height:1.6;margin:0 0 16px;">
-                Olá, <strong>${recipientName}</strong>!
+                Olá, <strong>${escapeHtml(recipientName)}</strong>!
               </p>
               <p style="color:#333;font-size:15px;line-height:1.6;margin:0 0 24px;">
-                Seu comentário no post <strong>"${postTitle}"</strong> recebeu uma resposta da nossa equipe.
+                Seu comentário no post <strong>"${escapeHtml(postTitle)}"</strong> recebeu uma resposta da nossa equipe.
               </p>
 
               <div style="background-color:#f8f9fa;border-left:3px solid #6B7280;border-radius:4px;padding:16px;margin:0 0 16px;">
                 <p style="color:#6B7280;font-size:12px;margin:0 0 8px;font-weight:600;text-transform:uppercase;">Seu comentário:</p>
-                <p style="color:#555;font-size:14px;line-height:1.5;margin:0;font-style:italic;">"${truncatedComment}"</p>
+                <p style="color:#555;font-size:14px;line-height:1.5;margin:0;font-style:italic;">"${escapeHtml(truncatedComment)}"</p>
               </div>
 
               <div style="background-color:#E8F8FF;border-left:3px solid:#31D5FF;border-radius:4px;padding:16px;margin:0 0 24px;">
                 <p style="color:#31D5FF;font-size:12px;margin:0 0 8px;font-weight:600;text-transform:uppercase;">Nossa resposta:</p>
-                <p style="color:#333;font-size:14px;line-height:1.5;margin:0;">${replyContent}</p>
+                <p style="color:#333;font-size:14px;line-height:1.5;margin:0;">${escapeHtml(replyContent)}</p>
               </div>
 
               <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto;">
@@ -112,7 +121,7 @@ export async function sendCommentReplyNotification({
     await transporter.sendMail({
       from: fromAddress,
       to: recipientEmail,
-      subject: `Seu comentário em "${postTitle}" foi respondido — Psicometria Online`,
+      subject: `Seu comentário em "${escapeHtml(postTitle)}" foi respondido — Psicometria Online`,
       html,
     });
     console.log(`[Email] Reply notification sent to ${recipientEmail}`);
