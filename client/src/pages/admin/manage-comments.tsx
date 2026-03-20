@@ -470,7 +470,7 @@ export default function ManageComments() {
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-1">
-                        {!comment.parentId && (
+                        {!comment.parentId && !comment.isSpam && (
                           <Button
                             variant="ghost"
                             size="icon"
