@@ -45,6 +45,7 @@ export interface IStorage {
   countPostsInTag(tagId: number): Promise<number>;
 
   getPosts(options?: { status?: string; limit?: number; offset?: number; search?: string }): Promise<PostWithRelations[]>;
+  getPostsByAuthor(authorId: number): Promise<PostWithRelations[]>;
   getPostCount(status?: string, search?: string): Promise<number>;
   getPost(id: number): Promise<PostWithRelations | undefined>;
   getPostBySlug(slug: string): Promise<PostWithRelations | undefined>;
@@ -365,6 +366,13 @@ export class DatabaseStorage implements IStorage {
       ? rawPosts as Post[]
       : (rawPosts as any[]).map(toPostListRow);
     return enrichPostsWithRelations(postsWithContent);
+  }
+
+  async getPostsByAuthor(authorId: number): Promise<PostWithRelations[]> {
+    const rawPosts = await db.select(postListColumns).from(posts)
+      .where(eq(posts.authorId, authorId))
+      .orderBy(desc(posts.publishedAt), desc(posts.createdAt));
+    return enrichPostsWithRelations((rawPosts as any[]).map(toPostListRow));
   }
 
   async getPostCount(status?: string, search?: string): Promise<number> {

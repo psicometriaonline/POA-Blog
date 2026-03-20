@@ -1998,9 +1998,8 @@ export async function registerRoutes(
       const authorId = parseInt(req.params.id);
       const author = await storage.getAuthor(authorId);
       if (!author) return res.status(404).json({ message: "Autor não encontrado" });
-      const authorPosts = await storage.getPosts({ limit: 1000 });
-      const filtered = authorPosts.filter(p => p.authorId === authorId);
-      res.json(stripPostsContent(filtered));
+      const authorPosts = await storage.getPostsByAuthor(authorId);
+      res.json(stripPostsContent(authorPosts));
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

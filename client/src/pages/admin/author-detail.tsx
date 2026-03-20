@@ -56,7 +56,11 @@ export default function AuthorDetail() {
 
   const { data: authorPosts, isLoading: postsLoading } = useQuery<PostWithRelations[]>({
     queryKey: ["/api/admin/authors", authorId, "posts"],
-    queryFn: () => fetch(`/api/admin/authors/${authorId}/posts`, { credentials: "include" }).then(r => r.json()),
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/authors/${authorId}/posts`, { credentials: "include" });
+      if (!res.ok) throw new Error("Erro ao carregar posts do autor");
+      return res.json();
+    },
     enabled: !!authorId,
   });
 
@@ -190,12 +194,16 @@ export default function AuthorDetail() {
                       </td>
                       <td className="p-3">
                         <div className="flex justify-end gap-1">
-                          {post.status === "published" && (
+                          {post.status === "published" ? (
                             <a href={`/${post.slug}`} target="_blank" rel="noopener noreferrer">
                               <Button size="icon" variant="ghost" title="Ir para o post" data-testid={`button-view-post-${post.id}`}>
                                 <ExternalLink className="h-4 w-4" />
                               </Button>
                             </a>
+                          ) : (
+                            <Button size="icon" variant="ghost" title="Post não publicado" disabled data-testid={`button-view-post-${post.id}`}>
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
                           )}
                           <Link href={`/admin/metricas?postId=${post.id}`}>
                             <Button size="icon" variant="ghost" title="Métricas" data-testid={`button-metrics-post-${post.id}`}>
