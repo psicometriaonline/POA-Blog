@@ -1153,6 +1153,9 @@ export async function registerRoutes(
       if (!parentComment) {
         return res.status(404).json({ message: "Comentário não encontrado" });
       }
+      if (parentComment.parentId) {
+        return res.status(400).json({ message: "Não é possível responder a uma resposta" });
+      }
 
       const adminName = (await storage.getSetting("comment_reply_author_name")) || "Equipe Psicometria Online";
       const adminEmail = (await storage.getSetting("comment_reply_author_email")) || "contato@psicometriaonline.com.br";

@@ -177,7 +177,7 @@ export default function ManageComments() {
 
   const saveTemplateMutation = useMutation({
     mutationFn: async (template: string) => {
-      await apiRequest("PUT", "/api/admin/settings", { key: "comment_reply_template", value: template });
+      await apiRequest("PUT", "/api/admin/settings", { comment_reply_template: template });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
