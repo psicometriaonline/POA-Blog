@@ -48,7 +48,7 @@ export default function AuthorDetail() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
-  const { data: authors } = useQuery<Author[]>({
+  const { data: authors, isLoading: authorsLoading } = useQuery<Author[]>({
     queryKey: ["/api/authors"],
   });
 
@@ -107,7 +107,12 @@ export default function AuthorDetail() {
         </h1>
       </div>
 
-      {!author ? (
+      {authorsLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      ) : !author ? (
         <div className="text-center text-muted-foreground py-16">
           <p>Autor não encontrado.</p>
         </div>
