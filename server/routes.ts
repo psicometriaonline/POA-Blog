@@ -382,7 +382,7 @@ export async function registerRoutes(
 
   app.post("/api/admin/media/import-from-posts", isAuthenticated, async (_req, res) => {
     try {
-      const allPosts = await storage.getPosts({ limit: 1000 });
+      const allPosts = await storage.getPosts({ limit: 1000, includeContent: true });
       const seenUrls = new Set<string>();
       const toInsert: { url: string; filename: string; altText?: string; source: string; fileSize?: number }[] = [];
 
@@ -476,7 +476,7 @@ export async function registerRoutes(
       const WP_REGEX = new RegExp(WP_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^"\'<>\\s,]+', 'g');
       const SIZE_VARIANT_RE = /(-\d+x\d+)(\.\w+)$/;
 
-      const allPosts = await storage.getPosts({ limit: 10000 });
+      const allPosts = await storage.getPosts({ limit: 10000, includeContent: true });
 
       const allWpUrls = new Set<string>();
       for (const post of allPosts) {
@@ -1156,7 +1156,7 @@ export async function registerRoutes(
 
   app.post("/api/admin/media/fix-citations", isAuthenticated, async (_req, res) => {
     try {
-      const allPosts = await storage.getPosts({ limit: 10000 });
+      const allPosts = await storage.getPosts({ limit: 10000, includeContent: true });
       let updated = 0;
       
       const properNouns = [
@@ -1644,7 +1644,7 @@ export async function registerRoutes(
   app.get("/api/admin/posts/export", isAuthenticated, async (req, res) => {
     try {
       const search = req.query.search as string | undefined;
-      const allPosts = await storage.getPosts({ limit: 100000, offset: 0 });
+      const allPosts = await storage.getPosts({ limit: 100000, offset: 0, includeContent: true });
       const filteredPosts = search 
         ? allPosts.filter(p => p.title.toLowerCase().includes(search.toLowerCase()))
         : allPosts;
