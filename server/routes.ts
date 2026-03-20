@@ -1993,6 +1993,19 @@ export async function registerRoutes(
 
   // ===== AUTHOR ROUTES (Protected) =====
 
+  app.get("/api/admin/authors/:id/posts", isAuthenticated, async (req, res) => {
+    try {
+      const authorId = parseInt(req.params.id);
+      const author = await storage.getAuthor(authorId);
+      if (!author) return res.status(404).json({ message: "Autor não encontrado" });
+      const authorPosts = await storage.getPosts({ limit: 1000 });
+      const filtered = authorPosts.filter(p => p.authorId === authorId);
+      res.json(stripPostsContent(filtered));
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.post("/api/admin/authors", isAuthenticated, async (req, res) => {
     try {
       const parsed = insertAuthorSchema.parse(req.body);

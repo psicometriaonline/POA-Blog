@@ -203,7 +203,9 @@ function AuthorsManagerInner() {
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold" data-testid={`text-author-name-${author.id}`}>{author.name}</p>
+                    <Link href={`/admin/autores/${author.id}`}>
+                      <p className="font-semibold text-primary hover:underline cursor-pointer" data-testid={`text-author-name-${author.id}`}>{author.name}</p>
+                    </Link>
                     {author.bio && <p className="text-sm text-muted-foreground line-clamp-2" data-testid={`text-author-bio-${author.id}`}>{author.bio}</p>}
                   </div>
                   <div className="flex gap-1">

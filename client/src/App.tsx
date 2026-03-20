@@ -21,6 +21,7 @@ import AnalyticsPage from "@/pages/admin/analytics";
 import ManageComments from "@/pages/admin/manage-comments";
 import CategoryDetailPage from "@/pages/admin/category-detail";
 import TagDetailPage from "@/pages/admin/tag-detail";
+import AuthorDetail from "@/pages/admin/author-detail";
 import TermsPage from "@/pages/terms";
 import PrivacyPage from "@/pages/privacy";
 import AboutPage from "@/pages/about";
@@ -41,6 +42,7 @@ function Router() {
       <Route path="/admin/categorias/:slug" component={CategoryDetailPage} />
       <Route path="/admin/tags/:slug" component={TagDetailPage} />
       <Route path="/admin/metricas" component={AnalyticsPage} />
+      <Route path="/admin/autores/:id" component={AuthorDetail} />
       <Route path="/admin/comentarios" component={ManageComments} />
       <Route path="/:slug" component={PostPage} />
       <Route component={NotFound} />

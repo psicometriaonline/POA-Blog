@@ -319,7 +319,13 @@ function PostsTab({ user, bannerQuery, settings }: { user: any; bannerQuery: Ret
                             </div>
                           </td>
                           <td className="p-3" data-testid={`text-author-${post.id}`}>
-                            {post.authorName || post.author?.name ? (
+                            {post.authorId ? (
+                              <Link href={`/admin/autores/${post.authorId}`}>
+                                <span className="text-primary hover:underline cursor-pointer">
+                                  {post.authorName || post.author?.name}
+                                </span>
+                              </Link>
+                            ) : post.authorName || post.author?.name ? (
                               <span className="text-muted-foreground">
                                 {post.authorName || post.author?.name}
                               </span>
