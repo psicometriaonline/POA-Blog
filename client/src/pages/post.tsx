@@ -17,7 +17,7 @@ import { ptBR } from "date-fns/locale";
 import DOMPurify from "dompurify";
 import { useEffect, useRef, useState } from "react";
 
-import { Calendar, User, Tag, ChevronRight, Send, MessageSquare, List, Pencil } from "lucide-react";
+import { Calendar, User, Tag, ChevronRight, Send, MessageSquare, List, Pencil, FolderOpen } from "lucide-react";
 import { SiFacebook, SiLinkedin, SiWhatsapp, SiX } from "react-icons/si";
 import { useAuth } from "@/hooks/use-auth";
 import { parseBannerButtonColor } from "@/lib/banner-utils";
@@ -935,7 +935,7 @@ export default function PostPage() {
             {post.categories.map((cat) => (
               <Link key={cat.id} href={`/categoria/${cat.slug}`}>
                 <Badge variant="secondary" className="bg-accent-bright/15 text-accent-bright border-0" data-testid={`badge-category-${cat.id}`}>
-                  <Tag className="h-3 w-3 mr-1" />
+                  <FolderOpen className="h-3 w-3 mr-1" />
                   {cat.name}
                 </Badge>
               </Link>
