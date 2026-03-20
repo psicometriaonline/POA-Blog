@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -36,11 +37,24 @@ import {
   Download,
   Loader2,
   MessageSquare,
+  Reply,
+  X,
+  Settings,
+  Save,
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { PostsSubNav } from "@/components/admin/posts-sub-nav";
+
+const DEFAULT_REPLY_TEMPLATE = `Olá! Agradecemos pelo seu comentário e pela sua participação no nosso blog. Confira abaixo a nossa resposta:
+
+[Escreva sua resposta aqui]
+
+Esperamos ter ajudado! Caso tenha outras dúvidas, fique à vontade para comentar novamente.
+
+Atenciosamente,
+Equipe Psicometria Online`;
 
 interface CommentWithPost {
   id: number;
@@ -72,6 +86,10 @@ export default function ManageComments() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<number[]>([]);
   const [bulkAction, setBulkAction] = useState("");
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [replyContent, setReplyContent] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
+  const [templateDraft, setTemplateDraft] = useState("");
   const limit = 30;
   const { toast } = useToast();
 
@@ -129,6 +147,49 @@ export default function ManageComments() {
       toast({ title: "Ação em massa aplicada com sucesso" });
     },
   });
+
+  const { data: settings } = useQuery<Record<string, string>>({
+    queryKey: ["/api/admin/settings"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/settings", { credentials: "include" });
+      if (!res.ok) throw new Error("Erro");
+      return res.json();
+    },
+  });
+
+  const replyTemplate = settings?.comment_reply_template || DEFAULT_REPLY_TEMPLATE;
+
+  const replyMutation = useMutation({
+    mutationFn: async ({ commentId, content }: { commentId: number; content: string }) => {
+      const res = await apiRequest("POST", `/api/admin/comments/${commentId}/reply`, { content });
+      return res.json();
+    },
+    onSuccess: () => {
+      invalidate();
+      setReplyingTo(null);
+      setReplyContent("");
+      toast({ title: "Resposta enviada com sucesso" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Erro ao enviar resposta", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const saveTemplateMutation = useMutation({
+    mutationFn: async (template: string) => {
+      await apiRequest("PUT", "/api/admin/settings", { key: "comment_reply_template", value: template });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
+      setShowSettings(false);
+      toast({ title: "Template salvo com sucesso" });
+    },
+  });
+
+  const openReply = (commentId: number) => {
+    setReplyingTo(commentId);
+    setReplyContent(replyTemplate);
+  };
 
   const importMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/admin/crawl/import-comments"),
@@ -198,7 +259,7 @@ export default function ManageComments() {
             Gerenciar Comentários
           </h1>
         </div>
-        <div>
+        <div className="flex items-center gap-2 flex-wrap">
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" data-testid="button-import-comments" disabled={importMutation.isPending}>
@@ -226,7 +287,59 @@ export default function ManageComments() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowSettings(!showSettings);
+                setTemplateDraft(replyTemplate);
+              }}
+              data-testid="button-reply-settings"
+            >
+              <Settings className="h-4 w-4 mr-1" />
+              Template de Resposta
+            </Button>
         </div>
+
+        {showSettings && (
+          <Card className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-sm">Template de Resposta Padrão</h3>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowSettings(false)} data-testid="button-close-settings">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Este texto será usado como base ao responder comentários. Você pode editá-lo antes de cada envio.
+            </p>
+            <Textarea
+              value={templateDraft}
+              onChange={(e) => setTemplateDraft(e.target.value)}
+              rows={8}
+              data-testid="textarea-reply-template"
+            />
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={() => saveTemplateMutation.mutate(templateDraft)}
+                disabled={saveTemplateMutation.isPending}
+                data-testid="button-save-template"
+              >
+                <Save className="h-4 w-4 mr-1" />
+                {saveTemplateMutation.isPending ? "Salvando..." : "Salvar Template"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setTemplateDraft(DEFAULT_REPLY_TEMPLATE);
+                }}
+                data-testid="button-reset-template"
+              >
+                Restaurar Padrão
+              </Button>
+            </div>
+          </Card>
+        )}
 
         <div className="flex items-center gap-1 flex-wrap" data-testid="tabs-status">
         {statusTabs.map((tab) => (
@@ -312,7 +425,8 @@ export default function ManageComments() {
               </thead>
               <tbody>
                 {comments.map((comment) => (
-                  <tr key={comment.id} className="border-b hover:bg-muted/30" data-testid={`row-comment-${comment.id}`}>
+                  <Fragment key={comment.id}>
+                  <tr className="border-b hover:bg-muted/30" data-testid={`row-comment-${comment.id}`}>
                     <td className="p-3">
                       <Checkbox
                         checked={selected.includes(comment.id)}
@@ -356,6 +470,18 @@ export default function ManageComments() {
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-1">
+                        {!comment.parentId && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-primary"
+                            onClick={() => openReply(comment.id)}
+                            title="Responder"
+                            data-testid={`button-reply-${comment.id}`}
+                          >
+                            <Reply className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         {!comment.isApproved && (
                           <Button
                             variant="ghost"
@@ -421,6 +547,52 @@ export default function ManageComments() {
                       </div>
                     </td>
                   </tr>
+                  {replyingTo === comment.id && (
+                    <tr data-testid={`row-reply-form-${comment.id}`}>
+                      <td colSpan={7} className="p-3 bg-muted/20">
+                        <div className="max-w-2xl space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Reply className="h-4 w-4 text-primary" />
+                            <span className="text-sm font-medium">Responder a {comment.authorName}</span>
+                          </div>
+                          <Textarea
+                            value={replyContent}
+                            onChange={(e) => setReplyContent(e.target.value)}
+                            rows={6}
+                            placeholder="Escreva sua resposta..."
+                            data-testid={`textarea-reply-${comment.id}`}
+                          />
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => replyMutation.mutate({ commentId: comment.id, content: replyContent })}
+                              disabled={replyMutation.isPending || !replyContent.trim()}
+                              data-testid={`button-send-reply-${comment.id}`}
+                            >
+                              {replyMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                              ) : (
+                                <Reply className="h-4 w-4 mr-1" />
+                              )}
+                              {replyMutation.isPending ? "Enviando..." : "Enviar Resposta"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => { setReplyingTo(null); setReplyContent(""); }}
+                              data-testid={`button-cancel-reply-${comment.id}`}
+                            >
+                              Cancelar
+                            </Button>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              Uma notificação será enviada para {comment.authorEmail}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

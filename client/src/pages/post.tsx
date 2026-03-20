@@ -538,24 +538,52 @@ function CommentsSection({ postId }: { postId: number }) {
         <p className="text-sm text-muted-foreground text-center py-4">Seja o primeiro a comentar!</p>
       ) : (
         <div className="space-y-4">
-          {comments.map((c) => (
-            <div key={c.id} className="border rounded-md p-4" data-testid={`comment-${c.id}`}>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="h-8 w-8 rounded-full bg-accent-bright/15 flex items-center justify-center text-accent-bright font-bold text-sm">
-                  {c.authorName.charAt(0).toUpperCase()}
+          {comments
+            .filter((c) => !c.parentId)
+            .map((c) => {
+              const replies = comments.filter((r) => r.parentId === c.id);
+              return (
+                <div key={c.id}>
+                  <div className="border rounded-md p-4" data-testid={`comment-${c.id}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="h-8 w-8 rounded-full bg-accent-bright/15 flex items-center justify-center text-accent-bright font-bold text-sm">
+                        {c.authorName.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm" data-testid={`text-comment-author-${c.id}`}>{c.authorName}</p>
+                        {c.createdAt && (
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(c.createdAt), "dd 'de' MMMM, yyyy", { locale: ptBR })}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-sm leading-relaxed" data-testid={`text-comment-content-${c.id}`}>{c.content}</p>
+                  </div>
+                  {replies.map((r) => (
+                    <div key={r.id} className="ml-8 mt-2 border rounded-md p-4 bg-primary/5 border-primary/20" data-testid={`comment-reply-${r.id}`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold text-sm">
+                          {r.authorName.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-sm" data-testid={`text-comment-author-${r.id}`}>{r.authorName}</p>
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0" data-testid={`badge-team-${r.id}`}>
+                            Equipe
+                          </Badge>
+                        </div>
+                        {r.createdAt && (
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(r.createdAt), "dd 'de' MMMM, yyyy", { locale: ptBR })}
+                          </p>
+                        )}
+                      </div>
+                      <p className="text-sm leading-relaxed" data-testid={`text-comment-content-${r.id}`}>{r.content}</p>
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <p className="font-semibold text-sm" data-testid={`text-comment-author-${c.id}`}>{c.authorName}</p>
-                  {c.createdAt && (
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(c.createdAt), "dd 'de' MMMM, yyyy", { locale: ptBR })}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <p className="text-sm leading-relaxed" data-testid={`text-comment-content-${c.id}`}>{c.content}</p>
-            </div>
-          ))}
+              );
+            })}
         </div>
       )}
     </Card>

@@ -76,6 +76,7 @@ export interface IStorage {
   getMostReadGlobal(excludePostId: number, limit?: number): Promise<PostWithRelations[]>;
 
   getCommentsByPost(postId: number): Promise<Comment[]>;
+  getCommentById(id: number): Promise<Comment | undefined>;
   createComment(data: InsertComment): Promise<Comment>;
   deleteComment(id: number): Promise<boolean>;
   getAllComments(options?: { status?: string; search?: string; page?: number; limit?: number }): Promise<{ data: any[]; total: number; counts: { all: number; pending: number; approved: number; spam: number } }>;
@@ -1176,6 +1177,11 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(comments)
       .where(and(eq(comments.postId, postId), eq(comments.isApproved, true)))
       .orderBy(desc(comments.createdAt));
+  }
+
+  async getCommentById(id: number): Promise<Comment | undefined> {
+    const [c] = await db.select().from(comments).where(eq(comments.id, id));
+    return c;
   }
 
   async createComment(data: InsertComment): Promise<Comment> {

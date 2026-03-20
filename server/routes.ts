@@ -1141,6 +1141,53 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/comments/:id/reply", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { content } = req.body;
+      if (!content || typeof content !== "string" || !content.trim()) {
+        return res.status(400).json({ message: "Conteúdo da resposta é obrigatório" });
+      }
+
+      const parentComment = await storage.getCommentById(id);
+      if (!parentComment) {
+        return res.status(404).json({ message: "Comentário não encontrado" });
+      }
+
+      const adminName = (await storage.getSetting("comment_reply_author_name")) || "Equipe Psicometria Online";
+      const adminEmail = (await storage.getSetting("comment_reply_author_email")) || "contato@psicometriaonline.com.br";
+
+      const reply = await storage.createComment({
+        postId: parentComment.postId,
+        parentId: parentComment.id,
+        authorName: adminName,
+        authorEmail: adminEmail,
+        content: content.trim(),
+        isApproved: true,
+        isSpam: false,
+      });
+
+      const post = await storage.getPost(parentComment.postId);
+      if (post) {
+        const { sendCommentReplyNotification } = await import("./email");
+        const siteBaseUrl = (await storage.getSetting("citation_base_url")) || "https://www.blog.psicometriaonline.com.br";
+        await sendCommentReplyNotification({
+          recipientEmail: parentComment.authorEmail,
+          recipientName: parentComment.authorName,
+          originalComment: parentComment.content,
+          replyContent: content.trim(),
+          postTitle: post.title,
+          postSlug: post.slug,
+          siteBaseUrl,
+        });
+      }
+
+      res.json(reply);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.post("/api/admin/comments/bulk", isAuthenticated, async (req, res) => {
     try {
       const { action, ids } = req.body;
