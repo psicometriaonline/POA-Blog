@@ -192,19 +192,17 @@ function HeroSettingsTab({ settings }: { settings: Record<string, string> }) {
   const [heroButtonText, setHeroButtonText] = useState("");
   const [heroButtonColor, setHeroButtonColor] = useState("#31D5FF");
   const [heroButtonTextColor, setHeroButtonTextColor] = useState("#000A24");
-  const [heroNamePlaceholder, setHeroNamePlaceholder] = useState("");
-  const [heroEmailPlaceholder, setHeroEmailPlaceholder] = useState("");
+  const [heroButtonUrl, setHeroButtonUrl] = useState("");
 
   useEffect(() => {
     setHeroHeadlineHtml(settings["hero_headline_html"] || 'O seu <span style="color:#31D5FF;font-weight:bold">Blog</span> de Psicometria');
     setHeroSubheadline(settings["hero_subheadline"] || "Recursos de aprendizagem em psicometria e análises quantitativas");
     setHeroFormEnabled(settings["hero_form_enabled"] !== "false");
-    setHeroFormCtaText(settings["hero_form_cta_text"] || 'Junte-se a mais de <span style="color:#31D5FF;font-weight:600">22.300</span> membros e receba conteúdos exclusivos e com prioridade');
-    setHeroButtonText(settings["hero_button_text"] || "Quero receber materiais gratuitos");
+    setHeroFormCtaText(settings["hero_form_cta_text"] || 'Cadastre-se gratuitamente na Psicometria Online Academy e tenha acesso a todos os nossos cursos, recursos e ferramentas estatísticas');
+    setHeroButtonText(settings["hero_button_text"] || "Fazer cadastro agora");
     setHeroButtonColor(settings["hero_button_color"] || "#31D5FF");
     setHeroButtonTextColor(settings["hero_button_text_color"] || "#000A24");
-    setHeroNamePlaceholder(settings["hero_name_placeholder"] || "Seu primeiro nome");
-    setHeroEmailPlaceholder(settings["hero_email_placeholder"] || "Digite seu e-mail");
+    setHeroButtonUrl(settings["hero_button_url"] || "https://academy.psicometriaonline.com.br");
   }, [settings]);
 
   const saveMutation = useMutation({
@@ -226,7 +224,7 @@ function HeroSettingsTab({ settings }: { settings: Record<string, string> }) {
     <Card className="p-6 space-y-6">
       <div>
         <h3 className="font-semibold text-lg mb-1">Cabeçalho (Hero)</h3>
-        <p className="text-sm text-muted-foreground mb-4">Configure o título, subtítulo e formulário de inscrição do topo da página.</p>
+        <p className="text-sm text-muted-foreground mb-4">Configure o título, subtítulo e botão CTA do topo da página.</p>
       </div>
 
       <div className="space-y-4">
@@ -260,13 +258,13 @@ function HeroSettingsTab({ settings }: { settings: Record<string, string> }) {
             onCheckedChange={setHeroFormEnabled}
             data-testid="switch-hero-form-enabled"
           />
-          <Label htmlFor="hero-form-enabled">Habilitar formulário de inscrição</Label>
+          <Label htmlFor="hero-form-enabled">Habilitar seção CTA</Label>
         </div>
 
         {heroFormEnabled && (
           <div className="space-y-4 pl-4 border-l-2 border-muted">
             <div>
-              <Label htmlFor="hero-form-cta">Texto acima do formulário (HTML)</Label>
+              <Label htmlFor="hero-form-cta">Texto do CTA (HTML)</Label>
               <Textarea
                 id="hero-form-cta"
                 value={heroFormCtaText}
@@ -277,15 +275,10 @@ function HeroSettingsTab({ settings }: { settings: Record<string, string> }) {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="hero-name-placeholder">Placeholder do nome</Label>
-                <Input id="hero-name-placeholder" value={heroNamePlaceholder} onChange={(e) => setHeroNamePlaceholder(e.target.value)} data-testid="input-hero-name-placeholder" />
-              </div>
-              <div>
-                <Label htmlFor="hero-email-placeholder">Placeholder do e-mail</Label>
-                <Input id="hero-email-placeholder" value={heroEmailPlaceholder} onChange={(e) => setHeroEmailPlaceholder(e.target.value)} data-testid="input-hero-email-placeholder" />
-              </div>
+            <div>
+              <Label htmlFor="hero-button-url">URL do botão</Label>
+              <Input id="hero-button-url" value={heroButtonUrl} onChange={(e) => setHeroButtonUrl(e.target.value)} data-testid="input-hero-button-url" placeholder="https://academy.psicometriaonline.com.br" />
+              <p className="text-xs text-muted-foreground mt-1">Link externo que abre em nova aba ao clicar no botão.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -324,8 +317,7 @@ function HeroSettingsTab({ settings }: { settings: Record<string, string> }) {
           hero_button_text: heroButtonText,
           hero_button_color: heroButtonColor,
           hero_button_text_color: heroButtonTextColor,
-          hero_name_placeholder: heroNamePlaceholder,
-          hero_email_placeholder: heroEmailPlaceholder,
+          hero_button_url: heroButtonUrl,
         })}
         disabled={saveMutation.isPending}
         data-testid="button-save-hero"
@@ -345,16 +337,16 @@ function NewsletterSettingsTab({ settings }: { settings: Record<string, string> 
   const [buttonText, setButtonText] = useState("");
   const [buttonColor, setButtonColor] = useState("#31D5FF");
   const [buttonTextColor, setButtonTextColor] = useState("#000A24");
-  const [emailPlaceholder, setEmailPlaceholder] = useState("");
+  const [buttonUrl, setButtonUrl] = useState("");
 
   useEffect(() => {
     setEnabled(settings["newsletter_enabled"] !== "false");
-    setTitle(settings["newsletter_title"] || "Newsletter");
-    setText(settings["newsletter_text"] || "Receba nossos conteúdos diretamente no seu e-mail");
-    setButtonText(settings["newsletter_button_text"] || "Inscrever-se");
+    setTitle(settings["newsletter_title"] || "Psicometria Online Academy");
+    setText(settings["newsletter_text"] || "Acesse nossos cursos, recursos e ferramentas estatísticas");
+    setButtonText(settings["newsletter_button_text"] || "Acessar Academy");
     setButtonColor(settings["newsletter_button_color"] || "#31D5FF");
     setButtonTextColor(settings["newsletter_button_text_color"] || "#000A24");
-    setEmailPlaceholder(settings["newsletter_email_placeholder"] || "Seu melhor e-mail");
+    setButtonUrl(settings["newsletter_button_url"] || "https://academy.psicometriaonline.com.br");
   }, [settings]);
 
   const saveMutation = useMutation({
@@ -375,8 +367,8 @@ function NewsletterSettingsTab({ settings }: { settings: Record<string, string> 
   return (
     <Card className="p-6 space-y-6">
       <div>
-        <h3 className="font-semibold text-lg mb-1">Newsletter</h3>
-        <p className="text-sm text-muted-foreground mb-4">Configure a seção de newsletter exibida na Home.</p>
+        <h3 className="font-semibold text-lg mb-1">Newsletter / CTA</h3>
+        <p className="text-sm text-muted-foreground mb-4">Configure a seção CTA exibida na Home (antes era Newsletter com formulário, agora é um botão externo).</p>
       </div>
 
       <div className="flex items-center gap-3">
@@ -386,7 +378,7 @@ function NewsletterSettingsTab({ settings }: { settings: Record<string, string> 
           onCheckedChange={setEnabled}
           data-testid="switch-newsletter-enabled"
         />
-        <Label htmlFor="newsletter-enabled">Habilitar seção de newsletter</Label>
+        <Label htmlFor="newsletter-enabled">Habilitar seção CTA</Label>
       </div>
 
       {enabled && (
@@ -398,6 +390,11 @@ function NewsletterSettingsTab({ settings }: { settings: Record<string, string> 
           <div>
             <Label htmlFor="newsletter-text">Texto descritivo</Label>
             <Input id="newsletter-text" value={text} onChange={(e) => setText(e.target.value)} data-testid="input-newsletter-text" />
+          </div>
+          <div>
+            <Label htmlFor="newsletter-button-url">URL do botão</Label>
+            <Input id="newsletter-button-url" value={buttonUrl} onChange={(e) => setButtonUrl(e.target.value)} data-testid="input-newsletter-button-url" placeholder="https://academy.psicometriaonline.com.br" />
+            <p className="text-xs text-muted-foreground mt-1">Link externo que abre em nova aba ao clicar no botão.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -421,10 +418,6 @@ function NewsletterSettingsTab({ settings }: { settings: Record<string, string> 
               </div>
             </div>
           </div>
-          <div>
-            <Label htmlFor="newsletter-email-placeholder">Placeholder do e-mail</Label>
-            <Input id="newsletter-email-placeholder" value={emailPlaceholder} onChange={(e) => setEmailPlaceholder(e.target.value)} data-testid="input-newsletter-email-placeholder" />
-          </div>
         </div>
       )}
 
@@ -436,7 +429,7 @@ function NewsletterSettingsTab({ settings }: { settings: Record<string, string> 
           newsletter_button_text: buttonText,
           newsletter_button_color: buttonColor,
           newsletter_button_text_color: buttonTextColor,
-          newsletter_email_placeholder: emailPlaceholder,
+          newsletter_button_url: buttonUrl,
         })}
         disabled={saveMutation.isPending}
         data-testid="button-save-newsletter"

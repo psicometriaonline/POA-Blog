@@ -18,17 +18,13 @@ function CategoryBadge({ slug, name, className = "bg-accent-bright text-accent-b
   );
 }
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, User, ArrowRight, Mail, ChevronRight, ChevronDown, Search, Menu as MenuIcon } from "lucide-react";
+import { Calendar, User, ArrowRight, ChevronRight, ChevronDown, Search, Menu as MenuIcon } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import type { PostWithRelations, Category, Banner, FreeMaterial } from "@shared/schema";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useRef, useEffect, useCallback } from "react";
 import { PostCard } from "@/components/post-card";
 import DOMPurify from "dompurify";
 import { parseBannerButtonColor } from "@/lib/banner-utils";
@@ -455,36 +451,13 @@ function SectionFeaturedCategory({ category, posts }: { category: Category | nul
 }
 
 function SectionNewsletter({ settings }: { settings: Record<string, string> }) {
-  const { toast } = useToast();
-  const [email, setEmail] = useState("");
   const enabled = settings["newsletter_enabled"] !== "false";
-  const title = settings["newsletter_title"] || "Newsletter";
-  const text = settings["newsletter_text"] || "Receba nossos conteúdos diretamente no seu e-mail";
-  const buttonText = settings["newsletter_button_text"] || "Inscrever-se";
+  const title = settings["newsletter_title"] || "Psicometria Online Academy";
+  const text = settings["newsletter_text"] || "Acesse nossos cursos, recursos e ferramentas estatísticas";
+  const buttonText = settings["newsletter_button_text"] || "Acessar Academy";
   const buttonColor = settings["newsletter_button_color"] || "#31D5FF";
   const buttonTextColor = settings["newsletter_button_text_color"] || "#000A24";
-  const emailPlaceholder = settings["newsletter_email_placeholder"] || "Seu melhor e-mail";
-
-  const subscribeMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/subscribe", { email, source: "newsletter" });
-    },
-    onSuccess: () => {
-      toast({ title: "Inscrito com sucesso!", description: "Você receberá nossos conteúdos em breve." });
-      setEmail("");
-    },
-    onError: (error: any) => {
-      toast({ title: "Erro", description: error.message || "Verifique o e-mail informado.", variant: "destructive" });
-    },
-  });
-
-  const handleSubmit = () => {
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      toast({ title: "E-mail inválido", description: "Por favor, digite um e-mail válido.", variant: "destructive" });
-      return;
-    }
-    subscribeMutation.mutate();
-  };
+  const buttonUrl = settings["newsletter_button_url"] || "https://academy.psicometriaonline.com.br";
 
   if (!enabled) return null;
 
@@ -492,30 +465,19 @@ function SectionNewsletter({ settings }: { settings: Record<string, string> }) {
     <section className="bg-dark-bg" data-testid="section-newsletter">
       <div className="max-w-7xl mx-auto px-4 py-14">
         <div className="max-w-xl mx-auto text-center">
-          <Mail className="h-10 w-10 text-accent-bright mx-auto mb-4" />
+          <ArrowRight className="h-10 w-10 text-accent-bright mx-auto mb-4" />
           <h2 className="font-serif text-2xl font-bold mb-2 text-dark-bg-foreground">{title}</h2>
           <p className="text-dark-bg-foreground/70 mb-6">{text}</p>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Input
-              type="email"
-              placeholder={emailPlaceholder}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-              className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50"
-              data-testid="input-newsletter-email"
-            />
+          <a href={buttonUrl} target="_blank" rel="noopener noreferrer">
             <Button
-              className="border-transparent"
+              className="border-transparent px-8 py-3 text-base font-semibold"
               style={{ backgroundColor: buttonColor, color: buttonTextColor }}
-              onClick={handleSubmit}
-              disabled={subscribeMutation.isPending}
-              data-testid="button-newsletter-subscribe"
+              data-testid="button-newsletter-cta"
             >
-              <Mail className="h-4 w-4 mr-1" />
-              {subscribeMutation.isPending ? "Enviando..." : buttonText}
+              <ArrowRight className="h-4 w-4 mr-2" />
+              {buttonText}
             </Button>
-          </div>
+          </a>
         </div>
       </div>
     </section>
