@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Eye, Code, Sigma, Plus, Image as ImageIcon, Link2, CheckCircle, XCircle, AlertTriangle, Loader2, ChevronDown, ChevronRight, Copy, Bold, Italic, Heading2, Heading3, List, ListOrdered, Quote, Table2, Type, Highlighter, ExternalLink, Palette } from "lucide-react";
+import { ArrowLeft, Save, Eye, Code, Sigma, Plus, Image as ImageIcon, Link2, CheckCircle, XCircle, AlertTriangle, Loader2, ChevronDown, ChevronRight, Copy, Bold, Italic, Heading2, Heading3, List, ListOrdered, Quote, Table2, Type, Highlighter, ExternalLink, Palette, Trash2, RefreshCw } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { MediaLibraryModal } from "@/components/media-library-modal";
 import { SeoPanel } from "@/components/seo-panel";
@@ -142,14 +142,28 @@ const LANGUAGES = [
   { value: "latex", label: "LaTeX" },
 ];
 
-function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, getAuthorName, getSlug, getPublishedAt }: { content: string; onChange: (html: string) => void; onOpenMediaLib?: () => void; editorRef?: React.MutableRefObject<any>; getTitle?: () => string; getAuthorName?: () => string; getSlug?: () => string; getPublishedAt?: () => Date | null }) {
+function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, getAuthorName, getSlug, getPublishedAt }: { content: string; onChange: (html: string) => void; onOpenMediaLib?: (mode?: "insert" | "replace") => void; editorRef?: React.MutableRefObject<any>; getTitle?: () => string; getAuthorName?: () => string; getSlug?: () => string; getPublishedAt?: () => Date | null }) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         codeBlock: false,
       }),
       LinkExtension.configure({ openOnClick: false }),
-      ImageExtension,
+      ImageExtension.extend({
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            title: {
+              default: null,
+              parseHTML: (element) => element.getAttribute("title"),
+              renderHTML: (attributes) => {
+                if (!attributes.title) return {};
+                return { title: attributes.title };
+              },
+            },
+          };
+        },
+      }),
       Placeholder.configure({ placeholder: "Escreva o conteudo do post aqui..." }),
       createCustomCodeBlockExtension(lowlight),
       Table.configure({ resizable: true }),
@@ -217,10 +231,12 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
   const [floatingMenuPos, setFloatingMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [floatingMenuOpen, setFloatingMenuOpen] = useState(false);
   const [codeBlockToolbar, setCodeBlockToolbar] = useState<{ top: number; left: number; dataStart: number; language: string } | null>(null);
+  const [imageMenu, setImageMenu] = useState<{ top: number; left: number; src: string; alt: string; title: string } | null>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
   const floatingRef = useRef<HTMLDivElement>(null);
   const codeBlockRef = useRef<HTMLDivElement>(null);
+  const imageMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!editor) return;
@@ -292,18 +308,41 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
       });
     };
 
+    const updateImageMenu = () => {
+      const { selection } = editor.state;
+      if ("node" in selection && (selection as any).node?.type.name === "image") {
+        const node = (selection as any).node;
+        const containerRect = editorContainerRef.current?.getBoundingClientRect();
+        if (!containerRect) { setImageMenu(null); return; }
+        const coords = editor.view.coordsAtPos(selection.from);
+        setImageMenu({
+          top: coords.top - containerRect.top - 4,
+          left: coords.left - containerRect.left,
+          src: node.attrs.src || "",
+          alt: node.attrs.alt || "",
+          title: node.attrs.title || "",
+        });
+      } else {
+        setImageMenu(null);
+      }
+    };
+
     editor.on("selectionUpdate", updateBubble);
     editor.on("selectionUpdate", updateFloating);
     editor.on("selectionUpdate", updateCodeBlockToolbar);
+    editor.on("selectionUpdate", updateImageMenu);
     editor.on("transaction", updateBubble);
     editor.on("transaction", updateCodeBlockToolbar);
+    editor.on("transaction", updateImageMenu);
 
     return () => {
       editor.off("selectionUpdate", updateBubble);
       editor.off("selectionUpdate", updateFloating);
       editor.off("selectionUpdate", updateCodeBlockToolbar);
+      editor.off("selectionUpdate", updateImageMenu);
       editor.off("transaction", updateBubble);
       editor.off("transaction", updateCodeBlockToolbar);
+      editor.off("transaction", updateImageMenu);
     };
   }, [editor]);
 
@@ -434,6 +473,73 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
           >
             <XCircle className="h-3.5 w-3.5" />
           </button>
+        </div>
+      )}
+
+      {imageMenu && (
+        <div
+          ref={imageMenuRef}
+          className="absolute z-50 rounded-lg border bg-popover p-3 shadow-lg animate-in fade-in-0 zoom-in-95 w-72"
+          style={{ top: imageMenu.top, left: Math.max(0, imageMenu.left) }}
+          data-testid="image-bubble-menu"
+        >
+          <div className="space-y-2">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Texto alternativo (alt)</label>
+              <input
+                type="text"
+                className="mt-1 h-8 w-full rounded-md border bg-background px-2 text-sm"
+                value={imageMenu.alt}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setImageMenu(prev => prev ? { ...prev, alt: val } : null);
+                  editor.chain().focus().updateAttributes("image", { alt: val }).run();
+                }}
+                placeholder="Descrição da imagem"
+                data-testid="input-image-alt"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Título</label>
+              <input
+                type="text"
+                className="mt-1 h-8 w-full rounded-md border bg-background px-2 text-sm"
+                value={imageMenu.title}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setImageMenu(prev => prev ? { ...prev, title: val } : null);
+                  editor.chain().focus().updateAttributes("image", { title: val }).run();
+                }}
+                placeholder="Título da imagem"
+                data-testid="input-image-title"
+              />
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs transition-colors hover:bg-accent text-muted-foreground"
+                onClick={() => onOpenMediaLib?.("replace")}
+                title="Substituir imagem"
+                data-testid="button-replace-image"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Substituir
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs transition-colors hover:bg-destructive/10 hover:text-destructive text-muted-foreground"
+                onClick={() => {
+                  editor.chain().focus().deleteSelection().run();
+                  setImageMenu(null);
+                }}
+                title="Remover imagem"
+                data-testid="button-remove-image"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Remover
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -879,7 +985,7 @@ export default function PostEditor() {
   const [metaDescription, setMetaDescription] = useState("");
   const [focusKeyword, setFocusKeyword] = useState("");
   const [mediaLibOpen, setMediaLibOpen] = useState(false);
-  const [mediaLibTarget, setMediaLibTarget] = useState<"inline" | "featured">("inline");
+  const [mediaLibTarget, setMediaLibTarget] = useState<"inline" | "featured" | "replace">("inline");
   const editorInstanceRef = useRef<any>(null);
   const [linkCheckResults, setLinkCheckResults] = useState<{ url: string; text: string; status: "ok" | "broken" | "error"; statusCode?: number; reason?: string }[] | null>(null);
   const [linkCheckLoading, setLinkCheckLoading] = useState(false);
@@ -1195,7 +1301,7 @@ export default function PostEditor() {
 
           <div>
             <Label>Conteudo</Label>
-            <TiptapEditor content={content} onChange={setContent} onOpenMediaLib={() => { setMediaLibTarget("inline"); setMediaLibOpen(true); }} editorRef={editorInstanceRef} getTitle={() => title} getAuthorName={() => { const a = allAuthors?.find(a => a.id === parseInt(authorId)); return a?.name || "Autor"; }} getSlug={() => slug} getPublishedAt={() => post?.publishedAt ? new Date(post.publishedAt) : null} />
+            <TiptapEditor content={content} onChange={setContent} onOpenMediaLib={(mode) => { setMediaLibTarget(mode === "replace" ? "replace" : "inline"); setMediaLibOpen(true); }} editorRef={editorInstanceRef} getTitle={() => title} getAuthorName={() => { const a = allAuthors?.find(a => a.id === parseInt(authorId)); return a?.name || "Autor"; }} getSlug={() => slug} getPublishedAt={() => post?.publishedAt ? new Date(post.publishedAt) : null} />
           </div>
 
           <SeoPanel
@@ -1599,11 +1705,16 @@ export default function PostEditor() {
       <MediaLibraryModal
         open={mediaLibOpen}
         onClose={() => setMediaLibOpen(false)}
-        onSelect={(url, alt) => {
+        onSelect={(url, alt, title) => {
           if (mediaLibTarget === "inline") {
             const editor = editorInstanceRef.current;
             if (editor) {
-              editor.chain().focus().setImage({ src: url, alt: alt || "" }).run();
+              editor.chain().focus().setImage({ src: url, alt: alt || "", title: title || "" }).run();
+            }
+          } else if (mediaLibTarget === "replace") {
+            const editor = editorInstanceRef.current;
+            if (editor) {
+              editor.chain().focus().updateAttributes("image", { src: url, alt: alt || "", title: title || "" }).run();
             }
           } else {
             setFeaturedImage(url);
