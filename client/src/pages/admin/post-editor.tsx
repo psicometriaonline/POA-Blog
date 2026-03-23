@@ -38,6 +38,7 @@ import katex from "katex";
 import "katex/dist/katex.min.css";
 
 import { Extension } from "@tiptap/core";
+import { NodeSelection } from "@tiptap/pm/state";
 
 const FontSize = Extension.create({
   name: "fontSize",
@@ -310,8 +311,8 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
 
     const updateImageMenu = () => {
       const { selection } = editor.state;
-      if ("node" in selection && (selection as any).node?.type.name === "image") {
-        const node = (selection as any).node;
+      if (selection instanceof NodeSelection && selection.node.type.name === "image") {
+        const node = selection.node;
         const containerRect = editorContainerRef.current?.getBoundingClientRect();
         if (!containerRect) { setImageMenu(null); return; }
         const coords = editor.view.coordsAtPos(selection.from);
