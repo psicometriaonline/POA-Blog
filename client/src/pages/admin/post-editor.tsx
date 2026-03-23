@@ -482,6 +482,7 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
           ref={imageMenuRef}
           className="absolute z-50 rounded-lg border bg-popover p-3 shadow-lg animate-in fade-in-0 zoom-in-95 w-72"
           style={{ top: imageMenu.top, left: Math.max(0, imageMenu.left) }}
+          onMouseDown={(e) => e.stopPropagation()}
           data-testid="image-bubble-menu"
         >
           <div className="space-y-2">
@@ -494,7 +495,7 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
                 onChange={(e) => {
                   const val = e.target.value;
                   setImageMenu(prev => prev ? { ...prev, alt: val } : null);
-                  editor.chain().focus().updateAttributes("image", { alt: val }).run();
+                  editor.commands.updateAttributes("image", { alt: val });
                 }}
                 placeholder="Descrição da imagem"
                 data-testid="input-image-alt"
@@ -509,7 +510,7 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
                 onChange={(e) => {
                   const val = e.target.value;
                   setImageMenu(prev => prev ? { ...prev, title: val } : null);
-                  editor.chain().focus().updateAttributes("image", { title: val }).run();
+                  editor.commands.updateAttributes("image", { title: val });
                 }}
                 placeholder="Título da imagem"
                 data-testid="input-image-title"
