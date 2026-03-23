@@ -238,15 +238,27 @@ function renderMathAndCode(contentRef: React.RefObject<HTMLDivElement | null>) {
   });
 
   el.querySelectorAll("pre").forEach((preEl) => {
-    if (preEl.querySelector(".copy-code-btn")) return;
-
     const codeEl = preEl.querySelector("code");
     if (!codeEl) return;
 
-    const wrapper = document.createElement("div");
-    wrapper.className = "code-block-wrapper";
-    preEl.parentNode?.insertBefore(wrapper, preEl);
-    wrapper.appendChild(preEl);
+    preEl.querySelectorAll(".line-numbers").forEach((ln) => ln.remove());
+    preEl.querySelectorAll(".copy-code-btn").forEach((btn) => btn.remove());
+    preEl.classList.remove("has-line-numbers");
+
+    const existingWrapper = preEl.parentElement;
+    if (existingWrapper?.classList.contains("code-block-wrapper")) {
+      existingWrapper.querySelectorAll(".copy-code-btn").forEach((btn) => btn.remove());
+    }
+
+    let wrapper: HTMLElement;
+    if (existingWrapper?.classList.contains("code-block-wrapper")) {
+      wrapper = existingWrapper;
+    } else {
+      wrapper = document.createElement("div");
+      wrapper.className = "code-block-wrapper";
+      preEl.parentNode?.insertBefore(wrapper, preEl);
+      wrapper.appendChild(preEl);
+    }
 
     const codeText = codeEl.textContent || "";
     const rawLines = codeText.split("\n");
@@ -1013,7 +1025,7 @@ export default function PostPage() {
                     data-testid="img-featured"
                   />
                 )}
-                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(injectContainerImages(post.content, containerData || [], disabledContainers), { ADD_TAGS: ["iframe", "span", "div", "a"], ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "scrolling", "data-type", "data-latex", "class", "loading", "title", "target", "rel", "href"] }) }} />
+                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(injectContainerImages(post.content, containerData || [], disabledContainers), { ADD_TAGS: ["iframe", "span", "div", "a"], ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "scrolling", "data-type", "data-latex", "class", "loading", "title", "target", "rel", "href", "data-start"] }) }} />
               </div>
             </Card>
 

@@ -216,9 +216,11 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
   const [bubbleMenuPos, setBubbleMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [floatingMenuPos, setFloatingMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [floatingMenuOpen, setFloatingMenuOpen] = useState(false);
+  const [codeBlockToolbar, setCodeBlockToolbar] = useState<{ top: number; left: number; dataStart: number; language: string } | null>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
   const floatingRef = useRef<HTMLDivElement>(null);
+  const codeBlockRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!editor) return;
@@ -261,14 +263,47 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
       });
     };
 
+    const updateCodeBlockToolbar = () => {
+      if (!editor.isActive("codeBlock")) {
+        setCodeBlockToolbar(null);
+        return;
+      }
+      const containerRect = editorContainerRef.current?.getBoundingClientRect();
+      if (!containerRect) return;
+      const { $anchor } = editor.state.selection;
+      const resolvedPos = editor.state.doc.resolve($anchor.pos);
+      let codeBlockNode = null;
+      let codeBlockPos = 0;
+      for (let d = resolvedPos.depth; d >= 0; d--) {
+        const node = resolvedPos.node(d);
+        if (node.type.name === "codeBlock") {
+          codeBlockNode = node;
+          codeBlockPos = resolvedPos.before(d);
+          break;
+        }
+      }
+      if (!codeBlockNode) { setCodeBlockToolbar(null); return; }
+      const coords = editor.view.coordsAtPos(codeBlockPos);
+      setCodeBlockToolbar({
+        top: coords.top - containerRect.top - 40,
+        left: 0,
+        dataStart: codeBlockNode.attrs.dataStart || 1,
+        language: codeBlockNode.attrs.language || "",
+      });
+    };
+
     editor.on("selectionUpdate", updateBubble);
     editor.on("selectionUpdate", updateFloating);
+    editor.on("selectionUpdate", updateCodeBlockToolbar);
     editor.on("transaction", updateBubble);
+    editor.on("transaction", updateCodeBlockToolbar);
 
     return () => {
       editor.off("selectionUpdate", updateBubble);
       editor.off("selectionUpdate", updateFloating);
+      editor.off("selectionUpdate", updateCodeBlockToolbar);
       editor.off("transaction", updateBubble);
+      editor.off("transaction", updateCodeBlockToolbar);
     };
   }, [editor]);
 
@@ -325,6 +360,80 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
               {btn.icon}
             </button>
           ))}
+        </div>
+      )}
+
+      {codeBlockToolbar && (
+        <div
+          ref={codeBlockRef}
+          className="absolute z-50 flex items-center gap-2 rounded-lg border bg-popover p-1.5 shadow-lg animate-in fade-in-0 zoom-in-95"
+          style={{ top: codeBlockToolbar.top, left: codeBlockToolbar.left }}
+          data-testid="code-block-toolbar"
+        >
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-muted-foreground whitespace-nowrap">Linha inicial:</label>
+            <input
+              type="number"
+              min="1"
+              className="h-7 w-16 rounded-md border bg-background px-2 text-xs"
+              value={codeBlockToolbar.dataStart}
+              onChange={(e) => {
+                const val = parseInt(e.target.value) || 1;
+                setCodeBlockToolbar(prev => prev ? { ...prev, dataStart: val } : null);
+                editor.chain().focus().updateAttributes("codeBlock", { dataStart: val }).run();
+              }}
+              data-testid="input-code-start-line"
+            />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-muted-foreground whitespace-nowrap">Linguagem:</label>
+            <select
+              className="h-7 rounded-md border bg-background px-2 text-xs"
+              value={codeBlockToolbar.language}
+              onChange={(e) => {
+                const lang = e.target.value;
+                setCodeBlockToolbar(prev => prev ? { ...prev, language: lang } : null);
+                editor.chain().focus().updateAttributes("codeBlock", { language: lang }).run();
+              }}
+              data-testid="select-code-language"
+            >
+              <option value="">Auto</option>
+              <option value="r">R</option>
+              <option value="python">Python</option>
+              <option value="javascript">JavaScript</option>
+              <option value="typescript">TypeScript</option>
+              <option value="html">HTML</option>
+              <option value="css">CSS</option>
+              <option value="sql">SQL</option>
+              <option value="bash">Bash</option>
+              <option value="json">JSON</option>
+              <option value="yaml">YAML</option>
+              <option value="markdown">Markdown</option>
+              <option value="latex">LaTeX</option>
+              <option value="java">Java</option>
+              <option value="c">C</option>
+              <option value="cpp">C++</option>
+              <option value="csharp">C#</option>
+              <option value="php">PHP</option>
+              <option value="ruby">Ruby</option>
+              <option value="go">Go</option>
+              <option value="rust">Rust</option>
+              <option value="xml">XML</option>
+              <option value="plaintext">Texto</option>
+            </select>
+          </div>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center rounded-md px-2 py-1 text-xs transition-colors hover:bg-destructive/10 hover:text-destructive text-muted-foreground"
+            onClick={() => {
+              editor.chain().focus().toggleCodeBlock().run();
+              setCodeBlockToolbar(null);
+            }}
+            title="Remover bloco de código"
+            data-testid="button-remove-code-block"
+          >
+            <XCircle className="h-3.5 w-3.5" />
+          </button>
         </div>
       )}
 
