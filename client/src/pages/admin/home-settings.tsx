@@ -1516,7 +1516,49 @@ export function CitationSettingsTab({ settings }: { settings: Record<string, str
         <Save className="h-4 w-4 mr-1" />
         {saveMutation.isPending ? "Salvando..." : "Salvar"}
       </Button>
+
+      <MigrateCitationsButton />
     </Card>
+  );
+}
+
+function MigrateCitationsButton() {
+  const { toast } = useToast();
+  const migrateMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/migrate-citations");
+      return res.json();
+    },
+    onSuccess: (data: { updated: number; total: number }) => {
+      toast({
+        title: "Migração concluída",
+        description: `${data.updated} de ${data.total} posts atualizados.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro na migração",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  return (
+    <div className="mt-4 pt-4 border-t">
+      <h4 className="text-sm font-medium mb-1">Corrigir citações existentes</h4>
+      <p className="text-xs text-muted-foreground mb-3">
+        Recalcula a citação de todos os posts publicados usando a data de publicação original. Execute uma vez após o deploy para corrigir posts com data incorreta.
+      </p>
+      <Button
+        variant="outline"
+        onClick={() => migrateMutation.mutate()}
+        disabled={migrateMutation.isPending}
+        data-testid="button-migrate-citations"
+      >
+        {migrateMutation.isPending ? "Migrando..." : "Migrar citações"}
+      </Button>
+    </div>
   );
 }
 

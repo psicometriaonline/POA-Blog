@@ -142,7 +142,7 @@ const LANGUAGES = [
   { value: "latex", label: "LaTeX" },
 ];
 
-function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, getAuthorName, getSlug }: { content: string; onChange: (html: string) => void; onOpenMediaLib?: () => void; editorRef?: React.MutableRefObject<any>; getTitle?: () => string; getAuthorName?: () => string; getSlug?: () => string }) {
+function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, getAuthorName, getSlug, getPublishedAt }: { content: string; onChange: (html: string) => void; onOpenMediaLib?: () => void; editorRef?: React.MutableRefObject<any>; getTitle?: () => string; getAuthorName?: () => string; getSlug?: () => string; getPublishedAt?: () => Date | null }) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -602,7 +602,8 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
               const authorName = getAuthorName?.() || "Autor";
               const slug = getSlug?.() || "";
               
-              const now = new Date();
+              const publishedAt = getPublishedAt?.();
+              const now = publishedAt || new Date();
               const months = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
               
               const nameParts = authorName.trim().split(/\s+/);
@@ -888,7 +889,7 @@ export default function PostEditor() {
   const generateCitationHtml = () => {
     const selectedAuthor = allAuthors?.find(a => a.id === parseInt(authorId));
     const authorName = selectedAuthor?.name || "Autor";
-    const now = new Date();
+    const now = post?.publishedAt ? new Date(post.publishedAt) : new Date();
     const months = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
     const nameParts = authorName.trim().split(/\s+/);
@@ -932,7 +933,7 @@ export default function PostEditor() {
       if (!hasCitation && title && slug) {
         finalContent = finalContent + generateCitationHtml();
       } else if (hasCitation && title && slug) {
-        finalContent = finalContent.replace(/<div class="citation-box">[\s\S]*?<\/div>/, generateCitationHtml());
+        finalContent = finalContent.replace(/<div class=["']citation-box["']>[\s\S]*?<\/div>/, generateCitationHtml());
       }
       const body = {
         title,
@@ -1085,7 +1086,7 @@ export default function PostEditor() {
 
           <div>
             <Label>Conteudo</Label>
-            <TiptapEditor content={content} onChange={setContent} onOpenMediaLib={() => { setMediaLibTarget("inline"); setMediaLibOpen(true); }} editorRef={editorInstanceRef} getTitle={() => title} getAuthorName={() => { const a = allAuthors?.find(a => a.id === parseInt(authorId)); return a?.name || "Autor"; }} getSlug={() => slug} />
+            <TiptapEditor content={content} onChange={setContent} onOpenMediaLib={() => { setMediaLibTarget("inline"); setMediaLibOpen(true); }} editorRef={editorInstanceRef} getTitle={() => title} getAuthorName={() => { const a = allAuthors?.find(a => a.id === parseInt(authorId)); return a?.name || "Autor"; }} getSlug={() => slug} getPublishedAt={() => post?.publishedAt ? new Date(post.publishedAt) : null} />
           </div>
 
           <SeoPanel

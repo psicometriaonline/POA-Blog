@@ -2386,6 +2386,67 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/migrate-citations", isAuthenticated, async (_req, res) => {
+    try {
+      const settings = await storage.getAllSettings();
+      const citationSourceName = settings["citation_source_name"] || "Blog Psicometria Online";
+      const citationBaseUrl = settings["citation_base_url"] || "https://www.blog.psicometriaonline.com.br";
+      const capExceptionsStr = settings["citation_capitalization_exceptions"] || "";
+      const capExceptions = new Set(capExceptionsStr.split(",").map(s => s.trim().toLowerCase()).filter(Boolean));
+
+      const months = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+      const allPosts = await storage.getPosts({ status: "published", limit: 100000, includeContent: true });
+      let updated = 0;
+
+      for (const post of allPosts) {
+        if (!post.publishedAt || !post.content) continue;
+        const hasCitation = post.content.includes('class="citation-box"') || post.content.includes("class='citation-box'");
+        if (!hasCitation) continue;
+
+        const pubDate = new Date(post.publishedAt);
+        const authorName = post.authorName || "Autor";
+        const nameParts = authorName.trim().split(/\s+/);
+        const lastName = nameParts[nameParts.length - 1];
+        const firstInitial = nameParts[0].charAt(0);
+
+        let fmtTitle = (post.title || "").trim();
+        if (fmtTitle.includes(':')) {
+          const [m, s] = fmtTitle.split(':');
+          const formatPart = (str: string) => {
+            const trimmed = str.trim();
+            if (capExceptions.has(trimmed.toLowerCase())) return trimmed;
+            return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+          };
+          fmtTitle = `${formatPart(m)}: ${formatPart(s)}`;
+        } else {
+          const trimmed = fmtTitle;
+          if (capExceptions.has(trimmed.toLowerCase())) {
+            fmtTitle = trimmed;
+          } else {
+            fmtTitle = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+          }
+        }
+
+        const endsWithPunctuation = /[.!?;:…]$/.test(fmtTitle);
+        const titleWithSeparator = endsWithPunctuation ? fmtTitle : fmtTitle + ".";
+
+        const newCitation = `<div class="citation-box"><p>${lastName}, ${firstInitial}. (${pubDate.getFullYear()}, ${pubDate.getDate()} de ${months[pubDate.getMonth()]}). ${titleWithSeparator} <em>${citationSourceName}</em>. ${citationBaseUrl}/${post.slug}</p></div>`;
+
+        const updatedContent = post.content.replace(/<div class=["']citation-box["']>[\s\S]*?<\/div>/, newCitation);
+
+        if (updatedContent !== post.content) {
+          await storage.updatePost(post.id, { content: updatedContent });
+          updated++;
+        }
+      }
+
+      res.json({ updated, total: allPosts.length });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ===== ANALYTICS ROUTES (Protected) =====
 
   app.get("/api/admin/analytics/timeseries", isAuthenticated, async (req, res) => {
