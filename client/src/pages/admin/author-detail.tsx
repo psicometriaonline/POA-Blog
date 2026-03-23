@@ -169,7 +169,9 @@ export default function AuthorDetail() {
                         <div className="flex flex-wrap gap-1">
                           {post.categories.length > 0
                             ? post.categories.map(c => (
-                                <Badge key={c.id} variant="outline" className="text-xs" data-testid={`badge-category-${c.id}`}>{c.name}</Badge>
+                                <Link key={c.id} href={`/admin/categorias/${c.slug}`}>
+                                  <Badge variant="outline" className="text-xs cursor-pointer hover:bg-accent" data-testid={`badge-category-${c.id}`}>{c.name}</Badge>
+                                </Link>
                               ))
                             : <span className="text-muted-foreground">—</span>
                           }
@@ -179,7 +181,9 @@ export default function AuthorDetail() {
                         <div className="flex flex-wrap gap-1">
                           {post.tags.length > 0
                             ? post.tags.slice(0, 3).map(t => (
-                                <Badge key={t.id} variant="secondary" className="text-xs" data-testid={`badge-tag-${t.id}`}>{t.name}</Badge>
+                                <Link key={t.id} href={`/admin/tags/${t.slug}`}>
+                                  <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-accent" data-testid={`badge-tag-${t.id}`}>{t.name}</Badge>
+                                </Link>
                               ))
                             : <span className="text-muted-foreground">—</span>
                           }
