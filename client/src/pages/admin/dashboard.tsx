@@ -667,26 +667,40 @@ export default function AdminDashboard() {
 
   if (authLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <Skeleton className="h-8 w-64 mb-8" />
-        <div className="space-y-4">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-950">
+        <Card className="w-full max-w-sm p-8 text-center shadow-lg">
+          <Skeleton className="h-10 w-10 rounded-full mx-auto mb-4" />
+          <Skeleton className="h-6 w-48 mx-auto mb-2" />
+          <Skeleton className="h-4 w-36 mx-auto mb-6" />
+          <Skeleton className="h-10 w-full" />
+        </Card>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold mb-4">Acesso Restrito</h1>
-        <p className="text-muted-foreground mb-6">
-          Faça login para acessar o painel administrativo.
-        </p>
-        <a href="/api/login">
-          <Button data-testid="button-login">Fazer Login</Button>
-        </a>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-950" data-testid="page-admin-login">
+        <Card className="w-full max-w-sm p-8 text-center shadow-lg border-t-4 border-t-primary">
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
+          <h1 className="font-serif text-xl font-bold mb-1" data-testid="text-admin-title">Painel Administrativo</h1>
+          <p className="text-sm text-muted-foreground mb-6">
+            Blog Psicometria Online
+          </p>
+          <a href="/api/login" className="block">
+            <Button className="w-full" size="lg" data-testid="button-login">
+              Entrar
+            </Button>
+          </a>
+          <p className="text-xs text-muted-foreground mt-4">
+            Acesso restrito a administradores autorizados.
+          </p>
+        </Card>
       </div>
     );
   }
