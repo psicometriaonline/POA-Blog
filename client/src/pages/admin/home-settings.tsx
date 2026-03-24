@@ -1546,9 +1546,9 @@ function MigrateCitationsButton() {
 
   return (
     <div className="mt-4 pt-4 border-t">
-      <h4 className="text-sm font-medium mb-1">Corrigir citações existentes</h4>
+      <h4 className="text-sm font-medium mb-1">Regenerar citações</h4>
       <p className="text-xs text-muted-foreground mb-3">
-        Recalcula a citação de todos os posts publicados usando a data de publicação original. Execute uma vez após o deploy para corrigir posts com data incorreta.
+        Regenera as citações de todos os posts publicados usando as configurações atuais (nome da fonte, URL, exceções de capitalização). Use após alterar qualquer configuração acima.
       </p>
       <Button
         variant="outline"
@@ -1556,7 +1556,7 @@ function MigrateCitationsButton() {
         disabled={migrateMutation.isPending}
         data-testid="button-migrate-citations"
       >
-        {migrateMutation.isPending ? "Migrando..." : "Migrar citações"}
+        {migrateMutation.isPending ? "Regenerando..." : "Regenerar citações"}
       </Button>
     </div>
   );

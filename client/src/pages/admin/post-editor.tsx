@@ -1116,24 +1116,33 @@ export default function PostEditor() {
     const citationSourceName = settings?.["citation_source_name"] || "Blog Psicometria Online";
     const citationBaseUrl = settings?.["citation_base_url"] || "https://www.blog.psicometriaonline.com.br";
     const capExceptionsStr = settings?.["citation_capitalization_exceptions"] || "";
-    const capExceptions = new Set(capExceptionsStr.split(",").map(s => s.trim().toLowerCase()).filter(Boolean));
+    const capExceptionsMap = new Map<string, string>();
+    capExceptionsStr.split(",").map(s => s.trim()).filter(Boolean).forEach(word => {
+      capExceptionsMap.set(word.toLowerCase(), word);
+    });
+
+    const formatWord = (word: string) => {
+      const match = capExceptionsMap.get(word.toLowerCase());
+      if (match) return match;
+      return word.toLowerCase();
+    };
+
+    const formatPart = (str: string) => {
+      const trimmed = str.trim();
+      if (!trimmed) return "";
+      const words = trimmed.split(/\s+/).map(formatWord);
+      words[0] = words[0].charAt(0).toUpperCase() + words[0].slice(1);
+      return words.join(" ");
+    };
 
     let fmtTitle = title.trim();
     if (fmtTitle.includes(':')) {
-      const [m, s] = fmtTitle.split(':');
-      const formatPart = (str: string) => {
-        const trimmed = str.trim();
-        if (capExceptions.has(trimmed.toLowerCase())) return trimmed;
-        return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
-      };
-      fmtTitle = `${formatPart(m)}: ${formatPart(s)}`;
+      const colonIndex = fmtTitle.indexOf(':');
+      const before = fmtTitle.slice(0, colonIndex);
+      const after = fmtTitle.slice(colonIndex + 1);
+      fmtTitle = `${formatPart(before)}: ${formatPart(after)}`;
     } else {
-      const trimmed = fmtTitle;
-      if (capExceptions.has(trimmed.toLowerCase())) {
-        fmtTitle = trimmed;
-      } else {
-        fmtTitle = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
-      }
+      fmtTitle = formatPart(fmtTitle);
     }
 
     const endsWithPunctuation = /[.!?;:…]$/.test(fmtTitle);
