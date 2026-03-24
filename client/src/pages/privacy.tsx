@@ -160,7 +160,7 @@ export default function PrivacyPage() {
         </p>
         <p>
           Para mais informações sobre nossas regras de uso, consulte também os{" "}
-          <a href="https://membros.psicometriaonline.com.br/legal/termos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Termos de Uso</a>.
+          <a href="/termos-de-uso" className="text-primary hover:underline">Termos de Uso</a>.
         </p>
       </div>
     </div>
