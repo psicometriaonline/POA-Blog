@@ -33,6 +33,7 @@ The project employs a full-stack architecture. The backend is built with Express
 - **Media Management:** Centralized media library with image browsing, uploading, duplicate detection, and usage tracking.
 - **Analytics:** Comprehensive dashboard with unique visitor tracking, referrer tracking, various chart types, and per-post analytics.
 - **Container System:** Flexible system for embedding images with rules-based group assignment and intelligent placement.
+- **Broken Link Scanner:** Admin tool (Database > Links Quebrados) that scans all published posts, banners, and settings for broken internal/external links. Stores results in `broken_links` table with URL, status code, page context. Handles internal path validation, protocol-relative URLs, query strings, and 405 fallbacks.
 - **Authentication:** Admin access secured via Replit Auth.
 - **Post Structure:** Validation requires at least one category and tag; deletion of categories/tags triggers orphan checks.
 

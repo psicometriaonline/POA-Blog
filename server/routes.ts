@@ -3012,5 +3012,206 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/broken-links", isAuthenticated, async (_req, res) => {
+    try {
+      const links = await storage.getBrokenLinks();
+      const lastScanStr = await storage.getSetting("broken_links_last_scan");
+      const lastScan = lastScanStr || null;
+      res.json({ links, lastScan });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/broken-links/scan", isAuthenticated, async (req, res) => {
+    req.setTimeout(600000);
+    res.setTimeout(600000);
+    try {
+      const allPosts = await storage.getPosts({ status: "published", limit: 10000, includeContent: true });
+      const allCategories = await storage.getCategories();
+      const allTags = await storage.getTags();
+      const settings = await storage.getAllSettings();
+      const allBanners = await db.select().from(banners).where(eq(banners.isActive, true));
+
+      const linkMap = new Map<string, Set<string>>();
+
+      function addLink(url: string, pageDesc: string) {
+        if (!url || url.startsWith("#") || url.startsWith("mailto:") || url.startsWith("tel:") || url.startsWith("javascript:") || url.startsWith("data:")) return;
+        try {
+          new URL(url.startsWith("/") ? `https://placeholder.com${url}` : url);
+        } catch { return; }
+        if (!linkMap.has(url)) linkMap.set(url, new Set());
+        linkMap.get(url)!.add(pageDesc);
+      }
+
+      for (const post of allPosts) {
+        const pageDesc = JSON.stringify({ type: "post", slug: post.slug, title: post.title });
+        if (post.content) {
+          const hrefRe = /href=["']([^"']+)["']/gi;
+          let m;
+          while ((m = hrefRe.exec(post.content))) addLink(m[1], pageDesc);
+          const srcRe = /src=["']([^"']+)["']/gi;
+          while ((m = srcRe.exec(post.content))) addLink(m[1], pageDesc);
+        }
+        if (post.featuredImage) addLink(post.featuredImage, pageDesc);
+      }
+
+      for (const banner of allBanners) {
+        const pageDesc = JSON.stringify({ type: "banner", slug: null, title: `Banner: ${banner.title}` });
+        if (banner.imageUrl) addLink(banner.imageUrl, pageDesc);
+        if (banner.linkUrl) addLink(banner.linkUrl, pageDesc);
+      }
+
+      const settingLinksKeys = ["hero_button_url", "newsletter_button_url"];
+      for (const key of settingLinksKeys) {
+        if (settings[key]) {
+          addLink(settings[key], JSON.stringify({ type: "settings", slug: null, title: `Configuração: ${key}` }));
+        }
+      }
+
+      const host = req.get("host") || "localhost";
+      const protocol = req.protocol || "https";
+      const baseUrl = `${protocol}://${host}`;
+
+      const internalPaths = new Set<string>();
+      for (const post of allPosts) internalPaths.add(`/${post.slug}`);
+      for (const cat of allCategories) internalPaths.add(`/categoria/${cat.slug}`);
+      for (const tag of allTags) internalPaths.add(`/tag/${tag.slug}`);
+      internalPaths.add("/");
+      internalPaths.add("/quem-somos");
+      internalPaths.add("/termos-de-uso");
+      internalPaths.add("/politicas-de-privacidade");
+      internalPaths.add("/busca");
+
+      const brokenResults: { url: string; statusCode: number | null; errorMessage: string | null; pageType: string; pageSlug: string | null; pageTitle: string | null }[] = [];
+      const checkedUrls = new Map<string, { broken: boolean; statusCode: number | null; errorMessage: string | null }>();
+
+      const entries = Array.from(linkMap.entries());
+
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+        const batch = entries.slice(i, i + BATCH_SIZE);
+        await Promise.all(batch.map(async ([url, pages]) => {
+          if (checkedUrls.has(url)) {
+            const cached = checkedUrls.get(url)!;
+            if (cached.broken) {
+              for (const pageDescStr of pages) {
+                const pd = JSON.parse(pageDescStr);
+                brokenResults.push({ url, statusCode: cached.statusCode, errorMessage: cached.errorMessage, pageType: pd.type, pageSlug: pd.slug, pageTitle: pd.title });
+              }
+            }
+            return;
+          }
+
+          let isBroken = false;
+          let statusCode: number | null = null;
+          let errorMessage: string | null = null;
+
+          try {
+            const isProtocolRelative = url.startsWith("//");
+            const isInternal = url.startsWith("/") && !isProtocolRelative;
+
+            if (isInternal) {
+              const parsedPath = url.split("?")[0].split("#")[0].replace(/\/+$/, "") || "/";
+
+              if (parsedPath.startsWith("/uploads/")) {
+                const filename = path.basename(parsedPath);
+                const filePath = path.join(uploadsDir, filename);
+                if (!fs.existsSync(filePath)) {
+                  const media = await storage.getMediaByUrl(parsedPath);
+                  if (!media || !media.data) {
+                    isBroken = true;
+                    statusCode = 404;
+                    errorMessage = "Arquivo local não encontrado";
+                  }
+                }
+              } else {
+                if (!internalPaths.has(parsedPath) && !parsedPath.startsWith("/admin")) {
+                  isBroken = true;
+                  statusCode = 404;
+                  errorMessage = "Rota interna não encontrada";
+                }
+              }
+            } else {
+              const externalUrl = isProtocolRelative ? `https:${url}` : url;
+              const controller = new AbortController();
+              const timeout = setTimeout(() => controller.abort(), 15000);
+              try {
+                const resp = await fetch(externalUrl, {
+                  method: "HEAD",
+                  signal: controller.signal,
+                  redirect: "follow",
+                  headers: { "User-Agent": "Mozilla/5.0 (compatible; BrokenLinkChecker/1.0)" },
+                });
+                clearTimeout(timeout);
+                statusCode = resp.status;
+                if (resp.status >= 400) {
+                  if (resp.status === 405) {
+                    const getController = new AbortController();
+                    const getTimeout = setTimeout(() => getController.abort(), 15000);
+                    try {
+                      const getResp = await fetch(externalUrl, { method: "GET", signal: getController.signal, redirect: "follow", headers: { "User-Agent": "Mozilla/5.0 (compatible; BrokenLinkChecker/1.0)" } });
+                      clearTimeout(getTimeout);
+                      statusCode = getResp.status;
+                      if (getResp.status >= 400) {
+                        isBroken = true;
+                        errorMessage = `HTTP ${getResp.status}`;
+                      }
+                    } catch (e: any) {
+                      clearTimeout(getTimeout);
+                      isBroken = true;
+                      errorMessage = e.message || "Erro ao acessar URL";
+                    }
+                  } else {
+                    isBroken = true;
+                    errorMessage = `HTTP ${resp.status}`;
+                  }
+                }
+              } catch (e: any) {
+                clearTimeout(timeout);
+                isBroken = true;
+                errorMessage = e.name === "AbortError" ? "Timeout (15s)" : (e.message || "Erro de conexão");
+              }
+            }
+          } catch (e: any) {
+            isBroken = true;
+            errorMessage = e.message || "Erro inesperado";
+          }
+
+          checkedUrls.set(url, { broken: isBroken, statusCode, errorMessage });
+
+          if (isBroken) {
+            for (const pageDescStr of pages) {
+              const pd = JSON.parse(pageDescStr);
+              brokenResults.push({ url, statusCode, errorMessage, pageType: pd.type, pageSlug: pd.slug, pageTitle: pd.title });
+            }
+          }
+        }));
+      }
+
+      await storage.clearBrokenLinks();
+      await storage.saveBrokenLinks(brokenResults);
+      await storage.setSetting("broken_links_last_scan", new Date().toISOString());
+
+      res.json({
+        totalLinksChecked: entries.length,
+        brokenCount: brokenResults.length,
+        uniqueBrokenUrls: new Set(brokenResults.map(r => r.url)).size,
+        links: brokenResults,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/broken-links", isAuthenticated, async (_req, res) => {
+    try {
+      await storage.clearBrokenLinks();
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

@@ -14,7 +14,7 @@ import {
   type Subscriber,
   authors, categories, tags, posts, postCategories, postTags,
   banners, freeMaterials, siteSettings, comments, postViews,
-  imageGroups, imageBankItems, containerRules, mediaLibrary, subscribers,
+  imageGroups, imageBankItems, containerRules, mediaLibrary, subscribers, brokenLinks,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, ne, ilike, or, desc, sql, inArray, notInArray, and, asc, gte, lte, count, isNull } from "drizzle-orm";
@@ -141,6 +141,10 @@ export interface IStorage {
   getPostViewsSummary(startDate: Date, endDate: Date, sortDir?: 'asc' | 'desc'): Promise<{ postId: number; title: string; slug: string; views: number }[]>;
   getPostCountsByStatus(): Promise<{ total: number; published: number; scheduled: number; draft: number }>;
   getTotalViews(startDate: Date, endDate: Date, postId?: number): Promise<number>;
+
+  getBrokenLinks(): Promise<import("@shared/schema").BrokenLink[]>;
+  clearBrokenLinks(): Promise<void>;
+  saveBrokenLinks(links: { url: string; statusCode: number | null; errorMessage: string | null; pageType: string; pageSlug: string | null; pageTitle: string | null }[]): Promise<void>;
 }
 
 const postListColumns = {
@@ -1829,6 +1833,21 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(subscribers).where(eq(subscribers.id, id)).returning();
     return result.length > 0;
   }
+
+  async getBrokenLinks(): Promise<import("@shared/schema").BrokenLink[]> {
+    return db.select().from(brokenLinks).orderBy(brokenLinks.url);
+  }
+
+  async clearBrokenLinks(): Promise<void> {
+    await db.delete(brokenLinks);
+  }
+
+  async saveBrokenLinks(links: { url: string; statusCode: number | null; errorMessage: string | null; pageType: string; pageSlug: string | null; pageTitle: string | null }[]): Promise<void> {
+    if (links.length === 0) return;
+    const now = new Date();
+    await db.insert(brokenLinks).values(links.map(l => ({ ...l, scannedAt: now })));
+  }
+
 }
 
 export const storage = new DatabaseStorage();

@@ -212,6 +212,17 @@ export const subscribers = pgTable("subscribers", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const brokenLinks = pgTable("broken_links", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  url: text("url").notNull(),
+  statusCode: integer("status_code"),
+  errorMessage: text("error_message"),
+  pageType: text("page_type").notNull(),
+  pageSlug: text("page_slug"),
+  pageTitle: text("page_title"),
+  scannedAt: timestamp("scanned_at").notNull().defaultNow(),
+});
+
 export const siteSettings = pgTable("site_settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
@@ -252,6 +263,7 @@ export type ContainerRule = typeof containerRules.$inferSelect;
 export type InsertContainerRule = z.infer<typeof insertContainerRuleSchema>;
 export type Subscriber = typeof subscribers.$inferSelect;
 export type InsertSubscriber = z.infer<typeof insertSubscriberSchema>;
+export type BrokenLink = typeof brokenLinks.$inferSelect;
 export type SiteSetting = typeof siteSettings.$inferSelect;
 export type MediaItem = typeof mediaLibrary.$inferSelect;
 export type InsertMedia = z.infer<typeof insertMediaSchema>;
