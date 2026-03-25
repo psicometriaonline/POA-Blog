@@ -72,13 +72,17 @@ function isSectionEndingWithText(heading: Element): boolean {
       sibling = sibling.previousSibling;
       continue;
     }
-    if (tag === "figure" || tag === "table" || tag === "pre") {
+    const mediaTags = ["figure", "table", "pre", "img", "svg", "canvas", "iframe", "video"];
+    if (mediaTags.includes(tag)) {
       return false;
     }
-    if (tag === "div" && (el.querySelector("img") || el.querySelector("figure") || el.querySelector("table"))) {
+    if (tag === "div" && (el.querySelector("img, figure, table, svg, canvas, iframe, video"))) {
       return false;
     }
     if (tag === "p") {
+      if (el.querySelector("img, svg, canvas, iframe, video")) {
+        return false;
+      }
       return true;
     }
     return true;
