@@ -3253,6 +3253,56 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/broken-links/replace", isAuthenticated, async (req, res) => {
+    try {
+      const { oldUrl, newUrl } = req.body;
+      if (!oldUrl || typeof oldUrl !== "string") {
+        return res.status(400).json({ message: "URL antiga é obrigatória" });
+      }
+      if (!newUrl || typeof newUrl !== "string") {
+        return res.status(400).json({ message: "Nova URL é obrigatória" });
+      }
+
+      const updatedPosts = await storage.replaceUrlInAllPosts(oldUrl, newUrl);
+
+      const allBannersList = await db.select().from(banners);
+      let updatedBanners = 0;
+      for (const banner of allBannersList) {
+        const updates: Record<string, string> = {};
+        if (banner.imageUrl && banner.imageUrl.includes(oldUrl)) {
+          updates.imageUrl = banner.imageUrl.split(oldUrl).join(newUrl);
+        }
+        if (banner.linkUrl && banner.linkUrl.includes(oldUrl)) {
+          updates.linkUrl = banner.linkUrl.split(oldUrl).join(newUrl);
+        }
+        if (Object.keys(updates).length > 0) {
+          await db.update(banners).set(updates).where(eq(banners.id, banner.id));
+          updatedBanners++;
+        }
+      }
+
+      const allSettings = await storage.getAllSettings();
+      let updatedSettings = 0;
+      for (const [key, value] of Object.entries(allSettings)) {
+        if (value && value.includes(oldUrl)) {
+          await storage.setSetting(key, value.split(oldUrl).join(newUrl));
+          updatedSettings++;
+        }
+      }
+
+      await db.delete(brokenLinks).where(eq(brokenLinks.url, oldUrl));
+
+      res.json({
+        updated: updatedPosts + updatedBanners + updatedSettings,
+        posts: updatedPosts,
+        banners: updatedBanners,
+        settings: updatedSettings,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.delete("/api/admin/broken-links", isAuthenticated, async (_req, res) => {
     try {
       await storage.clearBrokenLinks();

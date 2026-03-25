@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertTriangle, Search, RefreshCw, ExternalLink, FileText, Image, Settings, Layers, Trash2 } from "lucide-react";
+import { AlertTriangle, Search, RefreshCw, ExternalLink, FileText, Image, Settings, Layers, Trash2, Replace, Check, X, Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { BrokenLink } from "@shared/schema";
@@ -50,6 +50,92 @@ function PageTypeBadge({ type }: { type: string }) {
       <PageTypeIcon type={type} />
       <span className="ml-1">{labels[type] || type}</span>
     </Badge>
+  );
+}
+
+function ReplaceAction({ url }: { url: string }) {
+  const { toast } = useToast();
+  const [expanded, setExpanded] = useState(false);
+  const [newUrl, setNewUrl] = useState("");
+
+  const replaceMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/broken-links/replace", { oldUrl: url, newUrl });
+      return res.json();
+    },
+    onSuccess: (data: { updated: number; posts: number; banners: number; settings: number }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/broken-links"] });
+      setExpanded(false);
+      setNewUrl("");
+      const parts: string[] = [];
+      if (data.posts > 0) parts.push(`${data.posts} post(s)`);
+      if (data.banners > 0) parts.push(`${data.banners} banner(s)`);
+      if (data.settings > 0) parts.push(`${data.settings} configuração(ões)`);
+      toast({
+        title: "Links substituídos",
+        description: parts.length > 0
+          ? `Atualizado em: ${parts.join(", ")}.`
+          : "Nenhuma ocorrência encontrada nos conteúdos.",
+      });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro ao substituir", description: error.message, variant: "destructive" });
+    },
+  });
+
+  if (!expanded) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setExpanded(true)}
+        className="text-xs"
+        data-testid={`button-replace-${encodeURIComponent(url).slice(0, 30)}`}
+      >
+        <Replace className="h-3.5 w-3.5 mr-1" />
+        Substituir
+      </Button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 mt-2 w-full" data-testid={`div-replace-form-${encodeURIComponent(url).slice(0, 30)}`}>
+      <Input
+        placeholder="Nova URL..."
+        value={newUrl}
+        onChange={(e) => setNewUrl(e.target.value)}
+        className="text-xs h-8 flex-1"
+        data-testid="input-replace-url"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && newUrl.trim()) replaceMutation.mutate();
+          if (e.key === "Escape") { setExpanded(false); setNewUrl(""); }
+        }}
+        autoFocus
+      />
+      <Button
+        size="sm"
+        className="h-8 px-2"
+        onClick={() => replaceMutation.mutate()}
+        disabled={!newUrl.trim() || replaceMutation.isPending}
+        data-testid="button-confirm-replace"
+      >
+        {replaceMutation.isPending ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Check className="h-3.5 w-3.5" />
+        )}
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-8 px-2"
+        onClick={() => { setExpanded(false); setNewUrl(""); }}
+        disabled={replaceMutation.isPending}
+        data-testid="button-cancel-replace"
+      >
+        <X className="h-3.5 w-3.5" />
+      </Button>
+    </div>
   );
 }
 
@@ -225,22 +311,25 @@ export function BrokenLinksContent() {
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="h-4 w-4 text-red-500 mt-1 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm font-mono text-red-600 dark:text-red-400 hover:underline break-all"
-                        data-testid="link-broken-url"
-                      >
-                        {url}
-                        <ExternalLink className="h-3 w-3 inline ml-1" />
-                      </a>
-                      {occurrences[0]?.statusCode && (
-                        <Badge variant="outline" className="text-[10px] font-mono" data-testid="badge-status-code">
-                          {occurrences[0].statusCode}
-                        </Badge>
-                      )}
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-mono text-red-600 dark:text-red-400 hover:underline break-all"
+                          data-testid="link-broken-url"
+                        >
+                          {url}
+                          <ExternalLink className="h-3 w-3 inline ml-1" />
+                        </a>
+                        {occurrences[0]?.statusCode && (
+                          <Badge variant="outline" className="text-[10px] font-mono" data-testid="badge-status-code">
+                            {occurrences[0].statusCode}
+                          </Badge>
+                        )}
+                      </div>
+                      <ReplaceAction url={url} />
                     </div>
                     {occurrences[0]?.errorMessage && (
                       <p className="text-xs text-muted-foreground mt-1" data-testid="text-error-message">{occurrences[0].errorMessage}</p>
