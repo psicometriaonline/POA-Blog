@@ -54,8 +54,8 @@ function AuthorPhotoSelector({ photo, onPhotoChange, idPrefix }: { photo: string
       queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
       onPhotoChange(mediaItem.url);
       toast({ title: "Foto recortada e salva com sucesso" });
-    } catch (err: any) {
-      toast({ title: "Erro ao salvar foto", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Erro ao salvar foto", description: err instanceof Error ? err.message : "Erro desconhecido", variant: "destructive" });
     }
   };
 
