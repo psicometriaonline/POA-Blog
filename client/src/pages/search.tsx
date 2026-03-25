@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { PostCard } from "@/components/post-card";
 import { PaginationControls } from "@/components/pagination-controls";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +16,7 @@ function getParam(key: string): string {
 
 export default function SearchPage() {
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
   const [mode, setMode] = useState<"simple" | "advanced">(getParam("searchIn") || getParam("categoryId") || getParam("tagId") || getParam("dateFrom") || getParam("dateTo") ? "advanced" : "simple");
 
   const [query, setQuery] = useState(getParam("q"));
@@ -38,6 +39,39 @@ export default function SearchPage() {
 
   const [offset, setOffset] = useState(0);
   const limit = 12;
+
+  useEffect(() => {
+    const urlQ = getParam("q");
+    if (!urlQ) return;
+
+    const urlSearchIn = getParam("searchIn") || "all";
+    const urlCategoryId = getParam("categoryId") || "";
+    const urlTagId = getParam("tagId") || "";
+    const urlDateFrom = getParam("dateFrom") || "";
+    const urlDateTo = getParam("dateTo") || "";
+    const urlSort = getParam("sort") || "relevance";
+
+    setQuery(urlQ);
+    setSubmittedQuery(urlQ);
+    setSearchIn(urlSearchIn);
+    setCategoryId(urlCategoryId);
+    setTagId(urlTagId);
+    setDateFrom(urlDateFrom);
+    setDateTo(urlDateTo);
+    setSort(urlSort);
+    setSubmittedFilters({
+      searchIn: urlSearchIn,
+      categoryId: urlCategoryId,
+      tagId: urlTagId,
+      dateFrom: urlDateFrom,
+      dateTo: urlDateTo,
+      sort: urlSort,
+    });
+    setOffset(0);
+    if (urlSearchIn !== "all" || urlCategoryId || urlTagId || urlDateFrom || urlDateTo) {
+      setMode("advanced");
+    }
+  }, [searchString]);
 
   const { data: allCategories } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
@@ -125,7 +159,7 @@ export default function SearchPage() {
         <div className="flex items-center gap-2 mb-4">
           <Search className="h-6 w-6 text-muted-foreground" />
           <h1 className="font-serif text-3xl font-bold" data-testid="text-search-title">
-            Buscar Artigos
+            Buscar Posts
           </h1>
         </div>
 

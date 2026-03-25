@@ -119,7 +119,7 @@ export function BlogFooter() {
                 <Link href="/" className="text-white/50 hover:text-[#31D5FF] transition-colors">Home</Link>
               </li>
               <li>
-                <Link href="/busca" className="text-white/50 hover:text-[#31D5FF] transition-colors">Buscar Artigos</Link>
+                <Link href="/busca" className="text-white/50 hover:text-[#31D5FF] transition-colors" onClick={() => window.scrollTo(0, 0)}>Buscar Posts</Link>
               </li>
               <li>
                 <Link href="/categoria/geral" className="text-white/50 hover:text-[#31D5FF] transition-colors">Categorias</Link>
