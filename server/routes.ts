@@ -3264,7 +3264,7 @@ export async function registerRoutes(
       }
 
       let updatedPosts = 0;
-      const allPosts = await db.select({ id: posts.id, content: posts.content }).from(posts);
+      const allPosts = await db.select({ id: posts.id, content: posts.content }).from(posts).where(eq(posts.status, "published"));
       for (const post of allPosts) {
         if (post.content && post.content.includes(oldUrl)) {
           const newContent = post.content.split(oldUrl).join(newUrl);
