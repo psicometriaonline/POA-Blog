@@ -45,6 +45,7 @@ interface HomeData {
   rowSection2: { category: Category; posts: PostWithRelations[] } | null;
   randomPosts: PostWithRelations[];
   randomSectionTitle: string;
+  randomSectionCount: number;
   materials: FreeMaterial[];
 }
 

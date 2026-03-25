@@ -1109,6 +1109,7 @@ export class DatabaseStorage implements IStorage {
       rowSection2,
       randomPosts,
       randomSectionTitle,
+      randomSectionCount,
       materials,
     };
   }
