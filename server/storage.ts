@@ -1067,10 +1067,30 @@ export class DatabaseStorage implements IStorage {
 
     const materials = await this.getFreeMaterials();
 
-    const randomRaw = await db.select(postListColumns).from(posts)
-      .where(eq(posts.status, "published"))
-      .orderBy(sql`RANDOM()`)
-      .limit(6);
+    const randomSectionTitle = settings["random_section_title"] || "Você Também Pode Gostar";
+    const randomSectionCount = Math.max(1, Math.min(12, parseInt(settings["random_section_count"] || "6") || 6));
+    const randomCategoryIds = (settings["random_section_category_ids"] || "").split(",").filter(Boolean).map(Number).filter(n => !isNaN(n));
+
+    let randomRaw;
+    if (randomCategoryIds.length > 0) {
+      const eligiblePostIds = await db.select({ postId: postCategories.postId })
+        .from(postCategories)
+        .where(inArray(postCategories.categoryId, randomCategoryIds));
+      const ids = [...new Set(eligiblePostIds.map(r => r.postId))];
+      if (ids.length > 0) {
+        randomRaw = await db.select(postListColumns).from(posts)
+          .where(and(eq(posts.status, "published"), inArray(posts.id, ids)))
+          .orderBy(sql`RANDOM()`)
+          .limit(randomSectionCount);
+      } else {
+        randomRaw = [];
+      }
+    } else {
+      randomRaw = await db.select(postListColumns).from(posts)
+        .where(eq(posts.status, "published"))
+        .orderBy(sql`RANDOM()`)
+        .limit(randomSectionCount);
+    }
     const randomPosts = await enrichPostsWithRelations((randomRaw as any[]).map(toPostListRow));
 
     return {
@@ -1088,6 +1108,7 @@ export class DatabaseStorage implements IStorage {
       rowSection1,
       rowSection2,
       randomPosts,
+      randomSectionTitle,
       materials,
     };
   }

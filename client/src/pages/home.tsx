@@ -44,6 +44,7 @@ interface HomeData {
   rowSection1: { category: Category; posts: PostWithRelations[] } | null;
   rowSection2: { category: Category; posts: PostWithRelations[] } | null;
   randomPosts: PostWithRelations[];
+  randomSectionTitle: string;
   materials: FreeMaterial[];
 }
 
@@ -546,13 +547,13 @@ function SectionDiverseCategories({ sections }: { sections: { category: Category
   );
 }
 
-function SectionRandomPosts({ posts }: { posts: PostWithRelations[] }) {
+function SectionRandomPosts({ posts, title }: { posts: PostWithRelations[]; title: string }) {
   if (posts.length === 0) return null;
   return (
     <section className="max-w-7xl mx-auto px-4 py-10" data-testid="section-random-posts">
-      <SectionTitle>Você Também Pode Gostar</SectionTitle>
+      <SectionTitle>{title}</SectionTitle>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {posts.slice(0, 6).map((post) => (
+        {posts.map((post) => (
           <PostCard key={post.id} post={post} />
         ))}
       </div>
@@ -640,7 +641,7 @@ export default function Home() {
       <SectionDiverseCategories sections={data.diverseSections} />
 
       {/* 8. Random posts */}
-      <SectionRandomPosts posts={data.randomPosts} />
+      <SectionRandomPosts posts={data.randomPosts} title={data.randomSectionTitle || "Você Também Pode Gostar"} />
 
       {/* 9. Row category sections */}
       <SectionRowCategories row1={data.rowSection1} row2={data.rowSection2} />

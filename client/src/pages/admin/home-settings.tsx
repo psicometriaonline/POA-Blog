@@ -503,6 +503,9 @@ function HomeSectionsTab({ settings, categories }: { settings: Record<string, st
   const [diverseSlug3, setDiverseSlug3] = useState("");
   const [row1Slug, setRow1Slug] = useState("");
   const [row2Slug, setRow2Slug] = useState("");
+  const [randomTitle, setRandomTitle] = useState("Você Também Pode Gostar");
+  const [randomCount, setRandomCount] = useState("6");
+  const [randomCategoryIds, setRandomCategoryIds] = useState<number[]>([]);
 
   useEffect(() => {
     setFeaturedSlug(settings["featured_category_slug"] || "");
@@ -512,6 +515,10 @@ function HomeSectionsTab({ settings, categories }: { settings: Record<string, st
     setDiverseSlug3(diverseParts[2]?.trim() || "");
     setRow1Slug(settings["row_section_1_slug"] || "");
     setRow2Slug(settings["row_section_2_slug"] || "");
+    setRandomTitle(settings["random_section_title"] || "Você Também Pode Gostar");
+    setRandomCount(settings["random_section_count"] || "6");
+    const catIds = (settings["random_section_category_ids"] || "").split(",").filter(Boolean).map(Number).filter(n => !isNaN(n));
+    setRandomCategoryIds(catIds);
   }, [settings]);
 
   const saveMutation = useMutation({
@@ -594,12 +601,52 @@ function HomeSectionsTab({ settings, categories }: { settings: Record<string, st
         </div>
       </div>
 
+      <div>
+        <h3 className="font-semibold text-lg mb-4">Seção Aleatória</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <Label htmlFor="random-title">Título da Seção</Label>
+            <Input id="random-title" value={randomTitle} onChange={(e) => setRandomTitle(e.target.value)} data-testid="input-random-section-title" />
+          </div>
+          <div>
+            <Label htmlFor="random-count">Quantidade de Posts</Label>
+            <Input id="random-count" type="number" min={1} max={12} value={randomCount} onChange={(e) => setRandomCount(e.target.value)} data-testid="input-random-section-count" />
+          </div>
+        </div>
+        <div>
+          <Label className="mb-2 block">Categorias (nenhuma selecionada = todas)</Label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {categories.map((cat) => (
+              <label key={cat.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 rounded px-2 py-1.5">
+                <input
+                  type="checkbox"
+                  checked={randomCategoryIds.includes(cat.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setRandomCategoryIds([...randomCategoryIds, cat.id]);
+                    } else {
+                      setRandomCategoryIds(randomCategoryIds.filter(id => id !== cat.id));
+                    }
+                  }}
+                  className="rounded border-gray-300"
+                  data-testid={`checkbox-random-category-${cat.id}`}
+                />
+                {cat.name}
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <Button
         onClick={() => saveMutation.mutate({
           featured_category_slug: featuredSlug,
           diverse_category_slugs: [diverseSlug1, diverseSlug2, diverseSlug3].filter(Boolean).join(","),
           row_section_1_slug: row1Slug === "none" ? "" : row1Slug,
           row_section_2_slug: row2Slug === "none" ? "" : row2Slug,
+          random_section_title: randomTitle,
+          random_section_count: randomCount,
+          random_section_category_ids: randomCategoryIds.join(","),
         })}
         disabled={saveMutation.isPending}
         data-testid="button-save-sections"
