@@ -993,8 +993,12 @@ export default function PostPage() {
             <Card className="p-6 mb-6" data-testid="card-post-header">
               <div className="flex items-center gap-3 mb-4 flex-wrap text-sm text-muted-foreground">
                 {post.authorName && (
-                  <span className="flex items-center gap-1">
-                    <User className="h-4 w-4" />
+                  <span className="flex items-center gap-1.5">
+                    {post.author?.photo ? (
+                      <img src={post.author.photo} alt={post.authorName} className="h-6 w-6 rounded-full object-cover" data-testid="img-post-author-avatar" />
+                    ) : (
+                      <User className="h-4 w-4" />
+                    )}
                     {post.authorName}
                   </span>
                 )}
