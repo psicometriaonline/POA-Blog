@@ -3263,7 +3263,15 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Nova URL é obrigatória" });
       }
 
-      const updatedPosts = await storage.replaceUrlInAllPosts(oldUrl, newUrl);
+      let updatedPosts = 0;
+      const allPosts = await db.select({ id: posts.id, content: posts.content }).from(posts);
+      for (const post of allPosts) {
+        if (post.content && post.content.includes(oldUrl)) {
+          const newContent = post.content.split(oldUrl).join(newUrl);
+          await db.update(posts).set({ content: newContent, updatedAt: new Date() }).where(eq(posts.id, post.id));
+          updatedPosts++;
+        }
+      }
 
       const allBannersList = await db.select().from(banners);
       let updatedBanners = 0;
