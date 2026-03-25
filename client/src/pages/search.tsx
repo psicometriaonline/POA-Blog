@@ -42,17 +42,19 @@ export default function SearchPage() {
 
   useEffect(() => {
     const urlQ = getParam("q");
-    if (!urlQ) return;
-
     const urlSearchIn = getParam("searchIn") || "all";
     const urlCategoryId = getParam("categoryId") || "";
     const urlTagId = getParam("tagId") || "";
     const urlDateFrom = getParam("dateFrom") || "";
     const urlDateTo = getParam("dateTo") || "";
-    const urlSort = getParam("sort") || "relevance";
+    const rawSort = getParam("sort") || "relevance";
+    const urlSort = (!urlQ && rawSort === "relevance") ? "newest" : rawSort;
 
-    setQuery(urlQ);
-    setSubmittedQuery(urlQ);
+    const hasUrlFilters = !!(urlCategoryId || urlTagId || urlDateFrom || urlDateTo);
+    if (!urlQ && !hasUrlFilters) return;
+
+    setQuery(urlQ || "");
+    setSubmittedQuery(urlQ || "");
     setSearchIn(urlSearchIn);
     setCategoryId(urlCategoryId);
     setTagId(urlTagId);
@@ -68,7 +70,7 @@ export default function SearchPage() {
       sort: urlSort,
     });
     setOffset(0);
-    if (urlSearchIn !== "all" || urlCategoryId || urlTagId || urlDateFrom || urlDateTo) {
+    if (urlSearchIn !== "all" || hasUrlFilters) {
       setMode("advanced");
     } else {
       setMode("simple");
@@ -99,21 +101,34 @@ export default function SearchPage() {
 
   const apiUrl = buildSearchUrl();
 
+  const hasFilters = !!(submittedFilters.categoryId || submittedFilters.tagId || submittedFilters.dateFrom || submittedFilters.dateTo);
+  const hasAnyCriteria = !!submittedQuery || hasFilters;
+
   const { data, isLoading } = useQuery<{ posts: PostWithRelations[]; total: number }>({
     queryKey: [apiUrl],
-    enabled: !!submittedQuery,
+    enabled: hasAnyCriteria,
   });
 
   function doSearch() {
+    const advFilters = mode === "advanced";
+    const hasQuery = !!query.trim();
+    const hasAdvFilters = advFilters && !!(categoryId || tagId || dateFrom || dateTo);
+
+    if (mode === "simple" && !hasQuery) return;
+    if (mode === "advanced" && !hasQuery && !hasAdvFilters) return;
+
+    const effectiveSort = (!hasQuery && sort === "relevance") ? "newest" : sort;
+    if (effectiveSort !== sort) setSort(effectiveSort);
+
     setOffset(0);
-    setSubmittedQuery(query);
+    setSubmittedQuery(query.trim());
     setSubmittedFilters({
-      searchIn: mode === "advanced" ? searchIn : "all",
-      categoryId: mode === "advanced" ? categoryId : "",
-      tagId: mode === "advanced" ? tagId : "",
-      dateFrom: mode === "advanced" ? dateFrom : "",
-      dateTo: mode === "advanced" ? dateTo : "",
-      sort,
+      searchIn: advFilters ? searchIn : "all",
+      categoryId: advFilters ? categoryId : "",
+      tagId: advFilters ? tagId : "",
+      dateFrom: advFilters ? dateFrom : "",
+      dateTo: advFilters ? dateTo : "",
+      sort: effectiveSort,
     });
 
     const urlParams = new URLSearchParams();
@@ -125,7 +140,7 @@ export default function SearchPage() {
       if (dateFrom) urlParams.set("dateFrom", dateFrom);
       if (dateTo) urlParams.set("dateTo", dateTo);
     }
-    if (sort !== "relevance") urlParams.set("sort", sort);
+    if (effectiveSort !== "relevance") urlParams.set("sort", effectiveSort);
     setLocation(`/busca?${urlParams.toString()}`);
   }
 
@@ -202,7 +217,7 @@ export default function SearchPage() {
         ) : (
           <div className="bg-muted/30 border rounded-lg p-4 space-y-4 max-w-2xl">
             <div>
-              <label className="text-sm font-medium mb-1 block">Termo de busca *</label>
+              <label className="text-sm font-medium mb-1 block">Termo de busca</label>
               <Input
                 placeholder="Digite o termo de busca..."
                 value={query}
@@ -288,10 +303,14 @@ export default function SearchPage() {
         )}
       </div>
 
-      {submittedQuery && (
+      {hasAnyCriteria && (
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <p className="text-muted-foreground" data-testid="text-search-query">
-            Buscando por: <strong>"{submittedQuery}"</strong>
+            {submittedQuery ? (
+              <>Buscando por: <strong>"{submittedQuery}"</strong></>
+            ) : (
+              <>Buscando com filtros</>
+            )}
             {data && <span> — {data.total} resultado(s)</span>}
           </p>
           {data && data.total > 0 && (
@@ -302,7 +321,7 @@ export default function SearchPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="relevance">Relevância</SelectItem>
+                  {submittedQuery && <SelectItem value="relevance">Relevância</SelectItem>}
                   <SelectItem value="az">A-Z</SelectItem>
                   <SelectItem value="za">Z-A</SelectItem>
                   <SelectItem value="newest">Mais recentes</SelectItem>
@@ -314,10 +333,12 @@ export default function SearchPage() {
         </div>
       )}
 
-      {!submittedQuery ? (
+      {!hasAnyCriteria ? (
         <div className="text-center py-16">
           <p className="text-muted-foreground text-lg">
-            Digite algo para buscar.
+            {mode === "advanced"
+              ? "Preencha pelo menos um critério: termo de busca, tag, categoria ou intervalo de datas."
+              : "Digite algo para buscar."}
           </p>
         </div>
       ) : isLoading ? (
@@ -333,7 +354,9 @@ export default function SearchPage() {
       ) : data?.posts.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-muted-foreground text-lg" data-testid="text-no-results">
-            Nenhum resultado encontrado para "{submittedQuery}".
+            {submittedQuery
+              ? `Nenhum resultado encontrado para "${submittedQuery}".`
+              : "Nenhum resultado encontrado para os filtros selecionados."}
           </p>
         </div>
       ) : (

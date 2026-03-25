@@ -480,16 +480,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   private buildSearchConditions(query: string, options?: { searchIn?: string; categoryId?: number; tagId?: number; dateFrom?: string; dateTo?: string }) {
-    const searchTerm = `%${query}%`;
     const conditions: any[] = [];
 
-    const searchIn = options?.searchIn || "all";
-    if (searchIn === "title") {
-      conditions.push(ilike(posts.title, searchTerm));
-    } else if (searchIn === "content") {
-      conditions.push(or(ilike(posts.content, searchTerm), ilike(posts.excerpt, searchTerm)));
-    } else {
-      conditions.push(or(ilike(posts.title, searchTerm), ilike(posts.content, searchTerm), ilike(posts.excerpt, searchTerm)));
+    if (query) {
+      const searchTerm = `%${query}%`;
+      const searchIn = options?.searchIn || "all";
+      if (searchIn === "title") {
+        conditions.push(ilike(posts.title, searchTerm));
+      } else if (searchIn === "content") {
+        conditions.push(or(ilike(posts.content, searchTerm), ilike(posts.excerpt, searchTerm)));
+      } else {
+        conditions.push(or(ilike(posts.title, searchTerm), ilike(posts.content, searchTerm), ilike(posts.excerpt, searchTerm)));
+      }
     }
 
     if (options?.dateFrom) {
@@ -531,7 +533,8 @@ export class DatabaseStorage implements IStorage {
 
   async searchPosts(query: string, options?: { limit?: number; offset?: number; searchIn?: string; categoryId?: number; tagId?: number; dateFrom?: string; dateTo?: string; sort?: string }): Promise<PostWithRelations[]> {
     const conditions = this.buildSearchConditions(query, options);
-    const sortOrder = options?.sort || "relevance";
+    let sortOrder = options?.sort || "relevance";
+    if (!query && sortOrder === "relevance") sortOrder = "newest";
 
     if (sortOrder === "relevance") {
       const relevanceScore = this.buildRelevanceScore(query);

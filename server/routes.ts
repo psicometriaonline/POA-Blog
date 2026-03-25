@@ -708,7 +708,8 @@ export async function registerRoutes(
       const dateFrom = (req.query.dateFrom as string) || undefined;
       const dateTo = (req.query.dateTo as string) || undefined;
       const sort = (req.query.sort as string) || "relevance";
-      if (!query) return res.json({ posts: [], total: 0, limit, offset });
+      const hasFilters = !!(categoryId || tagId || dateFrom || dateTo);
+      if (!query && !hasFilters) return res.json({ posts: [], total: 0, limit, offset });
       const searchOptions = { limit, offset, searchIn, categoryId, tagId, dateFrom, dateTo, sort };
       const posts = await storage.searchPosts(query, searchOptions);
       const total = await storage.searchPostCount(query, { searchIn, categoryId, tagId, dateFrom, dateTo });
