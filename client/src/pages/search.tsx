@@ -70,6 +70,8 @@ export default function SearchPage() {
     setOffset(0);
     if (urlSearchIn !== "all" || urlCategoryId || urlTagId || urlDateFrom || urlDateTo) {
       setMode("advanced");
+    } else {
+      setMode("simple");
     }
   }, [searchString]);
 
