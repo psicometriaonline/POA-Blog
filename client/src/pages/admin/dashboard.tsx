@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2, Search, ChevronLeft, ChevronRight, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown, Loader2, MessageSquare, BarChart3, Home, Database, Layers, Eye } from "lucide-react";
+import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2, Search, ChevronLeft, ChevronRight, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown, Loader2, MessageSquare, BarChart3, Home, Database, Layers, Eye, ShieldAlert, LogOut, UserPlus, Users, X } from "lucide-react";
 import { PagePreview } from "@/components/admin/page-preview";
 import { useAuth } from "@/hooks/use-auth";
 import type { PostWithRelations, Category, Tag as TagType, Banner, FreeMaterial } from "@shared/schema";
@@ -581,6 +581,138 @@ function TagsTab({ settings, categories, allTags, bannerQuery }: { settings: Rec
   );
 }
 
+function AdminUsersContent() {
+  const { toast } = useToast();
+  const [newEmail, setNewEmail] = useState("");
+  const [newName, setNewName] = useState("");
+
+  const { data: adminUsers, isLoading } = useQuery<{ id: number; email: string; name: string | null; createdAt: string }[]>({
+    queryKey: ["/api/admin/admin-users"],
+  });
+
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/admin-users", { email: newEmail, name: newName || undefined });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/admin-users"] });
+      setNewEmail("");
+      setNewName("");
+      toast({ title: "Administrador adicionado" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/admin-users/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/admin-users"] });
+      toast({ title: "Administrador removido" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold mb-1" data-testid="text-admin-users-title">Administradores Autorizados</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Gerencie quem tem acesso ao painel administrativo. Apenas e-mails cadastrados aqui poderão acessar o admin após fazer login via Replit.
+        </p>
+      </div>
+
+      <Card className="p-4">
+        <div className="flex items-end gap-3">
+          <div className="flex-1">
+            <label className="text-sm font-medium mb-1 block">E-mail</label>
+            <Input
+              type="email"
+              placeholder="nome@exemplo.com"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              data-testid="input-admin-email"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="text-sm font-medium mb-1 block">Nome (opcional)</label>
+            <Input
+              placeholder="Nome do administrador"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              data-testid="input-admin-name"
+            />
+          </div>
+          <Button
+            onClick={() => addMutation.mutate()}
+            disabled={!newEmail || addMutation.isPending}
+            data-testid="button-add-admin"
+          >
+            <UserPlus className="h-4 w-4 mr-1" />
+            Adicionar
+          </Button>
+        </div>
+      </Card>
+
+      {isLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
+        </div>
+      ) : adminUsers && adminUsers.length > 0 ? (
+        <div className="border rounded-lg overflow-hidden">
+          <table className="w-full text-sm" data-testid="table-admin-users">
+            <thead>
+              <tr className="border-b bg-muted/50 text-muted-foreground">
+                <th className="text-left p-3 font-medium">E-mail</th>
+                <th className="text-left p-3 font-medium">Nome</th>
+                <th className="text-left p-3 font-medium">Adicionado em</th>
+                <th className="text-right p-3 font-medium">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {adminUsers.map((admin) => (
+                <tr key={admin.id} className="border-b last:border-0 hover:bg-muted/30" data-testid={`row-admin-${admin.id}`}>
+                  <td className="p-3 font-medium" data-testid={`text-admin-email-${admin.id}`}>{admin.email}</td>
+                  <td className="p-3 text-muted-foreground">{admin.name || "—"}</td>
+                  <td className="p-3 text-muted-foreground">
+                    {admin.createdAt ? format(new Date(admin.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "—"}
+                  </td>
+                  <td className="p-3 text-right">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={() => removeMutation.mutate(admin.id)}
+                      disabled={adminUsers.length <= 1 || removeMutation.isPending}
+                      title={adminUsers.length <= 1 ? "Não é possível remover o último administrador" : "Remover"}
+                      data-testid={`button-remove-admin-${admin.id}`}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <Card className="p-8 text-center">
+          <p className="text-muted-foreground">Nenhum administrador cadastrado.</p>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 function DatabaseTab() {
   const [subTab, setSubTab] = useState("media");
 
@@ -592,6 +724,10 @@ function DatabaseTab() {
           <TabsTrigger value="subscribers" data-testid="tab-db-subscribers">Inscritos</TabsTrigger>
           <TabsTrigger value="authors" data-testid="tab-db-authors">Autores</TabsTrigger>
           <TabsTrigger value="broken-links" data-testid="tab-db-broken-links">Links Quebrados</TabsTrigger>
+          <TabsTrigger value="admin-users" data-testid="tab-db-admin-users">
+            <Users className="h-3.5 w-3.5 mr-1" />
+            Admins
+          </TabsTrigger>
         </TabsList>
       </div>
 
@@ -610,6 +746,10 @@ function DatabaseTab() {
       <TabsContent value="broken-links" className="mt-0">
         <BrokenLinksContent />
       </TabsContent>
+
+      <TabsContent value="admin-users" className="mt-0">
+        <AdminUsersContent />
+      </TabsContent>
     </Tabs>
   );
 }
@@ -617,7 +757,7 @@ function DatabaseTab() {
 const VALID_TABS: AdminTab[] = ["home", "posts", "categories", "tags", "database"];
 
 export default function AdminDashboard() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, isAdmin } = useAuth();
   const searchString = useSearch();
 
   const getTabFromSearch = (search: string): AdminTab => {
@@ -700,6 +840,37 @@ export default function AdminDashboard() {
           <p className="text-xs text-muted-foreground mt-4">
             Acesso restrito a administradores autorizados.
           </p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-950" data-testid="page-admin-denied">
+        <Card className="w-full max-w-sm p-8 text-center shadow-lg border-t-4 border-t-destructive">
+          <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+            <ShieldAlert className="h-6 w-6 text-destructive" />
+          </div>
+          <h1 className="font-serif text-xl font-bold mb-1" data-testid="text-denied-title">Acesso Negado</h1>
+          <p className="text-sm text-muted-foreground mb-2">
+            Você está logado como:
+          </p>
+          <p className="text-sm font-medium mb-1" data-testid="text-denied-email">{user.email}</p>
+          {(user.firstName || user.lastName) && (
+            <p className="text-xs text-muted-foreground mb-4" data-testid="text-denied-name">
+              {[user.firstName, user.lastName].filter(Boolean).join(" ")}
+            </p>
+          )}
+          <p className="text-sm text-muted-foreground mb-6">
+            Este e-mail não está autorizado a acessar o painel administrativo. Solicite acesso a um administrador.
+          </p>
+          <a href="/api/logout" className="block">
+            <Button variant="outline" className="w-full" size="lg" data-testid="button-logout-denied">
+              <LogOut className="h-4 w-4 mr-2" />
+              Sair
+            </Button>
+          </a>
         </Card>
       </div>
     );

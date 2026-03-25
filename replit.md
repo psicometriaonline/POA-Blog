@@ -34,7 +34,7 @@ The project employs a full-stack architecture. The backend is built with Express
 - **Analytics:** Comprehensive dashboard with unique visitor tracking, referrer tracking, various chart types, and per-post analytics.
 - **Container System:** Flexible system for embedding images with rules-based group assignment and intelligent placement.
 - **Broken Link Scanner:** Admin tool (Database > Links Quebrados) that scans all published posts, banners, and settings for broken internal/external links. Stores results in `broken_links` table with URL, status code, page context. Handles internal path validation, protocol-relative URLs, query strings, and 405 fallbacks.
-- **Authentication:** Admin access secured via Replit Auth.
+- **Authentication:** Admin access secured via Replit Auth with an `admin_users` authorization table. The `isAuthenticated` middleware verifies both OIDC session validity and admin email authorization. Bootstrap: the first user to log in when the table is empty is auto-registered as admin. An "Admins" sub-tab in Database allows managing authorized emails.
 - **Post Structure:** Validation requires at least one category and tag; deletion of categories/tags triggers orphan checks.
 
 **Performance Optimizations:**

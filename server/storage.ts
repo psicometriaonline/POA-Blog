@@ -12,9 +12,11 @@ import {
   type ContainerRule, type InsertContainerRule, type ContainerRuleWithGroup,
   type MediaItem, type InsertMedia,
   type Subscriber,
+  type AdminUser,
   authors, categories, tags, posts, postCategories, postTags,
   banners, freeMaterials, siteSettings, comments, postViews,
   imageGroups, imageBankItems, containerRules, mediaLibrary, subscribers, brokenLinks,
+  adminUsers,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, ne, ilike, or, desc, sql, inArray, notInArray, and, asc, gte, lte, count, isNull } from "drizzle-orm";
@@ -145,6 +147,12 @@ export interface IStorage {
   getBrokenLinks(): Promise<import("@shared/schema").BrokenLink[]>;
   clearBrokenLinks(): Promise<void>;
   saveBrokenLinks(links: { url: string; statusCode: number | null; errorMessage: string | null; pageType: string; pageSlug: string | null; pageTitle: string | null }[]): Promise<void>;
+
+  getAdminUsers(): Promise<AdminUser[]>;
+  addAdminUser(email: string, name?: string): Promise<AdminUser>;
+  removeAdminUser(id: number): Promise<boolean>;
+  isAdminUser(email: string): Promise<boolean>;
+  getAdminUserCount(): Promise<number>;
 }
 
 const postListColumns = {
@@ -1846,6 +1854,30 @@ export class DatabaseStorage implements IStorage {
     if (links.length === 0) return;
     const now = new Date();
     await db.insert(brokenLinks).values(links.map(l => ({ ...l, scannedAt: now })));
+  }
+
+  async getAdminUsers(): Promise<AdminUser[]> {
+    return db.select().from(adminUsers).orderBy(adminUsers.createdAt);
+  }
+
+  async addAdminUser(email: string, name?: string): Promise<AdminUser> {
+    const [admin] = await db.insert(adminUsers).values({ email: email.toLowerCase().trim(), name: name || null }).returning();
+    return admin;
+  }
+
+  async removeAdminUser(id: number): Promise<boolean> {
+    const result = await db.delete(adminUsers).where(eq(adminUsers.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async isAdminUser(email: string): Promise<boolean> {
+    const [admin] = await db.select().from(adminUsers).where(eq(adminUsers.email, email.toLowerCase().trim()));
+    return !!admin;
+  }
+
+  async getAdminUserCount(): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(adminUsers);
+    return result.count;
   }
 
 }

@@ -276,6 +276,17 @@ export type ContainerRuleWithGroup = ContainerRule & {
   imageGroup: ImageGroup;
 };
 
+export const adminUsers = pgTable("admin_users", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  email: text("email").notNull().unique(),
+  name: text("name"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAdminUserSchema = createInsertSchema(adminUsers).omit({ id: true, createdAt: true });
+export type AdminUser = typeof adminUsers.$inferSelect;
+export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
+
 export type PostWithRelations = Post & {
   categories: Category[];
   tags: Tag[];

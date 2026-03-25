@@ -2365,6 +2365,46 @@ export async function registerRoutes(
 
   // ===== SITE SETTINGS ROUTES (Protected) =====
 
+  app.get("/api/admin/admin-users", isAuthenticated, async (_req, res) => {
+    try {
+      const admins = await storage.getAdminUsers();
+      res.json(admins);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/admin-users", isAuthenticated, async (req, res) => {
+    try {
+      const { email, name } = req.body;
+      if (!email || typeof email !== "string" || !email.includes("@")) {
+        return res.status(400).json({ message: "E-mail inválido" });
+      }
+      const existing = await storage.isAdminUser(email);
+      if (existing) {
+        return res.status(409).json({ message: "Este e-mail já é administrador" });
+      }
+      const admin = await storage.addAdminUser(email, name);
+      res.json(admin);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/admin-users/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const admins = await storage.getAdminUsers();
+      if (admins.length <= 1) {
+        return res.status(400).json({ message: "Não é possível remover o último administrador" });
+      }
+      const deleted = await storage.removeAdminUser(id);
+      res.json({ deleted });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/admin/settings", isAuthenticated, async (_req, res) => {
     try {
       const settings = await storage.getAllSettings();
