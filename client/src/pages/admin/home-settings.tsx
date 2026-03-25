@@ -15,7 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
-import { BANNER_SLOTS } from "@shared/schema";
+import { BANNER_SLOTS, HOME_BANNER_SLOTS } from "@shared/schema";
 import type { Category, Banner, FreeMaterial } from "@shared/schema";
 import { MediaLibraryModal } from "@/components/media-library-modal";
 
@@ -911,7 +911,7 @@ export function FilteredBannersTab({
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(BANNER_SLOTS).filter(([key]) => slots.includes(key)).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                  <SelectItem key={key} value={key}>{label.replace(/^.+? — /, "")}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -1083,7 +1083,7 @@ export function FilteredBannersTab({
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{banner.title}</p>
-                  <p className="text-xs text-muted-foreground">Local: {BANNER_SLOTS[banner.slot] || banner.slot}</p>
+                  <p className="text-xs text-muted-foreground">Local: {(BANNER_SLOTS[banner.slot] || banner.slot).replace(/^.+? — /, "")}</p>
                   {banner.linkUrl && <p className="text-xs text-muted-foreground truncate">Link: {banner.linkUrl}</p>}
                 </div>
                 <div className="flex items-center gap-2">
@@ -1127,7 +1127,7 @@ function BannersTab({ banners, isLoading }: { banners: Banner[]; isLoading: bool
   return <FilteredBannersTab 
     banners={banners} 
     isLoading={isLoading} 
-    slots={Object.keys(BANNER_SLOTS)}
+    slots={HOME_BANNER_SLOTS}
     defaultSlot="home_sidebar_recent_1"
   />;
 }

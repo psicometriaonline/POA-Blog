@@ -12,6 +12,7 @@ import { Plus, FileText, FolderOpen, Tag, Download, Edit, Trash2, Search, Chevro
 import { PagePreview } from "@/components/admin/page-preview";
 import { useAuth } from "@/hooks/use-auth";
 import type { PostWithRelations, Category, Tag as TagType, Banner, FreeMaterial } from "@shared/schema";
+import { POST_BANNER_SLOTS, CATEGORY_BANNER_SLOTS, TAG_BANNER_SLOTS } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -217,7 +218,7 @@ function PostsTab({ user, bannerQuery, settings }: { user: any; bannerQuery: Ret
           <FilteredBannersTab 
             banners={bannerQuery.data || []} 
             isLoading={bannerQuery.isLoading} 
-            slots={["post_sidebar", "post_academy_form"]}
+            slots={POST_BANNER_SLOTS}
             defaultSlot="post_sidebar"
           />
         </TabsContent>
@@ -503,7 +504,7 @@ function CategoriesTab({ settings, categories, bannerQuery }: { settings: Record
         <FilteredBannersTab 
           banners={bannerQuery.data || []} 
           isLoading={bannerQuery.isLoading} 
-          slots={["category_academy_form"]}
+          slots={CATEGORY_BANNER_SLOTS}
           defaultSlot="category_academy_form"
         />
       </TabsContent>
@@ -558,7 +559,7 @@ function TagsTab({ settings, categories, allTags, bannerQuery }: { settings: Rec
         <FilteredBannersTab 
           banners={bannerQuery.data || []} 
           isLoading={bannerQuery.isLoading} 
-          slots={["tag_academy_form"]}
+          slots={TAG_BANNER_SLOTS}
           defaultSlot="tag_academy_form"
         />
       </TabsContent>

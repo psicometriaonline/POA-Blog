@@ -85,15 +85,20 @@ export const postTagsRelations = relations(postTags, ({ one }) => ({
 }));
 
 export const BANNER_SLOTS: Record<string, string> = {
-  home_sidebar_recent_1: "Home — Sidebar Posts Recentes (1)",
-  home_sidebar_recent_2: "Home — Sidebar Posts Recentes (2)",
-  home_sidebar_categories: "Home — Sidebar Categorias",
+  home_sidebar_recent_1: "Home — Lateral Direita (1º)",
+  home_sidebar_recent_2: "Home — Lateral Direita (2º)",
+  home_sidebar_categories: "Home — Lateral Direita (3º)",
   home_horizontal: "Home — Banner Horizontal",
-  post_sidebar: "Post — Sidebar",
-  post_academy_form: "Post — Academy Form",
-  category_academy_form: "Categorias — Academy Form",
-  tag_academy_form: "Tags — Academy Form",
+  post_sidebar: "Post — Lateral Direita (1º)",
+  post_academy_form: "Post — Lateral Direita (2º)",
+  category_academy_form: "Categorias — Lateral Direita (1º)",
+  tag_academy_form: "Tags — Lateral Direita (1º)",
 };
+
+export const HOME_BANNER_SLOTS = ["home_sidebar_recent_1", "home_sidebar_recent_2", "home_sidebar_categories", "home_horizontal"];
+export const POST_BANNER_SLOTS = ["post_sidebar", "post_academy_form"];
+export const CATEGORY_BANNER_SLOTS = ["category_academy_form"];
+export const TAG_BANNER_SLOTS = ["tag_academy_form"];
 
 export const banners = pgTable("banners", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
