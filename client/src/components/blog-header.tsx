@@ -251,9 +251,9 @@ export function BlogHeader() {
             )}
 
             {ctaUrl.startsWith("http") ? (
-              <a href={ctaUrl} target="_blank" rel="noopener noreferrer" className="hidden xl:block">
+              <a href={ctaUrl} target="_blank" rel="noopener noreferrer" className="hidden xl:block flex-shrink-0">
                 <button
-                  className="inline-flex items-center px-5 py-2 text-sm font-medium rounded-full transition-colors"
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-full transition-colors whitespace-nowrap"
                   style={{ backgroundColor: "#31D5FF", color: "#000A24" }}
                   data-testid="button-criar-conta"
                 >
@@ -261,9 +261,9 @@ export function BlogHeader() {
                 </button>
               </a>
             ) : (
-              <Link href={ctaUrl} className="hidden xl:block">
+              <Link href={ctaUrl} className="hidden xl:block flex-shrink-0">
                 <button
-                  className="inline-flex items-center px-5 py-2 text-sm font-medium rounded-full transition-colors"
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-full transition-colors whitespace-nowrap"
                   style={{ backgroundColor: "#31D5FF", color: "#000A24" }}
                   data-testid="button-criar-conta"
                 >
