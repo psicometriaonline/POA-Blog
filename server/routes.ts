@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { type PostWithRelations, insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema, insertMediaSchema, authors, postCategories, postTags, posts, comments, banners, siteSettings } from "@shared/schema";
+import { type PostWithRelations, insertAuthorSchema, insertCategorySchema, insertTagSchema, insertPostSchema, insertBannerSchema, insertFreeMaterialSchema, insertCommentSchema, insertImageGroupSchema, insertImageBankItemSchema, insertContainerRuleSchema, insertMediaSchema, authors, postCategories, postTags, posts, comments, banners, siteSettings, brokenLinks } from "@shared/schema";
 import { eq, and, lte, sql } from "drizzle-orm";
 import { db } from "./db";
 import { crawlMultipleUrls } from "./crawler";
