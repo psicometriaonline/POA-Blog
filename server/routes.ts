@@ -199,9 +199,9 @@ export async function registerRoutes(
   app.use((req, res, next) => {
     const url = req.url;
     
-    // Redirect without www to with www
-    if (!req.hostname.startsWith("www.") && req.hostname !== "localhost" && req.hostname !== "127.0.0.1") {
-      return res.redirect(301, `https://www.${req.hostname}${req.originalUrl}`);
+    // Redirect without www to with www (production domain only)
+    if (req.hostname === "blog.psicometriaonline.com.br") {
+      return res.redirect(301, `https://www.blog.psicometriaonline.com.br${req.originalUrl}`);
     }
     
     // Block /admin from public (WordPress legacy)
