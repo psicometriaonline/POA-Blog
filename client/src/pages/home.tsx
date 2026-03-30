@@ -2,6 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar, User, ArrowRight, ChevronRight, ChevronDown, Search, Menu as MenuIcon } from "lucide-react";
+import { useRef, useEffect, useCallback } from "react";
+import { setMetaTags } from "@/lib/meta-tags";
+import useEmblaCarousel from "embla-carousel-react";
+import type { PostWithRelations, Category, Banner, FreeMaterial } from "@shared/schema";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 function CategoryBadge({ slug, name, className = "bg-accent-bright text-accent-bright-foreground border-none text-[10px] font-bold tracking-tight px-1.5 py-0.5 hover:bg-accent-bright/80 cursor-pointer transition-colors" }: { slug: string; name: string; className?: string }) {
   const [, navigate] = useLocation();
@@ -17,14 +26,7 @@ function CategoryBadge({ slug, name, className = "bg-accent-bright text-accent-b
     </button>
   );
 }
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, User, ArrowRight, ChevronRight, ChevronDown, Search, Menu as MenuIcon } from "lucide-react";
-import useEmblaCarousel from "embla-carousel-react";
-import type { PostWithRelations, Category, Banner, FreeMaterial } from "@shared/schema";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { useRef, useEffect, useCallback } from "react";
+
 import { PostCard } from "@/components/post-card";
 import DOMPurify from "dompurify";
 import { parseBannerButtonColor } from "@/lib/banner-utils";
@@ -614,6 +616,18 @@ export default function Home() {
   const { data, isLoading } = useQuery<HomeData>({
     queryKey: ["/api/home"],
   });
+
+  useEffect(() => {
+    setMetaTags({
+      title: "Blog Psicometria Online | Psicometria e Pesquisa Quantitativa",
+      description: "Artigos especializados em psicometria, quantitativa e estatística para pesquisadores e profissionais.",
+      canonical: `${import.meta.env.VITE_SITE_URL || "https://www.blog.psicometriaonline.com.br"}/`,
+      ogUrl: `${import.meta.env.VITE_SITE_URL || "https://www.blog.psicometriaonline.com.br"}/`,
+      ogTitle: "Blog Psicometria Online",
+      ogDescription: "Artigos especializados em psicometria, quantitativa e estatística",
+      twitterCard: "summary",
+    });
+  }, []);
 
   if (isLoading || !data) {
     return <HomeSkeleton />;

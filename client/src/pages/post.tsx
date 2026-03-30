@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import DOMPurify from "dompurify";
 import { useEffect, useRef, useState } from "react";
+import { setMetaTags, setJsonLd } from "@/lib/meta-tags";
 
 import { Calendar, User, Tag, ChevronRight, Send, MessageSquare, List, Pencil, FolderOpen } from "lucide-react";
 import { SiFacebook, SiLinkedin, SiWhatsapp, SiX } from "react-icons/si";
@@ -921,6 +922,46 @@ export default function PostPage() {
       setTimeout(() => renderMathAndCode(contentRef), 50);
     }
   }, [post, containerData]);
+
+  useEffect(() => {
+    if (!post) return;
+    const siteUrl = import.meta.env.VITE_SITE_URL || "https://www.blog.psicometriaonline.com.br";
+    const postUrl = `${siteUrl}/${post.slug}`;
+    const metaDesc = post.metaDescription || post.excerpt || post.title;
+    
+    setMetaTags({
+      title: `${post.seoTitle || post.title} | Blog Psicometria Online`,
+      description: metaDesc,
+      canonical: postUrl,
+      ogUrl: postUrl,
+      ogTitle: post.seoTitle || post.title,
+      ogDescription: metaDesc,
+      ogImage: post.featuredImage,
+      twitterCard: "summary_large_image",
+    });
+
+    setJsonLd({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: post.seoTitle || post.title,
+      description: metaDesc,
+      image: post.featuredImage,
+      datePublished: post.publishedAt?.toISOString().split('T')[0],
+      dateModified: post.updatedAt?.toISOString().split('T')[0] || post.publishedAt?.toISOString().split('T')[0],
+      author: {
+        "@type": "Person",
+        name: post.authorName || "Blog Psicometria Online"
+      },
+      publisher: {
+        "@type": "Organization",
+        name: "Blog Psicometria Online",
+        logo: {
+          "@type": "ImageObject",
+          url: `${siteUrl}/logo.png`
+        }
+      }
+    });
+  }, [post]);
 
   if (isLoading) {
     return (

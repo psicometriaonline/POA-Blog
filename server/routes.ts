@@ -3398,5 +3398,122 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/sitemap.xml", async (_req, res) => {
+    try {
+      const publishedPosts = await storage.getPosts({ status: "published", limit: 10000 });
+      const categories = await storage.getCategories();
+      const tags = await storage.getTags();
+      
+      let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+      xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+      
+      // Home
+      xml += `  <url>\n`;
+      xml += `    <loc>${SITE_URL}/</loc>\n`;
+      xml += `    <priority>1.0</priority>\n`;
+      xml += `  </url>\n`;
+      
+      // Posts
+      for (const post of publishedPosts) {
+        xml += `  <url>\n`;
+        xml += `    <loc>${SITE_URL}/${post.slug}</loc>\n`;
+        if (post.updatedAt || post.publishedAt) {
+          const date = (post.updatedAt || post.publishedAt)?.toISOString().split('T')[0];
+          if (date) xml += `    <lastmod>${date}</lastmod>\n`;
+        }
+        xml += `    <priority>0.8</priority>\n`;
+        xml += `  </url>\n`;
+      }
+      
+      // Categories
+      for (const cat of categories) {
+        xml += `  <url>\n`;
+        xml += `    <loc>${SITE_URL}/categorias/${cat.slug}</loc>\n`;
+        xml += `    <priority>0.6</priority>\n`;
+        xml += `  </url>\n`;
+      }
+      
+      // Tags
+      for (const tag of tags) {
+        xml += `  <url>\n`;
+        xml += `    <loc>${SITE_URL}/tags/${tag.slug}</loc>\n`;
+        xml += `    <priority>0.6</priority>\n`;
+        xml += `  </url>\n`;
+      }
+      
+      xml += '</urlset>';
+      
+      res.header('Content-Type', 'application/xml');
+      res.send(xml);
+    } catch (error: any) {
+      res.status(500).send('<?xml version="1.0"?><error>Erro ao gerar sitemap</error>');
+    }
+  });
+
+  app.get("/robots.txt", async (_req, res) => {
+    const robotsContent = `User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+Sitemap: ${SITE_URL}/sitemap.xml
+`;
+    res.header('Content-Type', 'text/plain');
+    res.send(robotsContent);
+  });
+
+  app.get("/api/admin/migration/checklist", isAuthenticated, async (_req, res) => {
+    try {
+      const publishedPosts = await storage.getPosts({ status: "published", limit: 100 });
+      const checks: { name: string; passed: boolean; details?: string }[] = [];
+      
+      // Check 1: Sitemap accessible
+      try {
+        const sitemapRes = await fetch(`${SITE_URL}/sitemap.xml`);
+        checks.push({ name: "Sitemap XML", passed: sitemapRes.ok });
+      } catch {
+        checks.push({ name: "Sitemap XML", passed: false, details: "Não foi possível acessar o sitemap" });
+      }
+      
+      // Check 2: Robots.txt accessible
+      try {
+        const robotsRes = await fetch(`${SITE_URL}/robots.txt`);
+        checks.push({ name: "Robots.txt", passed: robotsRes.ok });
+      } catch {
+        checks.push({ name: "Robots.txt", passed: false, details: "Não foi possível acessar o robots.txt" });
+      }
+      
+      // Check 3: Posts with SEO data
+      const postsWithoutSeo = publishedPosts.filter(p => !p.seoTitle || !p.metaDescription);
+      checks.push({ 
+        name: "Posts com SEO completo", 
+        passed: postsWithoutSeo.length === 0,
+        details: `${publishedPosts.length - postsWithoutSeo.length}/${publishedPosts.length} posts com título SEO e meta descrição`
+      });
+      
+      // Check 4: SITE_URL uses www
+      checks.push({
+        name: "Domínio canônico com www",
+        passed: SITE_URL.includes("www."),
+        details: `Domínio: ${SITE_URL}`
+      });
+      
+      // Check 5: Links normalized (sample check)
+      const samplePost = publishedPosts[0];
+      if (samplePost?.content) {
+        const hasOldLinks = /https?:\/\/(www\.)?blog\.psicometriaonline\.com\.br/.test(samplePost.content) ||
+                          /https:\/\/blog-academy\.replit\.app/.test(samplePost.content);
+        checks.push({
+          name: "Links normalizados",
+          passed: !hasOldLinks,
+          details: hasOldLinks ? "Alguns posts ainda contêm URLs antigas" : "Links normalizados com sucesso"
+        });
+      }
+      
+      res.json({ checks, totalChecks: checks.length, passedChecks: checks.filter(c => c.passed).length });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

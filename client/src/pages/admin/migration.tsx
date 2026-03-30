@@ -1,15 +1,16 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, Play } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 export function MigrationContent() {
   const { toast } = useToast();
   const [normalizationResult, setNormalizationResult] = useState<any>(null);
+  const [checklistResult, setChecklistResult] = useState<any>(null);
 
   const normalizeMutation = useMutation({
     mutationFn: async (dryRun: boolean) => {
@@ -29,6 +30,23 @@ export function MigrationContent() {
     onError: (err: any) => {
       toast({ 
         title: "Erro na normalização", 
+        description: err.message, 
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const checklistMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/migration/checklist");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setChecklistResult(data);
+    },
+    onError: (err: any) => {
+      toast({ 
+        title: "Erro ao executar checklist", 
         description: err.message, 
         variant: "destructive" 
       });
@@ -134,12 +152,60 @@ export function MigrationContent() {
       </Card>
 
       <Card className="p-6 bg-muted/30 border-l-4 border-l-muted-foreground">
+        <h3 className="font-semibold mb-3">Checklist de SEO</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Valide se todos os elementos de SEO técnico estão configurados corretamente.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => checklistMutation.mutate()}
+          disabled={checklistMutation.isPending}
+          data-testid="button-migration-checklist"
+        >
+          {checklistMutation.isPending ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Play className="h-4 w-4 mr-2" />
+          )}
+          Executar Checklist
+        </Button>
+
+        {checklistResult && (
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-sm font-medium">{checklistResult.passedChecks}/{checklistResult.totalChecks} verificações passaram</span>
+            </div>
+            <div className="space-y-2">
+              {checklistResult.checks.map((check: any, idx: number) => (
+                <div key={idx} className="flex items-start gap-3 p-2 rounded border">
+                  {check.passed ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{check.name}</p>
+                    {check.details && (
+                      <p className="text-xs text-muted-foreground">{check.details}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <Card className="p-6 bg-muted/30 border-l-4 border-l-muted-foreground">
         <h3 className="font-semibold mb-3">Informações sobre a Migração</h3>
         <ul className="space-y-2 text-sm text-muted-foreground">
           <li>• Operação afeta apenas posts publicados</li>
           <li>• URLs internas são convertidas para o domínio www.blog.psicometriaonline.com.br</li>
           <li>• Imagens de destaque também são normalizadas</li>
           <li>• Sempre use "Pré-visualizar" antes de "Normalizar Agora"</li>
+          <li>• Sitemap gerado automaticamente em /sitemap.xml</li>
+          <li>• Robots.txt disponível em /robots.txt</li>
         </ul>
       </Card>
     </div>
