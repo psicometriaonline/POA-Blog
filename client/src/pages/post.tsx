@@ -946,8 +946,8 @@ export default function PostPage() {
       headline: post.seoTitle || post.title,
       description: metaDesc,
       image: post.featuredImage,
-      datePublished: post.publishedAt?.toISOString().split('T')[0],
-      dateModified: post.updatedAt?.toISOString().split('T')[0] || post.publishedAt?.toISOString().split('T')[0],
+      datePublished: post.publishedAt ? new Date(post.publishedAt).toISOString().split('T')[0] : undefined,
+      dateModified: post.updatedAt ? new Date(post.updatedAt).toISOString().split('T')[0] : (post.publishedAt ? new Date(post.publishedAt).toISOString().split('T')[0] : undefined),
       author: {
         "@type": "Person",
         name: post.authorName || "Blog Psicometria Online"
