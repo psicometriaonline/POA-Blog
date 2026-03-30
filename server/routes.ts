@@ -3594,6 +3594,7 @@ Sitemap: ${SITE_URL}/sitemap.xml
   app.get("/api/admin/migration/checklist", isAuthenticated, async (_req, res) => {
     try {
       const allPublishedPosts = await storage.getPosts({ status: "published", limit: 10000 });
+      const samplePostWithContent = await storage.getPosts({ status: "published", limit: 1, includeContent: true });
       const checks: { name: string; passed: boolean; details?: string }[] = [];
       
       // Check 1: Sitemap accessible
@@ -3627,8 +3628,8 @@ Sitemap: ${SITE_URL}/sitemap.xml
         details: `Domínio: ${SITE_URL}`
       });
       
-      // Check 5: Links normalized (sample check on first post)
-      const samplePost = allPublishedPosts[0];
+      // Check 5: Links normalized (sample check on first post with content)
+      const samplePost = samplePostWithContent[0];
       if (samplePost?.content) {
         const hasOldLinks = /https?:\/\/(www\.)?blog\.psicometriaonline\.com\.br/.test(samplePost.content) ||
                           /https:\/\/blog-academy\.replit\.app/.test(samplePost.content);
@@ -3636,6 +3637,12 @@ Sitemap: ${SITE_URL}/sitemap.xml
           name: "Links normalizados",
           passed: !hasOldLinks,
           details: hasOldLinks ? "Alguns posts ainda contêm URLs antigas" : "Links normalizados com sucesso"
+        });
+      } else {
+        checks.push({
+          name: "Links normalizados",
+          passed: false,
+          details: "Não foi possível carregar conteúdo para verificação"
         });
       }
       
@@ -3649,7 +3656,7 @@ Sitemap: ${SITE_URL}/sitemap.xml
       let redirectsWorking = true;
       for (const test of redirectTests) {
         try {
-          const testRes = await fetch(`${SITE_URL}/api/admin/migration/test-redirect`, {
+          const testRes = await fetch(`http://localhost:5000/api/admin/migration/test-redirect`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ oldUrl: test.url })
