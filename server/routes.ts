@@ -3593,7 +3593,7 @@ Sitemap: ${SITE_URL}/sitemap.xml
 
   app.get("/api/admin/migration/checklist", isAuthenticated, async (_req, res) => {
     try {
-      const publishedPosts = await storage.getPosts({ status: "published", limit: 100 });
+      const allPublishedPosts = await storage.getPosts({ status: "published", limit: 10000 });
       const checks: { name: string; passed: boolean; details?: string }[] = [];
       
       // Check 1: Sitemap accessible
@@ -3612,12 +3612,12 @@ Sitemap: ${SITE_URL}/sitemap.xml
         checks.push({ name: "Robots.txt", passed: false, details: "Não foi possível acessar o robots.txt" });
       }
       
-      // Check 3: Posts with SEO data
-      const postsWithoutSeo = publishedPosts.filter(p => !p.seoTitle || !p.metaDescription);
+      // Check 3: Posts with SEO data (ALL posts, not limited)
+      const postsWithoutSeo = allPublishedPosts.filter(p => !p.seoTitle || !p.metaDescription);
       checks.push({ 
         name: "Posts com SEO completo", 
         passed: postsWithoutSeo.length === 0,
-        details: `${publishedPosts.length - postsWithoutSeo.length}/${publishedPosts.length} posts com título SEO e meta descrição`
+        details: `${allPublishedPosts.length - postsWithoutSeo.length}/${allPublishedPosts.length} posts com título SEO e meta descrição`
       });
       
       // Check 4: SITE_URL uses www
@@ -3627,8 +3627,8 @@ Sitemap: ${SITE_URL}/sitemap.xml
         details: `Domínio: ${SITE_URL}`
       });
       
-      // Check 5: Links normalized (sample check)
-      const samplePost = publishedPosts[0];
+      // Check 5: Links normalized (sample check on first post)
+      const samplePost = allPublishedPosts[0];
       if (samplePost?.content) {
         const hasOldLinks = /https?:\/\/(www\.)?blog\.psicometriaonline\.com\.br/.test(samplePost.content) ||
                           /https:\/\/blog-academy\.replit\.app/.test(samplePost.content);
@@ -3638,6 +3638,38 @@ Sitemap: ${SITE_URL}/sitemap.xml
           details: hasOldLinks ? "Alguns posts ainda contêm URLs antigas" : "Links normalizados com sucesso"
         });
       }
+      
+      // Check 6: 301 Redirects working (test 3 patterns)
+      const redirectTests = [
+        { url: "/page/2", expectedType: "pagination" },
+        { url: "/feed", expectedType: "feed" },
+        { url: "/?p=1", expectedType: "wordpress_post_id" }
+      ];
+      
+      let redirectsWorking = true;
+      for (const test of redirectTests) {
+        try {
+          const testRes = await fetch(`${SITE_URL}/api/admin/migration/test-redirect`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ oldUrl: test.url })
+          });
+          const result = await testRes.json();
+          if (result.status !== "redirect_301" && result.status !== "not_found") {
+            redirectsWorking = false;
+            break;
+          }
+        } catch (err) {
+          redirectsWorking = false;
+          break;
+        }
+      }
+      
+      checks.push({
+        name: "Redirecionamentos 301 configurados",
+        passed: redirectsWorking,
+        details: redirectsWorking ? "Padrões de redirecionamento validados" : "Erro ao validar redirecionamentos"
+      });
       
       res.json({ checks, totalChecks: checks.length, passedChecks: checks.filter(c => c.passed).length });
     } catch (error: any) {

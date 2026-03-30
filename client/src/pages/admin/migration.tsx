@@ -310,6 +310,75 @@ export function MigrationContent() {
         </div>
       </Card>
 
+      <Card className="p-6 border-t-4 border-t-orange-500">
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-10 h-10 bg-orange-100 dark:bg-orange-950/30 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span className="text-lg font-semibold text-orange-600">⚙️</span>
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-lg mb-1">Configuração de Domínio Customizado</h3>
+            <p className="text-sm text-muted-foreground">
+              Passo a passo para apontar seu domínio para o Replit e configurar HTTPS
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <h4 className="font-semibold text-sm mb-3 text-blue-900 dark:text-blue-200">Passo 1: Configurar no Replit</h4>
+            <ol className="space-y-2 text-sm text-blue-800 dark:text-blue-300 list-decimal list-inside">
+              <li>Acesse <strong>Settings → Deployment</strong> no seu projeto Replit</li>
+              <li>Role até a seção <strong>"Custom domains"</strong></li>
+              <li>Clique em <strong>"+ Add Custom Domain"</strong></li>
+              <li>Insira: <code className="bg-black/10 px-2 py-1 rounded text-xs">www.blog.psicometriaonline.com.br</code></li>
+              <li>Clique <strong>"Create"</strong> e anote as instruções DNS que aparecem</li>
+            </ol>
+          </div>
+
+          <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+            <h4 className="font-semibold text-sm mb-3 text-purple-900 dark:text-purple-200">Passo 2: Configurar DNS (Registrador do Domínio)</h4>
+            <ol className="space-y-2 text-sm text-purple-800 dark:text-purple-300 list-decimal list-inside">
+              <li>Entre em sua conta no registrador do domínio (ex: Namecheap, Hostinger, etc.)</li>
+              <li>Acesse o painel de <strong>DNS / Nameservers</strong> do domínio <strong>blog.psicometriaonline.com.br</strong></li>
+              <li>Crie um registro <strong>CNAME</strong>:
+                <ul className="list-none pl-4 mt-1 space-y-1">
+                  <li><strong>Name:</strong> <code className="bg-black/10 px-1 rounded text-xs">www</code></li>
+                  <li><strong>Value:</strong> <code className="bg-black/10 px-1 rounded text-xs">[host do Replit]</code> (copie do passo 1)</li>
+                </ul>
+              </li>
+              <li>Crie um redirecionamento da raiz para www:
+                <ul className="list-none pl-4 mt-1 space-y-1">
+                  <li><strong>Nome:</strong> <code className="bg-black/10 px-1 rounded text-xs">blog.psicometriaonline.com.br</code></li>
+                  <li><strong>Tipo:</strong> Redirecionamento (301) permanente</li>
+                  <li><strong>Alvo:</strong> <code className="bg-black/10 px-1 rounded text-xs">https://www.blog.psicometriaonline.com.br</code></li>
+                </ul>
+              </li>
+              <li>Salve as alterações e aguarde a propagação (pode levar até 24h)</li>
+            </ol>
+          </div>
+
+          <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <h4 className="font-semibold text-sm mb-3 text-green-900 dark:text-green-200">Passo 3: Validar Configuração</h4>
+            <ul className="space-y-2 text-sm text-green-800 dark:text-green-300 list-disc list-inside">
+              <li>Aguarde alguns minutos e acesse <code className="bg-black/10 px-2 py-1 rounded text-xs">https://www.blog.psicometriaonline.com.br</code></li>
+              <li>Verifique se o SSL está ativo (cadeado 🔒 na barra de endereço)</li>
+              <li>Teste o redirecionamento: <code className="bg-black/10 px-2 py-1 rounded text-xs">https://blog.psicometriaonline.com.br</code> deve redirecionar para <strong>www</strong></li>
+              <li>Execute o checklist novamente para validar todas as verificações</li>
+            </ul>
+          </div>
+
+          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+            <h4 className="font-semibold text-sm mb-3 text-amber-900 dark:text-amber-200">⚠️ Importante</h4>
+            <ul className="space-y-1 text-sm text-amber-800 dark:text-amber-300 list-disc list-inside">
+              <li>Não remova o domínio do Replit até ter certeza que o DNS está correto</li>
+              <li>O certificado SSL é gerado automaticamente após a configuração DNS</li>
+              <li>Em caso de erro, verifique os registros DNS com uma ferramenta como <strong>DNSChecker.org</strong></li>
+              <li>Após a migração, o site em <code className="bg-black/10 px-1 rounded text-xs">blog-academy.replit.app</code> continuará funcionando como fallback</li>
+            </ul>
+          </div>
+        </div>
+      </Card>
+
       <Card className="p-6 bg-muted/30 border-l-4 border-l-muted-foreground">
         <h3 className="font-semibold mb-3">Padrões de Redirecionamento</h3>
         <ul className="space-y-2 text-sm text-muted-foreground">
