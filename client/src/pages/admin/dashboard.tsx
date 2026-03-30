@@ -26,6 +26,7 @@ import { SubscribersContent } from "./subscribers";
 import { MediaContent } from "./manage-media";
 import { CrawlContent } from "./crawl";
 import { BrokenLinksContent } from "./broken-links";
+import { MigrationContent } from "./migration";
 import { AdminLayout, type AdminTab } from "@/components/admin/admin-layout";
 import { PostsSubNav } from "@/components/admin/posts-sub-nav";
 
@@ -725,6 +726,7 @@ function DatabaseTab() {
           <TabsTrigger value="subscribers" data-testid="tab-db-subscribers">Inscritos</TabsTrigger>
           <TabsTrigger value="authors" data-testid="tab-db-authors">Autores</TabsTrigger>
           <TabsTrigger value="broken-links" data-testid="tab-db-broken-links">Links Quebrados</TabsTrigger>
+          <TabsTrigger value="migration" data-testid="tab-db-migration">Migração</TabsTrigger>
           <TabsTrigger value="admin-users" data-testid="tab-db-admin-users">
             <Users className="h-3.5 w-3.5 mr-1" />
             Admins
@@ -746,6 +748,10 @@ function DatabaseTab() {
 
       <TabsContent value="broken-links" className="mt-0">
         <BrokenLinksContent />
+      </TabsContent>
+
+      <TabsContent value="migration" className="mt-0">
+        <MigrationContent />
       </TabsContent>
 
       <TabsContent value="admin-users" className="mt-0">

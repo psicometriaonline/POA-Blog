@@ -827,8 +827,9 @@ function TiptapEditor({ content, onChange, onOpenMediaLib, editorRef, getTitle, 
               const lastName = nameParts[nameParts.length - 1];
               const firstInitial = nameParts[0].charAt(0);
               
+              const defaultUrl = import.meta.env.VITE_SITE_URL || "https://www.blog.psicometriaonline.com.br";
               const citationSourceName = settings?.["citation_source_name"] || "Blog Psicometria Online";
-              const citationBaseUrl = settings?.["citation_base_url"] || "https://www.blog.psicometriaonline.com.br";
+              const citationBaseUrl = settings?.["citation_base_url"] || defaultUrl;
               const capExceptionsStr = settings?.["citation_capitalization_exceptions"] || "";
               const capExceptions = new Set(capExceptionsStr.split(",").map(s => s.trim().toLowerCase()).filter(Boolean));
               
@@ -1113,8 +1114,9 @@ export default function PostEditor() {
     const lastName = nameParts[nameParts.length - 1];
     const firstInitial = nameParts[0].charAt(0);
 
+    const defaultUrl = import.meta.env.VITE_SITE_URL || "https://www.blog.psicometriaonline.com.br";
     const citationSourceName = settings?.["citation_source_name"] || "Blog Psicometria Online";
-    const citationBaseUrl = settings?.["citation_base_url"] || "https://www.blog.psicometriaonline.com.br";
+    const citationBaseUrl = settings?.["citation_base_url"] || defaultUrl;
     const capExceptionsStr = settings?.["citation_capitalization_exceptions"] || "";
     const capExceptionsMap = new Map<string, string>();
     capExceptionsStr.split(",").map(s => s.trim()).filter(Boolean).forEach(word => {

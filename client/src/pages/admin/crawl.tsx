@@ -146,7 +146,7 @@ export function CrawlContent() {
           <Textarea
             value={urlsText}
             onChange={(e) => setUrlsText(e.target.value)}
-            placeholder={"https://blog.psicometriaonline.com.br/o-que-e-metanalise/\nhttps://blog.psicometriaonline.com.br/outro-post/"}
+            placeholder={"https://www.blog.psicometriaonline.com.br/o-que-e-metanalise/\nhttps://www.blog.psicometriaonline.com.br/outro-post/"}
             rows={12}
             className="resize-y font-mono text-sm"
             data-testid="textarea-urls"

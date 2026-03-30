@@ -10,6 +10,10 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
+// Domínio canônico do site com www
+const SITE_URL = process.env.SITE_URL || "https://www.blog.psicometriaonline.com.br";
+const SITE_DOMAIN = new URL(SITE_URL).hostname;
+
 const uploadsDir = path.resolve(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -493,7 +497,7 @@ export async function registerRoutes(
     req.setTimeout(600000);
     res.setTimeout(600000);
     try {
-      const WP_PREFIX = "https://www.blog.psicometriaonline.com.br/wp-content/uploads/";
+      const WP_PREFIX = SITE_URL + "/wp-content/uploads/";
       const WP_REGEX = new RegExp(WP_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^"\'<>\\s,]+', 'g');
       const SIZE_VARIANT_RE = /(-\d+x\d+)(\.\w+)$/;
 
@@ -760,7 +764,7 @@ export async function registerRoutes(
       if (refHeader) {
         try {
           const refUrl = new URL(refHeader as string);
-          const ownHosts = ["blog-academy.replit.app", "blog.psicometriaonline.com.br", "localhost"];
+          const ownHosts = [SITE_DOMAIN, "blog-academy.replit.app", "blog.psicometriaonline.com.br", "localhost"];
           if (!ownHosts.some(h => refUrl.hostname.includes(h))) {
             referrer = refUrl.hostname.replace(/^www\./, "");
           }
@@ -881,7 +885,7 @@ export async function registerRoutes(
       const slugToId = new Map<string, number>();
       for (const p of allPosts) slugToId.set(p.slug, p.id);
 
-      const internalDomains = ["blog.psicometriaonline.com.br", "www.blog.psicometriaonline.com.br", "blog-academy.replit.app"];
+      const internalDomains = [SITE_DOMAIN, "blog.psicometriaonline.com.br", "www.blog.psicometriaonline.com.br", "blog-academy.replit.app"];
       const hrefRegex = /<a[^>]+href=["']([^"'#?]+)["'][^>]*>/gi;
       const outboundMap: Record<number, number> = {};
       const inboundMap: Record<number, number> = {};
@@ -946,7 +950,7 @@ export async function registerRoutes(
       const slugToId = new Map<string, number>();
       for (const p of allPosts) slugToId.set(p.slug, p.id);
 
-      const internalDomains = ["blog.psicometriaonline.com.br", "www.blog.psicometriaonline.com.br", "blog-academy.replit.app"];
+      const internalDomains = [SITE_DOMAIN, "blog.psicometriaonline.com.br", "www.blog.psicometriaonline.com.br", "blog-academy.replit.app"];
       const hrefRegex = /<a[^>]+href=["']([^"'#?]+)["'][^>]*>/gi;
       const outboundMap: Record<number, number> = {};
       const inboundMap: Record<number, number> = {};
@@ -1202,7 +1206,7 @@ export async function registerRoutes(
       const post = await storage.getPost(parentComment.postId);
       if (post) {
         const { sendCommentReplyNotification } = await import("./email");
-        const siteBaseUrl = (await storage.getSetting("citation_base_url")) || "https://www.blog.psicometriaonline.com.br";
+        const siteBaseUrl = (await storage.getSetting("citation_base_url")) || SITE_URL;
         await sendCommentReplyNotification({
           recipientEmail: parentComment.authorEmail,
           recipientName: parentComment.authorName,
@@ -1322,7 +1326,7 @@ export async function registerRoutes(
         const slugToId = new Map<string, number>();
         for (const p of allFiltered) slugToId.set(p.slug, p.id);
 
-        const internalDomains = ["blog.psicometriaonline.com.br", "www.blog.psicometriaonline.com.br", "blog-academy.replit.app"];
+        const internalDomains = [SITE_DOMAIN, "blog.psicometriaonline.com.br", "www.blog.psicometriaonline.com.br", "blog-academy.replit.app"];
         const hrefRegex = /<a[^>]+href=["']([^"'#?]+)["'][^>]*>/gi;
         const outboundMap: Record<number, number> = {};
         const inboundMap: Record<number, number> = {};
@@ -1469,7 +1473,7 @@ export async function registerRoutes(
         ? allPosts.filter(p => p.title.toLowerCase().includes(search.toLowerCase()))
         : allPosts;
 
-      const internalDomains = ["blog.psicometriaonline.com.br", "www.blog.psicometriaonline.com.br", "blog-academy.replit.app"];
+      const internalDomains = [SITE_DOMAIN, "blog.psicometriaonline.com.br", "www.blog.psicometriaonline.com.br", "blog-academy.replit.app"];
       const hrefRegex = /<a[^>]+href=["']([^"'#?]+)["'][^>]*>/gi;
       const slugToId = new Map<string, number>();
       for (const p of allPosts) slugToId.set(p.slug, p.id);
@@ -1647,7 +1651,7 @@ export async function registerRoutes(
         links.push({ url, text, status: "ok" });
       }
 
-      const DOMAIN = "blog.psicometriaonline.com.br";
+      const DOMAIN = SITE_DOMAIN;
 
       await Promise.all(links.map(async (link) => {
         try {
@@ -2431,7 +2435,7 @@ export async function registerRoutes(
     try {
       const settings = await storage.getAllSettings();
       const citationSourceName = settings["citation_source_name"] || "Blog Psicometria Online";
-      const citationBaseUrl = settings["citation_base_url"] || "https://www.blog.psicometriaonline.com.br";
+      const citationBaseUrl = settings["citation_base_url"] || SITE_URL;
       const capExceptionsStr = settings["citation_capitalization_exceptions"] || "";
       const capExceptionsMap = new Map<string, string>();
       capExceptionsStr.split(",").map(s => s.trim()).filter(Boolean).forEach(word => {
@@ -2754,7 +2758,7 @@ export async function registerRoutes(
   app.post("/api/admin/crawl/import-seo", isAuthenticated, async (req, res) => {
     try {
       const dryRun = req.query.dryRun !== "false";
-      const WP_BASE = "https://blog.psicometriaonline.com.br";
+      const WP_BASE = SITE_URL;
       const allPosts = await storage.getPosts({ limit: 1000, offset: 0 });
       const results: { id: number; slug: string; title: string; seoTitle: string | null; metaDescription: string | null; focusKeyword: string | null }[] = [];
       const skipped: { id: number; slug: string; reason: string }[] = [];
@@ -3316,6 +3320,79 @@ export async function registerRoutes(
     try {
       await storage.clearBrokenLinks();
       res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/migration/normalize-links", isAuthenticated, async (req, res) => {
+    try {
+      const dryRun = req.query.dryRun !== "false";
+      const allPosts = await storage.getPosts({ limit: 10000, status: "published" });
+      
+      const patterns = [
+        { from: /https?:\/\/blog\.psicometriaonline\.com\.br\//g, to: SITE_URL + "/" },
+        { from: /https?:\/\/www\.blog\.psicometriaonline\.com\.br\//g, to: SITE_URL + "/" },
+        { from: /https:\/\/blog-academy\.replit\.app\//g, to: SITE_URL + "/" },
+      ];
+
+      const results: { id: number; title: string; contentChanges: number; imageChange: boolean }[] = [];
+      let totalContentChanges = 0;
+      let totalImageChanges = 0;
+
+      for (const post of allPosts) {
+        let contentChanges = 0;
+        let newContent = post.content;
+
+        for (const pattern of patterns) {
+          const matches = (newContent.match(pattern.from) || []).length;
+          if (matches > 0) {
+            newContent = newContent.replace(pattern.from, pattern.to);
+            contentChanges += matches;
+          }
+        }
+
+        let imageChange = false;
+        let newFeaturedImage = post.featuredImage;
+        if (post.featuredImage) {
+          for (const pattern of patterns) {
+            if (pattern.from.test(post.featuredImage)) {
+              newFeaturedImage = post.featuredImage.replace(pattern.from, pattern.to);
+              imageChange = true;
+              break;
+            }
+          }
+        }
+
+        if (contentChanges > 0 || imageChange) {
+          results.push({
+            id: post.id,
+            title: post.title,
+            contentChanges,
+            imageChange,
+          });
+          totalContentChanges += contentChanges;
+          totalImageChanges += imageChange ? 1 : 0;
+
+          if (!dryRun) {
+            if (contentChanges > 0) {
+              await db.update(posts).set({ content: newContent }).where(eq(posts.id, post.id));
+            }
+            if (imageChange) {
+              await db.update(posts).set({ featuredImage: newFeaturedImage }).where(eq(posts.id, post.id));
+            }
+          }
+        }
+      }
+
+      res.json({
+        dryRun,
+        totalPosts: allPosts.length,
+        affectedPosts: results.length,
+        totalContentChanges,
+        totalImageChanges,
+        results: results.slice(0, 20),
+      });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

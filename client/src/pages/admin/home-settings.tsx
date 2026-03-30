@@ -1420,9 +1420,10 @@ export function CitationSettingsTab({ settings }: { settings: Record<string, str
   const [newException, setNewException] = useState("");
 
   useEffect(() => {
+    const defaultUrl = import.meta.env.VITE_SITE_URL || "https://www.blog.psicometriaonline.com.br";
     setCitationTemplate(settings["citation_template"] || "{sobrenome}, {iniciais}. ({ano}, {dia} de {mês}). {titulo}. _{fonte}_. {url}");
     setCitationSourceName(settings["citation_source_name"] || "Blog Psicometria Online");
-    setCitationBaseUrl(settings["citation_base_url"] || "https://www.blog.psicometriaonline.com.br");
+    setCitationBaseUrl(settings["citation_base_url"] || defaultUrl);
     const raw = settings["citation_capitalization_exceptions"] || "";
     const parsed = raw.split(",").map(s => s.trim()).filter(Boolean);
     const list = parsed.length > 0 ? parsed : [...DEFAULT_CAP_EXCEPTIONS];
