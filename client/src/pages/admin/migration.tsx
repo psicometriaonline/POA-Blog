@@ -406,12 +406,12 @@ export function MigrationContent() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-medium text-sm">robots.txt</h4>
-                <a href="/robots.txt" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 text-xs">
+                <a href="/robots.txt" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 text-xs" data-testid="link-robots-txt">
                   <ExternalLink className="h-3 w-3" />
                   Abrir
                 </a>
               </div>
-              <div className="bg-black text-white p-3 rounded font-mono text-xs overflow-x-auto whitespace-pre-wrap break-words">
+              <div className="bg-black text-white p-3 rounded font-mono text-xs overflow-x-auto whitespace-pre-wrap break-words" data-testid="text-robots-content">
                 {seoFilesQuery.data.robotsTxt}
               </div>
             </div>
@@ -421,17 +421,18 @@ export function MigrationContent() {
               <button
                 onClick={() => setShowSitemap(!showSitemap)}
                 className="flex items-center justify-between w-full mb-2 hover:opacity-70 transition"
+                data-testid="button-toggle-sitemap"
               >
                 <div className="flex items-center gap-2">
                   <h4 className="font-medium text-sm">sitemap.xml</h4>
-                  <Badge variant="secondary" className="text-xs">{seoFilesQuery.data.sitemap.totalUrls} URLs</Badge>
+                  <Badge variant="secondary" className="text-xs" data-testid="text-sitemap-url-count">{seoFilesQuery.data.sitemap.totalUrls} URLs</Badge>
                 </div>
                 {showSitemap ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </button>
               
               {showSitemap && (
                 <div className="flex gap-2 mb-2">
-                  <a href="/sitemap.xml" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 text-xs">
+                  <a href="/sitemap.xml" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 text-xs" data-testid="link-sitemap-xml">
                     <ExternalLink className="h-3 w-3" />
                     Ver XML
                   </a>
