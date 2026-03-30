@@ -3515,6 +3515,66 @@ Sitemap: ${SITE_URL}/sitemap.xml
     res.send(robotsContent);
   });
 
+  app.get("/api/admin/migration/seo-files", isAuthenticated, async (_req, res) => {
+    try {
+      // Get robots.txt content
+      const robotsContent = `User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+Sitemap: ${SITE_URL}/sitemap.xml
+`;
+
+      // Get sitemap data
+      const publishedPosts = await storage.getPosts({ status: "published", limit: 10000 });
+      const categories = await storage.getCategories();
+      const tags = await storage.getTags();
+      
+      const urls = [];
+      
+      // Home
+      urls.push({ loc: `${SITE_URL}/`, priority: "1.0", lastmod: null });
+      
+      // Posts
+      for (const post of publishedPosts) {
+        const lastmod = (post.updatedAt || post.publishedAt)?.toISOString().split('T')[0] || null;
+        urls.push({
+          loc: `${SITE_URL}/${post.slug}`,
+          priority: "0.8",
+          lastmod
+        });
+      }
+      
+      // Categories
+      for (const cat of categories) {
+        urls.push({
+          loc: `${SITE_URL}/categorias/${cat.slug}`,
+          priority: "0.6",
+          lastmod: null
+        });
+      }
+      
+      // Tags
+      for (const tag of tags) {
+        urls.push({
+          loc: `${SITE_URL}/tags/${tag.slug}`,
+          priority: "0.6",
+          lastmod: null
+        });
+      }
+      
+      res.json({
+        robotsTxt: robotsContent,
+        sitemap: {
+          totalUrls: urls.length,
+          urls: urls
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.post("/api/admin/migration/test-redirect", isAuthenticated, async (req, res) => {
     try {
       const { oldUrl } = req.body as { oldUrl: string };

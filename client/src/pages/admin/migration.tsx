@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Loader2, AlertCircle, CheckCircle2, Play, ArrowRight } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, Play, ArrowRight, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -14,6 +14,15 @@ export function MigrationContent() {
   const [checklistResult, setChecklistResult] = useState<any>(null);
   const [testUrl, setTestUrl] = useState<string>("");
   const [testResult, setTestResult] = useState<any>(null);
+  const [showSitemap, setShowSitemap] = useState(false);
+
+  const seoFilesQuery = useQuery({
+    queryKey: ["/api/admin/migration/seo-files"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/migration/seo-files");
+      return res.json();
+    }
+  });
 
   const normalizeMutation = useMutation({
     mutationFn: async (dryRun: boolean) => {
@@ -377,6 +386,90 @@ export function MigrationContent() {
             </ul>
           </div>
         </div>
+      </Card>
+
+      <Card className="p-6 border-t-4 border-t-blue-500">
+        <h3 className="font-semibold mb-4 text-lg">Arquivos SEO</h3>
+        
+        {seoFilesQuery.isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-5 w-5 animate-spin mr-2" />
+            Carregando arquivos SEO...
+          </div>
+        ) : seoFilesQuery.isError ? (
+          <div className="text-red-600 text-sm p-3 bg-red-50 dark:bg-red-950/20 rounded border border-red-200 dark:border-red-800">
+            Erro ao carregar arquivos SEO
+          </div>
+        ) : seoFilesQuery.data ? (
+          <div className="space-y-4">
+            {/* Robots.txt Section */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-medium text-sm">robots.txt</h4>
+                <a href="/robots.txt" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 text-xs">
+                  <ExternalLink className="h-3 w-3" />
+                  Abrir
+                </a>
+              </div>
+              <div className="bg-black text-white p-3 rounded font-mono text-xs overflow-x-auto whitespace-pre-wrap break-words">
+                {seoFilesQuery.data.robotsTxt}
+              </div>
+            </div>
+
+            {/* Sitemap Section */}
+            <div>
+              <button
+                onClick={() => setShowSitemap(!showSitemap)}
+                className="flex items-center justify-between w-full mb-2 hover:opacity-70 transition"
+              >
+                <div className="flex items-center gap-2">
+                  <h4 className="font-medium text-sm">sitemap.xml</h4>
+                  <Badge variant="secondary" className="text-xs">{seoFilesQuery.data.sitemap.totalUrls} URLs</Badge>
+                </div>
+                {showSitemap ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+              
+              {showSitemap && (
+                <div className="flex gap-2 mb-2">
+                  <a href="/sitemap.xml" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 text-xs">
+                    <ExternalLink className="h-3 w-3" />
+                    Ver XML
+                  </a>
+                </div>
+              )}
+
+              {showSitemap && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs border-collapse border border-gray-300 dark:border-gray-700">
+                    <thead className="bg-gray-100 dark:bg-gray-800">
+                      <tr>
+                        <th className="border border-gray-300 dark:border-gray-700 px-3 py-2 text-left">URL</th>
+                        <th className="border border-gray-300 dark:border-gray-700 px-3 py-2 text-center w-20">Prioridade</th>
+                        <th className="border border-gray-300 dark:border-gray-700 px-3 py-2 text-center w-32">Última Modificação</th>
+                      </tr>
+                    </thead>
+                    <tbody className="max-h-96 overflow-y-auto block">
+                      {seoFilesQuery.data.sitemap.urls.slice(0, 100).map((url: any, idx: number) => (
+                        <tr key={idx} className="border-b border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900">
+                          <td className="border border-gray-300 dark:border-gray-700 px-3 py-2 break-all">
+                            <a href={url.loc} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                              {url.loc.replace(/^https?:\/\/[^/]+/, "")}
+                            </a>
+                          </td>
+                          <td className="border border-gray-300 dark:border-gray-700 px-3 py-2 text-center">{url.priority}</td>
+                          <td className="border border-gray-300 dark:border-gray-700 px-3 py-2 text-center">{url.lastmod || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {seoFilesQuery.data.sitemap.urls.length > 100 && (
+                    <p className="text-xs text-muted-foreground mt-2">Exibindo 100 de {seoFilesQuery.data.sitemap.urls.length} URLs</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : null}
       </Card>
 
       <Card className="p-6 bg-muted/30 border-l-4 border-l-muted-foreground">
