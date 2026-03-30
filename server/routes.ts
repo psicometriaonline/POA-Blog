@@ -195,6 +195,60 @@ export async function registerRoutes(
     }
   }, 60000);
 
+  // Redirect middleware for WordPress legacy URLs (BEFORE specific routes)
+  app.use((req, res, next) => {
+    const url = req.url;
+    
+    // Redirect without www to with www
+    if (!req.hostname.startsWith("www.") && req.hostname !== "localhost" && req.hostname !== "127.0.0.1") {
+      return res.redirect(301, `https://www.${req.hostname}${req.originalUrl}`);
+    }
+    
+    // Block /admin from public (WordPress legacy)
+    if (url.startsWith("/wp-") || url.includes("/wp-content/") || url.includes("/wp-admin/")) {
+      return res.status(404).json({ message: "Not found" });
+    }
+    
+    // Redirect /page/2, /page/3, etc to home
+    const pageMatch = url.match(/^\/page\/\d+\/?(?:\?.*)?$/);
+    if (pageMatch) {
+      return res.redirect(301, "/");
+    }
+    
+    // Redirect /feed, /rss, /comments/feed to home
+    if (url.match(/^\/(?:feed|rss|comments\/feed)(?:\/)?(?:\?.*)?$/)) {
+      return res.redirect(301, "/");
+    }
+    
+    // Redirect /amp/* to base URL
+    if (url.includes("/amp/")) {
+      const cleanUrl = url.replace(/\/amp\/?/, "/");
+      return res.redirect(301, cleanUrl);
+    }
+    
+    next();
+  });
+
+  // Redirect by WordPress post ID /?p=123
+  app.get("/", async (req, res, next) => {
+    const postId = req.query.p as string;
+    if (postId && /^\d+$/.test(postId)) {
+      try {
+        const post = await db.select({ slug: posts.slug })
+          .from(posts)
+          .where(eq(posts.sourceUrl, `https://www.blog.psicometriaonline.com.br/?p=${postId}`))
+          .limit(1);
+        
+        if (post.length > 0) {
+          return res.redirect(301, `/${post[0].slug}`);
+        }
+      } catch (err) {
+        console.error("Error redirecting post ID:", err);
+      }
+    }
+    next();
+  });
+
   app.get("/uploads/:filename", async (req, res, next) => {
     const filename = req.params.filename;
     const filePath = path.join(uploadsDir, filename);
@@ -3459,6 +3513,82 @@ Sitemap: ${SITE_URL}/sitemap.xml
 `;
     res.header('Content-Type', 'text/plain');
     res.send(robotsContent);
+  });
+
+  app.post("/api/admin/migration/test-redirect", isAuthenticated, async (req, res) => {
+    try {
+      const { oldUrl } = req.body as { oldUrl: string };
+      if (!oldUrl) {
+        return res.status(400).json({ message: "oldUrl é obrigatório" });
+      }
+
+      let redirectTo: string | null = null;
+      const result: { oldUrl: string; redirectTo: string | null; type: string; status: string } = {
+        oldUrl,
+        redirectTo: null,
+        type: "unknown",
+        status: "not_found",
+      };
+
+      // Test /page/2, /page/3
+      if (oldUrl.match(/^\/page\/\d+\/?(?:\?.*)?$/)) {
+        result.redirectTo = "/";
+        result.type = "pagination";
+        result.status = "redirect_301";
+        return res.json(result);
+      }
+
+      // Test /feed, /rss
+      if (oldUrl.match(/^\/(?:feed|rss|comments\/feed)(?:\/)?(?:\?.*)?$/)) {
+        result.redirectTo = "/";
+        result.type = "feed";
+        result.status = "redirect_301";
+        return res.json(result);
+      }
+
+      // Test /amp/*
+      if (oldUrl.includes("/amp/")) {
+        result.redirectTo = oldUrl.replace(/\/amp\/?/, "/");
+        result.type = "amp";
+        result.status = "redirect_301";
+        return res.json(result);
+      }
+
+      // Test /?p=123 (WordPress post ID)
+      const pMatch = oldUrl.match(/\?p=(\d+)/);
+      if (pMatch) {
+        const postId = pMatch[1];
+        try {
+          const post = await db.select({ slug: posts.slug })
+            .from(posts)
+            .where(eq(posts.sourceUrl, `https://www.blog.psicometriaonline.com.br/?p=${postId}`))
+            .limit(1);
+
+          if (post.length > 0) {
+            result.redirectTo = `/${post[0].slug}`;
+            result.type = "wordpress_post_id";
+            result.status = "redirect_301";
+          } else {
+            result.type = "wordpress_post_id";
+            result.status = "not_found";
+          }
+        } catch (err) {
+          result.status = "error";
+        }
+        return res.json(result);
+      }
+
+      // Test /wp-* pattern (blocked)
+      if (oldUrl.startsWith("/wp-") || oldUrl.includes("/wp-content/") || oldUrl.includes("/wp-admin/")) {
+        result.type = "wordpress_admin";
+        result.status = "blocked_404";
+        return res.json(result);
+      }
+
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
   });
 
   app.get("/api/admin/migration/checklist", isAuthenticated, async (_req, res) => {

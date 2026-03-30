@@ -3,7 +3,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, AlertCircle, CheckCircle2, Play } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, AlertCircle, CheckCircle2, Play, ArrowRight } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -11,6 +12,8 @@ export function MigrationContent() {
   const { toast } = useToast();
   const [normalizationResult, setNormalizationResult] = useState<any>(null);
   const [checklistResult, setChecklistResult] = useState<any>(null);
+  const [testUrl, setTestUrl] = useState<string>("");
+  const [testResult, setTestResult] = useState<any>(null);
 
   const normalizeMutation = useMutation({
     mutationFn: async (dryRun: boolean) => {
@@ -47,6 +50,23 @@ export function MigrationContent() {
     onError: (err: any) => {
       toast({ 
         title: "Erro ao executar checklist", 
+        description: err.message, 
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const testRedirectMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/migration/test-redirect", { oldUrl: testUrl });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setTestResult(data);
+    },
+    onError: (err: any) => {
+      toast({ 
+        title: "Erro ao testar redirecionamento", 
         description: err.message, 
         variant: "destructive" 
       });
@@ -197,15 +217,108 @@ export function MigrationContent() {
         )}
       </Card>
 
+      <Card className="p-6 border-t-4 border-t-primary">
+        <div className="flex items-start gap-3 mb-4">
+          <ArrowRight className="h-5 w-5 text-primary mt-0.5" />
+          <div>
+            <h3 className="font-semibold text-lg mb-1">Testar Redirecionamentos</h3>
+            <p className="text-sm text-muted-foreground">
+              Teste como as URLs legadas do WordPress serão redirecionadas.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              placeholder="/page/2 ou /?p=123 ou /artigo/amp/ ou /feed"
+              value={testUrl}
+              onChange={(e) => setTestUrl(e.target.value)}
+              disabled={testRedirectMutation.isPending}
+              data-testid="input-test-redirect-url"
+              className="flex-1"
+            />
+            <Button
+              onClick={() => testRedirectMutation.mutate()}
+              disabled={testRedirectMutation.isPending || !testUrl.trim()}
+              data-testid="button-test-redirect"
+            >
+              {testRedirectMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Play className="h-4 w-4 mr-2" />
+                  Testar
+                </>
+              )}
+            </Button>
+          </div>
+
+          {testResult && (
+            <div className={`p-4 rounded-lg border-2 ${
+              testResult.status === "redirect_301" ? "border-green-200 bg-green-50 dark:bg-green-950/20" :
+              testResult.status === "blocked_404" ? "border-red-200 bg-red-50 dark:bg-red-950/20" :
+              "border-amber-200 bg-amber-50 dark:bg-amber-950/20"
+            }`}>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">URL antiga:</span>
+                  <code className="text-xs bg-black/5 px-2 py-1 rounded">{testResult.oldUrl}</code>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {testResult.status === "redirect_301" ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <span className="text-sm">Redirecionar para:</span>
+                    </>
+                  ) : testResult.status === "blocked_404" ? (
+                    <>
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                      <span className="text-sm">Bloqueado (404):</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="h-4 w-4 text-amber-600" />
+                      <span className="text-sm">Status:</span>
+                    </>
+                  )}
+                  {testResult.redirectTo && (
+                    <code className="text-xs bg-black/5 px-2 py-1 rounded">{testResult.redirectTo}</code>
+                  )}
+                  {!testResult.redirectTo && testResult.status !== "not_found" && (
+                    <span className="text-xs text-muted-foreground">Bloqueado (WordPress)</span>
+                  )}
+                  {testResult.status === "not_found" && (
+                    <span className="text-xs text-amber-700">Nenhuma regra correspondeu</span>
+                  )}
+                </div>
+
+                <div className="pt-2 border-t border-current/10">
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Tipo:</strong> {testResult.type === "pagination" && "Paginação"} 
+                    {testResult.type === "feed" && "Feed RSS"} 
+                    {testResult.type === "amp" && "AMP"} 
+                    {testResult.type === "wordpress_post_id" && "Post ID do WordPress"} 
+                    {testResult.type === "wordpress_admin" && "Admin WordPress"} 
+                    {testResult.type === "unknown" && "Desconhecido"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+
       <Card className="p-6 bg-muted/30 border-l-4 border-l-muted-foreground">
-        <h3 className="font-semibold mb-3">Informações sobre a Migração</h3>
+        <h3 className="font-semibold mb-3">Padrões de Redirecionamento</h3>
         <ul className="space-y-2 text-sm text-muted-foreground">
-          <li>• Operação afeta apenas posts publicados</li>
-          <li>• URLs internas são convertidas para o domínio www.blog.psicometriaonline.com.br</li>
-          <li>• Imagens de destaque também são normalizadas</li>
-          <li>• Sempre use "Pré-visualizar" antes de "Normalizar Agora"</li>
-          <li>• Sitemap gerado automaticamente em /sitemap.xml</li>
-          <li>• Robots.txt disponível em /robots.txt</li>
+          <li>• <code className="bg-black/5 px-1 rounded">/page/N</code> → Home (paginação remove em um só post)</li>
+          <li>• <code className="bg-black/5 px-1 rounded">/feed, /rss</code> → Home (RSS desabilitado)</li>
+          <li>• <code className="bg-black/5 px-1 rounded">/artigo/amp/</code> → /artigo (AMP removido)</li>
+          <li>• <code className="bg-black/5 px-1 rounded">/?p=123</code> → /slug-do-post (ID do WP)</li>
+          <li>• <code className="bg-black/5 px-1 rounded">/wp-*</code> → 404 Bloqueado (WordPress)</li>
+          <li>• Domínio sem www → Redireciona para www (HTTPS)</li>
         </ul>
       </Card>
     </div>
