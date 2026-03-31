@@ -174,7 +174,7 @@ export const containerRules = pgTable("container_rules", {
   containerType: text("container_type").notNull(),
   criteriaType: text("criteria_type").notNull(),
   criteriaValue: text("criteria_value"),
-  imageGroupId: integer("image_group_id").notNull().references(() => imageGroups.id, { onDelete: "cascade" }),
+  imageGroupId: integer("image_group_id").references(() => imageGroups.id, { onDelete: "cascade" }),
   maxImages: integer("max_images").notNull().default(3),
   isActive: boolean("is_active").notNull().default(true),
   priority: integer("priority").notNull().default(0),

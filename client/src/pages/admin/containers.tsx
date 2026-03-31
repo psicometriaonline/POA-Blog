@@ -608,7 +608,7 @@ function RulesTab() {
           <div className="flex items-center gap-4 mt-4">
             <Button
               onClick={() => createRuleMutation.mutate()}
-              disabled={!formData.name.trim() || !formData.imageGroupId || createRuleMutation.isPending}
+              disabled={!formData.name.trim() || (formData.criteriaType !== "all" && !formData.imageGroupId) || createRuleMutation.isPending}
               data-testid="button-save-rule"
             >
               {editingRuleId ? "Atualizar Regra" : "Criar Regra"}
