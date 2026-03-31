@@ -32,15 +32,13 @@ export function SidebarAcademyForm({ slot = "post_academy_form" }: { slot?: stri
   return (
     <Card className="p-5 bg-primary/5 border-primary/20" data-testid="card-sidebar-academy-form">
       {banner.imageUrl && (
-        <div className="aspect-[1400/788] overflow-hidden rounded-md mb-4">
-          <img
+        <img
             src={banner.imageUrl}
             alt={banner.title}
-            className="w-full h-full object-cover"
+            className="w-full h-auto rounded-md mb-4"
             loading="lazy"
             data-testid="img-sidebar-academy"
           />
-        </div>
       )}
       {showTitle && (
         <div className={`${titleAlignClass} mb-4`}>

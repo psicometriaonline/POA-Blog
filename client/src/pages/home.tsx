@@ -336,9 +336,7 @@ function SectionRecentPosts({ posts, banner1, banner2 }: { posts: PostWithRelati
             {banner1 && (
               <div className="flex-1 border-none p-0">
                 <a href={banner1.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner1.id}`}>
-                  <div className="aspect-[1400/788] overflow-hidden rounded-xl shadow-md">
-                    <img src={banner1.imageUrl} alt={banner1.title} className="w-full h-full object-cover" loading="lazy" />
-                  </div>
+                  <img src={banner1.imageUrl} alt={banner1.title} className="w-full h-auto rounded-xl shadow-md" loading="lazy" />
                 </a>
                 {(banner1.showTitle ?? true) && banner1.title && (
                   <div className="mt-3 px-1">
@@ -376,9 +374,7 @@ function SectionRecentPosts({ posts, banner1, banner2 }: { posts: PostWithRelati
             {banner2 && (
               <div className="flex-1 border-none p-0">
                 <a href={banner2.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner2.id}`}>
-                  <div className="aspect-[1400/788] overflow-hidden rounded-xl shadow-md">
-                    <img src={banner2.imageUrl} alt={banner2.title} className="w-full h-full object-cover" loading="lazy" />
-                  </div>
+                  <img src={banner2.imageUrl} alt={banner2.title} className="w-full h-auto rounded-xl shadow-md" loading="lazy" />
                 </a>
                 {(banner2.showTitle ?? true) && banner2.title && (
                   <div className="mt-3 px-1">

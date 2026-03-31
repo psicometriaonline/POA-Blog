@@ -738,9 +738,7 @@ function SidebarBanner() {
   return (
     <a href={banner.linkUrl || "#"} target="_blank" rel="noopener noreferrer" data-testid={`banner-sidebar-${banner.id}`}>
       <Card className="p-4 overflow-visible hover-elevate cursor-pointer">
-        <div className="aspect-[1400/788] overflow-hidden rounded-md">
-          <img src={banner.imageUrl} alt={banner.title} className="w-full h-full object-cover" loading="lazy" />
-        </div>
+        <img src={banner.imageUrl} alt={banner.title} className="w-full h-auto rounded-md" loading="lazy" />
       </Card>
     </a>
   );
@@ -826,14 +824,12 @@ function AcademyForm() {
   return (
     <Card className="p-5 bg-primary/5 border-primary/20" data-testid="card-academy-form">
       {banner.imageUrl && (
-        <div className="aspect-[1400/788] overflow-hidden rounded-md mb-4">
-          <img
+        <img
             src={banner.imageUrl}
             alt={banner.title}
-            className="w-full h-full object-cover"
+            className="w-full h-auto rounded-md mb-4"
             loading="lazy"
           />
-        </div>
       )}
       {showTitle && (
         <div className={`${titleAlignClass} mb-4`}>
