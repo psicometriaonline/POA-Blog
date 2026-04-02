@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "QVfSzlTdMZKsi49Em3OFS"
+uri = "file://client/public/favicon.webp"
+type = "image"
+title = "No stock image needed"
