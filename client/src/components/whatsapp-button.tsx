@@ -1,8 +1,8 @@
 import { SiWhatsapp } from "react-icons/si";
 
-const WHATSAPP_NUMBER = "5516981060218";
+const WHATSAPP_NUMBER = "5583991575688";
 const WHATSAPP_MESSAGE = encodeURIComponent(
-  "Olá, pessoal! Estou no site da Quantidados. Gostaria de mais informações sobre a consultoria."
+  "Olá, pessoal! Estou no blog da Psicometria Online e gostaria de mais informações sobre a formação."
 );
 
 export function WhatsAppButton() {
