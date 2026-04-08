@@ -1,5 +1,10 @@
 uploads = []
-generated = []
+
+[[generated]]
+id = "QOTrSP4b5ZktciP3EqtAN"
+uri = "file://client/public/favicon.png"
+type = "image"
+title = "Custom logo favicon"
 
 [[outputs]]
 id = "QVfSzlTdMZKsi49Em3OFS"
