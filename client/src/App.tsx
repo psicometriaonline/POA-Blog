@@ -27,6 +27,7 @@ import TermsPage from "@/pages/terms";
 import PrivacyPage from "@/pages/privacy";
 import AboutPage from "@/pages/about";
 import type { FreeMaterial } from "@shared/schema";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 
 function Router() {
   return (
@@ -91,6 +92,7 @@ function App() {
             <SharedFreeMaterials />
             <BlogFooter />
           </div>
+          <WhatsAppButton />
           <Toaster />
         </TooltipProvider>
       </ThemeProvider>
