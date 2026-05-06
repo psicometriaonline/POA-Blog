@@ -204,7 +204,7 @@ export function registerLlmsRoutes(app: Express) {
   app.get("/llms-full.txt", async (_req, res) => {
     try {
       const about = (await storage.getSetting("llms_about_text"))?.trim();
-      const posts = await storage.getPosts({ status: "published", limit: 10000 });
+      const posts = await storage.getPosts({ status: "published", limit: 10000, includeContent: true });
       const lines: string[] = [];
       lines.push(`# ${SITE_NAME} — Conteúdo completo`);
       lines.push("");

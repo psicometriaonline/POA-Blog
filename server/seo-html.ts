@@ -86,7 +86,7 @@ async function buildHomeHead(siteVerifs: { google?: string; bing?: string }, ogI
     inLanguage: "pt-BR",
     potentialAction: {
       "@type": "SearchAction",
-      target: `${SITE_URL}/?busca={search_term_string}`,
+      target: `${SITE_URL}/?q={search_term_string}`,
       "query-input": "required name=search_term_string",
     },
   });

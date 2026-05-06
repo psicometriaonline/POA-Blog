@@ -3531,6 +3531,16 @@ export async function registerRoutes(
       // Home
       xml += `  <url>\n    <loc>${SITE_URL}/</loc>\n    <lastmod>${homeLastmod}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>\n`;
 
+      // Static institutional pages
+      const staticPages: Array<{ path: string; priority: string; changefreq: string }> = [
+        { path: "/quem-somos", priority: "0.5", changefreq: "monthly" },
+        { path: "/termos-de-uso", priority: "0.3", changefreq: "yearly" },
+        { path: "/politicas-de-privacidade", priority: "0.3", changefreq: "yearly" },
+      ];
+      for (const sp of staticPages) {
+        xml += `  <url>\n    <loc>${SITE_URL}${sp.path}</loc>\n    <lastmod>${homeLastmod}</lastmod>\n    <changefreq>${sp.changefreq}</changefreq>\n    <priority>${sp.priority}</priority>\n  </url>\n`;
+      }
+
       // Posts (with image namespace + .md alternate)
       for (const post of publishedPosts) {
         const lastmod = (post.updatedAt || post.publishedAt)?.toISOString().split('T')[0] || today;
