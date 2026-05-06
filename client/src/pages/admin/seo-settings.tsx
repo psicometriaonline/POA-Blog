@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, Save, Loader2, RefreshCw } from "lucide-react";
+import { ExternalLink, Save, Loader2, RefreshCw, CheckCircle2, AlertCircle, Copy } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -99,14 +99,133 @@ export function SeoSettingsContent() {
             <p className="text-xs text-muted-foreground">Códigos meta-tag para Google Search Console e Bing Webmaster Tools.</p>
           </div>
         </div>
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="google-verif">Google Site Verification</Label>
-            <Input id="google-verif" value={googleVerif} onChange={e => setGoogleVerif(e.target.value)} placeholder="ABC123…" data-testid="input-google-verif" />
+
+        <div className="mb-4 p-3 rounded border bg-muted/40 text-xs space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="font-medium">URL do sitemap (cole no GSC e Bing após verificar):</div>
+              <code className="text-[11px] break-all">https://www.blog.psicometriaonline.com.br/sitemap.xml</code>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                navigator.clipboard
+                  .writeText("https://www.blog.psicometriaonline.com.br/sitemap.xml")
+                  .then(() => toast({ title: "URL do sitemap copiada" }))
+                  .catch(() => toast({ title: "Não foi possível copiar", description: "Copie manualmente a URL exibida.", variant: "destructive" }));
+              }}
+              data-testid="button-copy-sitemap"
+            >
+              <Copy className="h-3 w-3 mr-1" />Copiar
+            </Button>
           </div>
-          <div>
-            <Label htmlFor="bing-verif">Bing Site Verification</Label>
-            <Input id="bing-verif" value={bingVerif} onChange={e => setBingVerif(e.target.value)} placeholder="ABC123…" data-testid="input-bing-verif" />
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="google-verif">Google Site Verification</Label>
+              {googleVerif ? (
+                <Badge variant="secondary" className="text-[10px] gap-1" data-testid="badge-google-status">
+                  <CheckCircle2 className="h-3 w-3 text-green-600" />Meta-tag ativa
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] gap-1" data-testid="badge-google-status">
+                  <AlertCircle className="h-3 w-3 text-amber-600" />Não configurado
+                </Badge>
+              )}
+            </div>
+            <Input
+              id="google-verif"
+              value={googleVerif}
+              onChange={e => setGoogleVerif(e.target.value)}
+              placeholder='Cole apenas o conteúdo do content="…"'
+              data-testid="input-google-verif"
+            />
+            <ol className="text-[11px] text-muted-foreground list-decimal pl-4 space-y-1">
+              <li>
+                Abra{" "}
+                <a
+                  href="https://search.google.com/search-console/welcome"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline inline-flex items-center gap-0.5"
+                  data-testid="link-gsc-welcome"
+                >
+                  Google Search Console <ExternalLink className="h-2.5 w-2.5" />
+                </a>{" "}
+                e adicione a propriedade do tipo <strong>Prefixo do URL</strong>: <code>https://www.blog.psicometriaonline.com.br/</code>.
+              </li>
+              <li>Escolha o método <strong>Tag HTML</strong>. Copie apenas o valor entre aspas do <code>content="…"</code> e cole acima.</li>
+              <li>Salve aqui, aguarde a publicação propagar e clique em <strong>Verificar</strong> no GSC.</li>
+              <li>
+                Após verificado, vá em{" "}
+                <a
+                  href="https://search.google.com/search-console/sitemaps"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline inline-flex items-center gap-0.5"
+                  data-testid="link-gsc-sitemaps"
+                >
+                  Sitemaps <ExternalLink className="h-2.5 w-2.5" />
+                </a>{" "}
+                e envie <code>sitemap.xml</code>.
+              </li>
+            </ol>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="bing-verif">Bing Site Verification</Label>
+              {bingVerif ? (
+                <Badge variant="secondary" className="text-[10px] gap-1" data-testid="badge-bing-status">
+                  <CheckCircle2 className="h-3 w-3 text-green-600" />Meta-tag ativa
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] gap-1" data-testid="badge-bing-status">
+                  <AlertCircle className="h-3 w-3 text-amber-600" />Não configurado
+                </Badge>
+              )}
+            </div>
+            <Input
+              id="bing-verif"
+              value={bingVerif}
+              onChange={e => setBingVerif(e.target.value)}
+              placeholder='Cole apenas o conteúdo do content="…"'
+              data-testid="input-bing-verif"
+            />
+            <ol className="text-[11px] text-muted-foreground list-decimal pl-4 space-y-1">
+              <li>
+                Abra{" "}
+                <a
+                  href="https://www.bing.com/webmasters/home"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline inline-flex items-center gap-0.5"
+                  data-testid="link-bing-home"
+                >
+                  Bing Webmaster Tools <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+                . Para ganhar tempo, importe a propriedade direto do GSC após verificar lá.
+              </li>
+              <li>Caso prefira manual, escolha <strong>Meta tag</strong> e cole apenas o valor de <code>content="…"</code> acima.</li>
+              <li>Salve aqui e clique em <strong>Verificar</strong> no Bing.</li>
+              <li>
+                Em <strong>Sitemaps</strong>, envie a URL do sitemap acima. Opcional: gere uma{" "}
+                <a
+                  href="https://www.bing.com/webmasters/url-submission-api"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline inline-flex items-center gap-0.5"
+                  data-testid="link-bing-api"
+                >
+                  API key <ExternalLink className="h-2.5 w-2.5" />
+                </a>{" "}
+                para uso futuro (IndexNow já funciona sem ela).
+              </li>
+            </ol>
           </div>
         </div>
       </Card>
