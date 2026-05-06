@@ -192,7 +192,6 @@ export async function registerRoutes(
 ): Promise<Server> {
   await setupAuth(app);
   registerAuthRoutes(app);
-  registerLlmsRoutes(app);
 
   await migrateAuthors();
   await migrateBannerSlots();
@@ -247,6 +246,11 @@ export async function registerRoutes(
     
     next();
   });
+
+  // Register LLM-friendly routes (llms.txt, llms-full.txt, /<slug>.md)
+  // AFTER the canonical/www redirect middleware so they share the same
+  // canonical surface (no duplicate non-www → www indexing surface).
+  registerLlmsRoutes(app);
 
   // Redirect by WordPress post ID /?p=123
   app.get("/", async (req, res, next) => {

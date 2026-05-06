@@ -1128,14 +1128,21 @@ export default function PostPage() {
               return (
                 <Card className="p-6 mb-6" data-testid="card-post-faq">
                   <h2 className="font-serif text-2xl font-bold mb-4">Perguntas frequentes</h2>
-                  <dl className="space-y-4">
+                  <div className="space-y-2">
                     {items.map((item, idx) => (
-                      <div key={idx} data-testid={`faq-public-${idx}`}>
-                        <dt className="font-semibold text-base mb-1">{item.q}</dt>
-                        <dd className="text-muted-foreground whitespace-pre-line leading-relaxed">{item.a}</dd>
-                      </div>
+                      <details
+                        key={idx}
+                        className="group border border-border rounded-md px-4 py-3 open:bg-muted/40"
+                        data-testid={`faq-public-${idx}`}
+                      >
+                        <summary className="cursor-pointer list-none font-semibold text-base flex items-center justify-between gap-2">
+                          <span>{item.q}</span>
+                          <span className="text-muted-foreground transition-transform group-open:rotate-45 select-none" aria-hidden="true">+</span>
+                        </summary>
+                        <div className="mt-2 text-muted-foreground whitespace-pre-line leading-relaxed">{item.a}</div>
+                      </details>
                     ))}
-                  </dl>
+                  </div>
                 </Card>
               );
             })()}

@@ -44,7 +44,11 @@ function buildPostMarkdown(post: Awaited<ReturnType<typeof storage.getPostBySlug
   fm.push(`canonical: ${url}`);
   fm.push(`language: pt-BR`);
   if (post.publishedAt) fm.push(`published: ${new Date(post.publishedAt).toISOString()}`);
-  if (post.updatedAt) fm.push(`modified: ${new Date(post.updatedAt).toISOString()}`);
+  if (post.updatedAt) {
+    const upd = new Date(post.updatedAt).toISOString();
+    fm.push(`updated: ${upd}`);
+    fm.push(`modified: ${upd}`);
+  }
   fm.push(`author: "${yamlEscape(author)}"`);
   if (post.categories.length) fm.push(`categories: [${post.categories.map((c) => `"${yamlEscape(c.name)}"`).join(", ")}]`);
   if (post.tags.length) fm.push(`tags: [${post.tags.map((t) => `"${yamlEscape(t.name)}"`).join(", ")}]`);
@@ -117,6 +121,8 @@ export function registerLlmsRoutes(app: Express) {
       lines.push("");
       lines.push(`> ${about || "Blog acadêmico sobre psicometria, estatística e pesquisa quantitativa em psicologia."}`);
       lines.push("");
+      lines.push("# About");
+      lines.push("");
       lines.push("## Sobre");
       lines.push("");
       lines.push(`- Site: ${SITE_URL}`);
@@ -126,7 +132,7 @@ export function registerLlmsRoutes(app: Express) {
       lines.push(`- Conteúdo completo: ${SITE_URL}/llms-full.txt`);
       lines.push("");
 
-      lines.push("## Top 50 mais lidos");
+      lines.push("## Posts mais lidos");
       lines.push("");
       for (const p of topRead) {
         const desc = p.metaDescription || p.excerpt || truncate(stripHtml(p.content), 140);
