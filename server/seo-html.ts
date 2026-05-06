@@ -5,6 +5,8 @@ const SITE_NAME = "Blog Psicometria Online";
 const DEFAULT_DESC = "Blog especializado em psicometria, estatística e pesquisa quantitativa em psicologia.";
 const PLACEHOLDER = "<!--SEO_HEAD-->";
 
+export type SeoInjectResult = { html: string; status: number };
+
 function escapeAttr(s: string): string {
   return String(s)
     .replace(/&/g, "&amp;")
@@ -28,6 +30,10 @@ function ldScript(obj: any): string {
   return `    <script type="application/ld+json">${escapeJsonLd(JSON.stringify(obj))}</script>\n`;
 }
 
+function hreflang(url: string): string {
+  return `    <link rel="alternate" hreflang="pt-BR" href="${escapeAttr(url)}">\n    <link rel="alternate" hreflang="x-default" href="${escapeAttr(url)}">\n`;
+}
+
 function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -45,6 +51,7 @@ async function buildHomeHead(siteVerifs: { google?: string; bing?: string }, ogI
   html += `    <title>${escapeAttr(title)}</title>\n`;
   html += meta("description", desc);
   html += `    <link rel="canonical" href="${escapeAttr(url)}">\n`;
+  html += hreflang(url);
   html += meta("robots", "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1");
   html += meta("og:type", "website", true);
   html += meta("og:site_name", SITE_NAME, true);
@@ -115,6 +122,7 @@ async function buildPostHead(slug: string, siteVerifs: { google?: string; bing?:
   html += `    <title>${escapeAttr(fullTitle)}</title>\n`;
   html += meta("description", desc);
   html += `    <link rel="canonical" href="${escapeAttr(url)}">\n`;
+  html += hreflang(url);
   html += `    <link rel="alternate" type="text/markdown" href="${escapeAttr(url)}.md" title="Versão Markdown">\n`;
   html += meta("robots", "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1");
   html += meta("article:published_time", published || "", true);
@@ -136,7 +144,7 @@ async function buildPostHead(slug: string, siteVerifs: { google?: string; bing?:
   if (siteVerifs.google) html += meta("google-site-verification", siteVerifs.google);
   if (siteVerifs.bing) html += meta("msvalidate.01", siteVerifs.bing);
 
-  const blogPosting: any = {
+  const blogPosting: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
@@ -159,7 +167,7 @@ async function buildPostHead(slug: string, siteVerifs: { google?: string; bing?:
   if (image) blogPosting.image = [image];
   html += ldScript(blogPosting);
 
-  const breadcrumbItems: any[] = [
+  const breadcrumbItems: Array<Record<string, unknown>> = [
     { "@type": "ListItem", position: 1, name: "Início", item: SITE_URL + "/" },
   ];
   if (primaryCategory) {
@@ -210,6 +218,7 @@ async function buildCategoryHead(slug: string, defaultOg: string): Promise<strin
   html += `    <title>${escapeAttr(title)}</title>\n`;
   html += meta("description", desc);
   html += `    <link rel="canonical" href="${escapeAttr(url)}">\n`;
+  html += hreflang(url);
   html += meta("robots", "index,follow,max-image-preview:large,max-snippet:-1");
   html += meta("og:type", "website", true);
   html += meta("og:site_name", SITE_NAME, true);
@@ -250,6 +259,7 @@ async function buildTagHead(slug: string, defaultOg: string): Promise<string | n
   html += `    <title>${escapeAttr(title)}</title>\n`;
   html += meta("description", desc);
   html += `    <link rel="canonical" href="${escapeAttr(url)}">\n`;
+  html += hreflang(url);
   html += meta("robots", "index,follow,max-image-preview:large,max-snippet:-1");
   html += meta("og:type", "website", true);
   html += meta("og:site_name", SITE_NAME, true);
@@ -280,14 +290,32 @@ async function buildTagHead(slug: string, defaultOg: string): Promise<string | n
   return html;
 }
 
-export async function injectSeoHead(html: string, urlPath: string): Promise<string> {
-  if (!html.includes(PLACEHOLDER)) return html;
+function notFoundHead(path: string): string {
+  const url = `${SITE_URL}${path}`;
+  let html = "";
+  html += `    <title>Página não encontrada — ${SITE_NAME}</title>\n`;
+  html += meta("description", "A página solicitada não foi encontrada.");
+  html += meta("robots", "noindex,follow");
+  html += `    <link rel="canonical" href="${escapeAttr(url)}">\n`;
+  return html;
+}
+
+/**
+ * Inject SEO head and return both the rewritten HTML and the appropriate
+ * HTTP status. Unknown post slugs / categories / tags get a real 404 with a
+ * noindex SEO head so search engines do not index ghost URLs.
+ */
+export async function injectSeoHead(html: string, urlPath: string): Promise<SeoInjectResult> {
+  if (!html.includes(PLACEHOLDER)) return { html, status: 200 };
   const path = urlPath.split("?")[0];
   if (path === "/admin" || path.startsWith("/admin/")) {
-    return html.replace(PLACEHOLDER, `    <meta name="robots" content="noindex,nofollow">\n`);
+    return {
+      html: html.replace(PLACEHOLDER, `    <meta name="robots" content="noindex,nofollow">\n`),
+      status: 200,
+    };
   }
   if (path.startsWith("/api/")) {
-    return html.replace(PLACEHOLDER, "");
+    return { html: html.replace(PLACEHOLDER, ""), status: 200 };
   }
 
   try {
@@ -300,15 +328,19 @@ export async function injectSeoHead(html: string, urlPath: string): Promise<stri
     const ogImage = (defaultOg?.trim()) || `${SITE_URL}/logo.png`;
 
     let head: string | null = null;
+    let isContentRoute = false;
     if (path === "/" || path === "") {
       head = await buildHomeHead(verifs, ogImage);
     } else if (path.startsWith("/categorias/")) {
+      isContentRoute = true;
       const slug = path.replace(/^\/categorias\//, "").replace(/\/$/, "");
       if (slug && !slug.includes("/")) head = await buildCategoryHead(slug, ogImage);
     } else if (path.startsWith("/tags/")) {
+      isContentRoute = true;
       const slug = path.replace(/^\/tags\//, "").replace(/\/$/, "");
       if (slug && !slug.includes("/")) head = await buildTagHead(slug, ogImage);
-    } else {
+    } else if (!path.startsWith("/uploads/") && !path.includes(".")) {
+      isContentRoute = true;
       const slug = path.replace(/^\//, "").replace(/\/$/, "");
       if (slug && !slug.includes("/")) {
         head = await buildPostHead(slug, verifs, ogImage);
@@ -316,11 +348,15 @@ export async function injectSeoHead(html: string, urlPath: string): Promise<stri
     }
 
     if (head === null) {
-      return html.replace(PLACEHOLDER, "");
+      // For content routes that didn't resolve, return a true 404.
+      if (isContentRoute) {
+        return { html: html.replace(PLACEHOLDER, notFoundHead(path)), status: 404 };
+      }
+      return { html: html.replace(PLACEHOLDER, ""), status: 200 };
     }
-    return html.replace(PLACEHOLDER, head);
+    return { html: html.replace(PLACEHOLDER, head), status: 200 };
   } catch (err) {
     console.error("[seo-html] inject error:", err);
-    return html.replace(PLACEHOLDER, "");
+    return { html: html.replace(PLACEHOLDER, ""), status: 200 };
   }
 }

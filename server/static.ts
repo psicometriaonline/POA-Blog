@@ -18,9 +18,9 @@ export function serveStatic(app: Express) {
     try {
       const indexPath = path.resolve(distPath, "index.html");
       const template = await fs.promises.readFile(indexPath, "utf-8");
-      let page = await injectSeoHead(template, req.originalUrl);
-      page = await injectMetaPixelNoscript(page, req.originalUrl);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+      const seo = await injectSeoHead(template, req.originalUrl);
+      const page = await injectMetaPixelNoscript(seo.html, req.originalUrl);
+      res.status(seo.status).set({ "Content-Type": "text/html" }).end(page);
     } catch (err) {
       res.status(500).send("Internal Server Error");
     }

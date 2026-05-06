@@ -983,9 +983,9 @@ export default function PostPage() {
       { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: breadcrumbItems },
     ];
 
-    if ((post as any).faq) {
+    if (post.faq) {
       try {
-        const items = JSON.parse((post as any).faq) as Array<{ q: string; a: string }>;
+        const items = JSON.parse(post.faq) as Array<{ q: string; a: string }>;
         if (Array.isArray(items) && items.length > 0) {
           blocks.push({
             "@context": "https://schema.org",
@@ -1116,6 +1116,29 @@ export default function PostPage() {
                 <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(injectContainerImages(post.content, containerData || [], disabledContainers), { ADD_TAGS: ["iframe", "span", "div", "a"], ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "scrolling", "data-type", "data-latex", "class", "loading", "title", "target", "rel", "href", "data-start"] }) }} />
               </div>
             </Card>
+
+            {(() => {
+              if (!post.faq) return null;
+              let items: Array<{ q: string; a: string }> = [];
+              try {
+                const parsed = JSON.parse(post.faq);
+                if (Array.isArray(parsed)) items = parsed.filter((i) => i?.q && i?.a);
+              } catch { return null; }
+              if (items.length === 0) return null;
+              return (
+                <Card className="p-6 mb-6" data-testid="card-post-faq">
+                  <h2 className="font-serif text-2xl font-bold mb-4">Perguntas frequentes</h2>
+                  <dl className="space-y-4">
+                    {items.map((item, idx) => (
+                      <div key={idx} data-testid={`faq-public-${idx}`}>
+                        <dt className="font-semibold text-base mb-1">{item.q}</dt>
+                        <dd className="text-muted-foreground whitespace-pre-line leading-relaxed">{item.a}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </Card>
+              );
+            })()}
 
             {post.tags.length > 0 && (
               <Card className="p-5 mb-6" data-testid="card-post-tags">

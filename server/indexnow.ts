@@ -54,7 +54,25 @@ export async function pingGoogleSitemap(): Promise<void> {
 }
 
 export async function notifySearchEngines(urls: string[]): Promise<void> {
+  // Always include Markdown mirror URLs alongside HTML URLs so AI crawlers
+  // can pick up the .md version too.
+  const expanded = new Set<string>();
+  for (const u of urls) {
+    expanded.add(u);
+    // Add a .md mirror for any post URL (skip home, sitemap, .xml, .txt, etc).
+    try {
+      const parsed = new URL(u);
+      const isFile = /\.[a-z0-9]+$/i.test(parsed.pathname);
+      const isRoot = parsed.pathname === "/" || parsed.pathname === "";
+      const isSection = parsed.pathname.startsWith("/categorias/") || parsed.pathname.startsWith("/tags/") || parsed.pathname.startsWith("/admin");
+      if (!isFile && !isRoot && !isSection) {
+        expanded.add(`${parsed.origin}${parsed.pathname.replace(/\/$/, "")}.md`);
+      }
+    } catch {
+      // skip invalid URL
+    }
+  }
   // Fire-and-forget; don't block request handlers.
-  void pingIndexNow(urls);
+  void pingIndexNow(Array.from(expanded));
   void pingGoogleSitemap();
 }

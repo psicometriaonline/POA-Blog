@@ -1074,8 +1074,7 @@ export default function PostEditor() {
       setMetaDescription(post.metaDescription || "");
       setFocusKeyword(post.focusKeyword || "");
       try {
-        const f = (post as any).faq;
-        setFaqItems(f ? (JSON.parse(f) as Array<{ q: string; a: string }>) : []);
+        setFaqItems(post.faq ? (JSON.parse(post.faq) as Array<{ q: string; a: string }>) : []);
       } catch { setFaqItems([]); }
       try {
         setDisabledContainers(post.disabledContainers ? JSON.parse(post.disabledContainers) : []);

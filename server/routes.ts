@@ -2514,7 +2514,20 @@ export async function registerRoutes(
   app.post("/api/admin/seo/indexnow-resubmit", isAuthenticated, async (_req, res) => {
     try {
       const published = await storage.getPosts({ status: "published", limit: 10000 });
-      const urls = [`${SITE_URL}/`, `${SITE_URL}/sitemap.xml`, ...published.map(p => `${SITE_URL}/${p.slug}`)];
+      const baseUrls: string[] = [
+        `${SITE_URL}/`,
+        `${SITE_URL}/sitemap.xml`,
+        `${SITE_URL}/sitemap-images.xml`,
+        `${SITE_URL}/sitemap-index.xml`,
+        `${SITE_URL}/llms.txt`,
+        `${SITE_URL}/llms-full.txt`,
+      ];
+      const postUrls: string[] = [];
+      for (const p of published) {
+        postUrls.push(`${SITE_URL}/${p.slug}`);
+        postUrls.push(`${SITE_URL}/${p.slug}.md`);
+      }
+      const urls = [...baseUrls, ...postUrls];
       // chunk to 10k per IndexNow spec
       const chunks: string[][] = [];
       for (let i = 0; i < urls.length; i += 10000) chunks.push(urls.slice(i, i + 10000));
@@ -3531,6 +3544,13 @@ export async function registerRoutes(
         xml += `  </url>\n`;
       }
 
+      // Explicit .md mirrors as separate entries (so crawlers that ignore
+      // xhtml:link alternates still discover them).
+      for (const post of publishedPosts) {
+        const lastmod = (post.updatedAt || post.publishedAt)?.toISOString().split('T')[0] || today;
+        xml += `  <url>\n    <loc>${SITE_URL}/${escXml(post.slug)}.md</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.5</priority>\n  </url>\n`;
+      }
+
       // Categories
       for (const cat of categories) {
         xml += `  <url>\n    <loc>${SITE_URL}/categorias/${escXml(cat.slug)}</loc>\n    <lastmod>${homeLastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n`;
@@ -3548,6 +3568,37 @@ export async function registerRoutes(
     } catch (error: any) {
       res.status(500).send('<?xml version="1.0"?><error>Erro ao gerar sitemap</error>');
     }
+  });
+
+  // Dedicated image sitemap (Google supports a separate file per Sitemaps protocol).
+  app.get("/sitemap-images.xml", async (_req, res) => {
+    try {
+      const publishedPosts = await storage.getPosts({ status: "published", limit: 10000 });
+      const escXml = (s: string) =>
+        s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+      let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+      xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n';
+      for (const post of publishedPosts) {
+        if (!post.featuredImage) continue;
+        xml += `  <url>\n    <loc>${SITE_URL}/${escXml(post.slug)}</loc>\n    <image:image>\n      <image:loc>${escXml(post.featuredImage)}</image:loc>\n      <image:title>${escXml(post.title)}</image:title>\n    </image:image>\n  </url>\n`;
+      }
+      xml += '</urlset>';
+      res.header('Content-Type', 'application/xml; charset=utf-8').send(xml);
+    } catch (error: any) {
+      res.status(500).send('<?xml version="1.0"?><error>Erro ao gerar sitemap-images</error>');
+    }
+  });
+
+  // Sitemap index pointing to main sitemap + image sitemap. Allows future
+  // splitting at scale without breaking existing references.
+  app.get("/sitemap-index.xml", async (_req, res) => {
+    const today = new Date().toISOString().split("T")[0];
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+    xml += `  <sitemap>\n    <loc>${SITE_URL}/sitemap.xml</loc>\n    <lastmod>${today}</lastmod>\n  </sitemap>\n`;
+    xml += `  <sitemap>\n    <loc>${SITE_URL}/sitemap-images.xml</loc>\n    <lastmod>${today}</lastmod>\n  </sitemap>\n`;
+    xml += '</sitemapindex>';
+    res.header('Content-Type', 'application/xml; charset=utf-8').send(xml);
   });
 
   app.get("/robots.txt", async (_req, res) => {
@@ -3571,6 +3622,8 @@ export async function registerRoutes(
       body += `User-agent: ${bot}\nAllow: /\nDisallow: /admin\nDisallow: /admin/\nDisallow: /api/\n\n`;
     }
     body += `Sitemap: ${SITE_URL}/sitemap.xml\n`;
+    body += `Sitemap: ${SITE_URL}/sitemap-images.xml\n`;
+    body += `Sitemap: ${SITE_URL}/sitemap-index.xml\n`;
     body += `# LLM-friendly references\n`;
     body += `# ${SITE_URL}/llms.txt\n`;
     body += `# ${SITE_URL}/llms-full.txt\n`;
