@@ -59,18 +59,6 @@ export function initMetaPixel(pixelId: string) {
   window.fbq("init", pixelId);
   window.fbq("track", "PageView");
   state.activePixelId = pixelId;
-
-  if (!document.getElementById("meta-pixel-noscript")) {
-    const noscript = document.createElement("noscript");
-    noscript.id = "meta-pixel-noscript";
-    const img = document.createElement("img");
-    img.height = 1;
-    img.width = 1;
-    img.style.display = "none";
-    img.src = `https://www.facebook.com/tr?id=${pixelId}&ev=PageView&noscript=1`;
-    noscript.appendChild(img);
-    document.body.appendChild(noscript);
-  }
 }
 
 export function trackEvent(event: string, params?: Record<string, any>) {
