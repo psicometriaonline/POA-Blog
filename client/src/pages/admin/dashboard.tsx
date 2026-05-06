@@ -27,6 +27,7 @@ import { MediaContent } from "./manage-media";
 import { CrawlContent } from "./crawl";
 import { BrokenLinksContent } from "./broken-links";
 import { MigrationContent } from "./migration";
+import { SeoSettingsContent } from "./seo-settings";
 import { AdminLayout, type AdminTab } from "@/components/admin/admin-layout";
 import { PostsSubNav } from "@/components/admin/posts-sub-nav";
 
@@ -815,6 +816,7 @@ function DatabaseTab() {
           <TabsTrigger value="authors" data-testid="tab-db-authors">Autores</TabsTrigger>
           <TabsTrigger value="broken-links" data-testid="tab-db-broken-links">Links Quebrados</TabsTrigger>
           <TabsTrigger value="migration" data-testid="tab-db-migration">Migração</TabsTrigger>
+          <TabsTrigger value="seo" data-testid="tab-db-seo">SEO Técnico</TabsTrigger>
           <TabsTrigger value="meta-pixel" data-testid="tab-db-meta-pixel">Pixel da Meta</TabsTrigger>
           <TabsTrigger value="admin-users" data-testid="tab-db-admin-users">
             <Users className="h-3.5 w-3.5 mr-1" />
@@ -841,6 +843,10 @@ function DatabaseTab() {
 
       <TabsContent value="migration" className="mt-0">
         <MigrationContent />
+      </TabsContent>
+
+      <TabsContent value="seo" className="mt-0">
+        <SeoSettingsContent />
       </TabsContent>
 
       <TabsContent value="meta-pixel" className="mt-0">

@@ -42,6 +42,7 @@ export const posts = pgTable("posts", {
   seoTitle: text("seo_title"),
   metaDescription: text("meta_description"),
   focusKeyword: text("focus_keyword"),
+  faq: text("faq"),
   publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

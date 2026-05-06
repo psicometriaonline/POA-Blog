@@ -6,6 +6,8 @@ import { eq, and, lte, sql } from "drizzle-orm";
 import { db } from "./db";
 import { crawlMultipleUrls } from "./crawler";
 import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
+import { registerLlmsRoutes } from "./llms";
+import { getOrCreateIndexNowKey, notifySearchEngines } from "./indexnow";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -171,6 +173,14 @@ async function seedDefaultSettings() {
     if (pixelEnabled === undefined) {
       await storage.setSetting("meta_pixel_enabled", "true");
     }
+    const llmsAbout = await storage.getSetting("llms_about_text");
+    if (llmsAbout === undefined) {
+      await storage.setSetting(
+        "llms_about_text",
+        "Blog acadêmico em português sobre psicometria, estatística aplicada e pesquisa quantitativa em psicologia. Publicamos guias técnicos, tutoriais de R/Python e validação de instrumentos."
+      );
+    }
+    await getOrCreateIndexNowKey();
   } catch (err) {
     console.error("Seed default settings error:", err);
   }
@@ -182,6 +192,7 @@ export async function registerRoutes(
 ): Promise<Server> {
   await setupAuth(app);
   registerAuthRoutes(app);
+  registerLlmsRoutes(app);
 
   await migrateAuthors();
   await migrateBannerSlots();
@@ -1626,6 +1637,9 @@ export async function registerRoutes(
       }
       const parsed = insertPostSchema.parse(postData);
       const post = await storage.createPost(parsed, categoryIds, tagIds);
+      if (post.status === "published") {
+        notifySearchEngines([`${SITE_URL}/${post.slug}`, `${SITE_URL}/`, `${SITE_URL}/sitemap.xml`]);
+      }
       res.status(201).json(post);
     } catch (error: any) {
       console.error("Error creating post:", error);
@@ -1660,6 +1674,10 @@ export async function registerRoutes(
       }
       const post = await storage.updatePost(parseInt(req.params.id), postData, categoryIds, tagIds);
       if (!post) return res.status(404).json({ message: "Post not found" });
+
+      if (post.status === "published") {
+        notifySearchEngines([`${SITE_URL}/${post.slug}`, `${SITE_URL}/`, `${SITE_URL}/sitemap.xml`]);
+      }
 
       const cats = await storage.getCategories();
       for (const c of cats) {
@@ -2490,6 +2508,20 @@ export async function registerRoutes(
       res.json({ message: "Settings updated" });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/seo/indexnow-resubmit", isAuthenticated, async (_req, res) => {
+    try {
+      const published = await storage.getPosts({ status: "published", limit: 10000 });
+      const urls = [`${SITE_URL}/`, `${SITE_URL}/sitemap.xml`, ...published.map(p => `${SITE_URL}/${p.slug}`)];
+      // chunk to 10k per IndexNow spec
+      const chunks: string[][] = [];
+      for (let i = 0; i < urls.length; i += 10000) chunks.push(urls.slice(i, i + 10000));
+      for (const c of chunks) await notifySearchEngines(c);
+      res.json({ count: urls.length });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 
@@ -3465,47 +3497,53 @@ export async function registerRoutes(
       const publishedPosts = await storage.getPosts({ status: "published", limit: 10000 });
       const categories = await storage.getCategories();
       const tags = await storage.getTags();
-      
+
+      const escXml = (s: string) =>
+        s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+      const today = new Date().toISOString().split("T")[0];
+      const latestPost = publishedPosts.reduce<Date | null>((acc, p) => {
+        const d = (p.updatedAt || p.publishedAt) ? new Date(p.updatedAt || p.publishedAt!) : null;
+        if (d && (!acc || d > acc)) return d;
+        return acc;
+      }, null);
+      const homeLastmod = latestPost ? latestPost.toISOString().split("T")[0] : today;
+
       let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
-      xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
-      
+      xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n';
+
       // Home
-      xml += `  <url>\n`;
-      xml += `    <loc>${SITE_URL}/</loc>\n`;
-      xml += `    <priority>1.0</priority>\n`;
-      xml += `  </url>\n`;
-      
-      // Posts
+      xml += `  <url>\n    <loc>${SITE_URL}/</loc>\n    <lastmod>${homeLastmod}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>\n`;
+
+      // Posts (with image namespace + .md alternate)
       for (const post of publishedPosts) {
+        const lastmod = (post.updatedAt || post.publishedAt)?.toISOString().split('T')[0] || today;
+        const ageDays = (post.updatedAt || post.publishedAt) ? (Date.now() - new Date(post.updatedAt || post.publishedAt!).getTime()) / 86400000 : 999;
+        const changefreq = ageDays < 7 ? "daily" : ageDays < 60 ? "weekly" : "monthly";
         xml += `  <url>\n`;
-        xml += `    <loc>${SITE_URL}/${post.slug}</loc>\n`;
-        if (post.updatedAt || post.publishedAt) {
-          const date = (post.updatedAt || post.publishedAt)?.toISOString().split('T')[0];
-          if (date) xml += `    <lastmod>${date}</lastmod>\n`;
-        }
+        xml += `    <loc>${SITE_URL}/${escXml(post.slug)}</loc>\n`;
+        xml += `    <lastmod>${lastmod}</lastmod>\n`;
+        xml += `    <changefreq>${changefreq}</changefreq>\n`;
         xml += `    <priority>0.8</priority>\n`;
+        xml += `    <xhtml:link rel="alternate" type="text/markdown" href="${SITE_URL}/${escXml(post.slug)}.md" />\n`;
+        if (post.featuredImage) {
+          xml += `    <image:image>\n      <image:loc>${escXml(post.featuredImage)}</image:loc>\n      <image:title>${escXml(post.title)}</image:title>\n    </image:image>\n`;
+        }
         xml += `  </url>\n`;
       }
-      
+
       // Categories
       for (const cat of categories) {
-        xml += `  <url>\n`;
-        xml += `    <loc>${SITE_URL}/categorias/${cat.slug}</loc>\n`;
-        xml += `    <priority>0.6</priority>\n`;
-        xml += `  </url>\n`;
+        xml += `  <url>\n    <loc>${SITE_URL}/categorias/${escXml(cat.slug)}</loc>\n    <lastmod>${homeLastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n`;
       }
-      
+
       // Tags
       for (const tag of tags) {
-        xml += `  <url>\n`;
-        xml += `    <loc>${SITE_URL}/tags/${tag.slug}</loc>\n`;
-        xml += `    <priority>0.6</priority>\n`;
-        xml += `  </url>\n`;
+        xml += `  <url>\n    <loc>${SITE_URL}/tags/${escXml(tag.slug)}</loc>\n    <lastmod>${homeLastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.5</priority>\n  </url>\n`;
       }
-      
+
       xml += '</urlset>';
-      
-      res.header('Content-Type', 'application/xml');
+      res.header('Content-Type', 'application/xml; charset=utf-8');
+      res.header('X-Robots-Tag', 'noindex');
       res.send(xml);
     } catch (error: any) {
       res.status(500).send('<?xml version="1.0"?><error>Erro ao gerar sitemap</error>');
@@ -3513,14 +3551,43 @@ export async function registerRoutes(
   });
 
   app.get("/robots.txt", async (_req, res) => {
-    const robotsContent = `User-agent: *
-Allow: /
-Disallow: /admin
-Disallow: /api
-Sitemap: ${SITE_URL}/sitemap.xml
-`;
-    res.header('Content-Type', 'text/plain');
-    res.send(robotsContent);
+    const aiBots = [
+      "GPTBot", "ChatGPT-User", "OAI-SearchBot",
+      "ClaudeBot", "Claude-Web", "anthropic-ai",
+      "PerplexityBot",
+      "Google-Extended",
+      "CCBot",
+      "Applebot-Extended",
+      "Amazonbot",
+      "cohere-ai",
+      "Bytespider",
+      "DuckAssistBot",
+      "Meta-ExternalAgent", "Meta-ExternalFetcher",
+    ];
+    let body = `# robots.txt — ${SITE_DOMAIN}\n`;
+    body += `# Permite indexação por buscadores tradicionais e por agentes de IA listados.\n\n`;
+    body += `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /admin/\nDisallow: /api/\n\n`;
+    for (const bot of aiBots) {
+      body += `User-agent: ${bot}\nAllow: /\nDisallow: /admin\nDisallow: /admin/\nDisallow: /api/\n\n`;
+    }
+    body += `Sitemap: ${SITE_URL}/sitemap.xml\n`;
+    body += `# LLM-friendly references\n`;
+    body += `# ${SITE_URL}/llms.txt\n`;
+    body += `# ${SITE_URL}/llms-full.txt\n`;
+    res.header('Content-Type', 'text/plain; charset=utf-8');
+    res.send(body);
+  });
+
+  // IndexNow key file (served at /<key>.txt)
+  app.get(/^\/([a-z0-9]{8,})\.txt$/i, async (req, res, next) => {
+    try {
+      const candidate = req.params[0];
+      const key = await getOrCreateIndexNowKey();
+      if (candidate.toLowerCase() !== key.toLowerCase()) return next();
+      res.header("Content-Type", "text/plain; charset=utf-8").send(key);
+    } catch {
+      next();
+    }
   });
 
   app.get("/api/admin/migration/seo-files", isAuthenticated, async (_req, res) => {

@@ -987,6 +987,7 @@ export default function PostEditor() {
   const [seoTitle, setSeoTitle] = useState("");
   const [metaDescription, setMetaDescription] = useState("");
   const [focusKeyword, setFocusKeyword] = useState("");
+  const [faqItems, setFaqItems] = useState<Array<{ q: string; a: string }>>([]);
   const [mediaLibOpen, setMediaLibOpen] = useState(false);
   const [mediaLibTarget, setMediaLibTarget] = useState<"inline" | "featured" | "replace">("inline");
   const editorInstanceRef = useRef<any>(null);
@@ -1072,6 +1073,10 @@ export default function PostEditor() {
       setSeoTitle(post.seoTitle || "");
       setMetaDescription(post.metaDescription || "");
       setFocusKeyword(post.focusKeyword || "");
+      try {
+        const f = (post as any).faq;
+        setFaqItems(f ? (JSON.parse(f) as Array<{ q: string; a: string }>) : []);
+      } catch { setFaqItems([]); }
       try {
         setDisabledContainers(post.disabledContainers ? JSON.parse(post.disabledContainers) : []);
       } catch { setDisabledContainers([]); }
@@ -1175,6 +1180,9 @@ export default function PostEditor() {
         seoTitle: seoTitle || null,
         metaDescription: metaDescription || null,
         focusKeyword: focusKeyword || null,
+        faq: faqItems.filter(i => i.q.trim() && i.a.trim()).length > 0
+          ? JSON.stringify(faqItems.filter(i => i.q.trim() && i.a.trim()))
+          : null,
         publishedAt: status === "published"
           ? (post?.publishedAt ? post.publishedAt : new Date().toISOString())
           : status === "scheduled" && scheduledAt
@@ -1414,6 +1422,49 @@ export default function PostEditor() {
               data-testid="input-excerpt"
             />
           </div>
+
+          <Card className="p-4 border-t-4 border-t-primary/60">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <Label className="text-base">FAQ (Perguntas frequentes)</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Gera JSON-LD <code>FAQPage</code> indexável por buscadores e LLMs.</p>
+              </div>
+              <Button type="button" size="sm" variant="outline" onClick={() => setFaqItems(prev => [...prev, { q: "", a: "" }])} data-testid="button-add-faq">
+                + Pergunta
+              </Button>
+            </div>
+            {faqItems.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-2">Nenhuma pergunta adicionada.</p>
+            ) : (
+              <div className="space-y-3">
+                {faqItems.map((item, idx) => (
+                  <div key={idx} className="border rounded p-3 bg-muted/30" data-testid={`faq-item-${idx}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-muted-foreground">Pergunta {idx + 1}</span>
+                      <Button type="button" size="sm" variant="ghost" className="h-6 text-xs"
+                        onClick={() => setFaqItems(prev => prev.filter((_, i) => i !== idx))}
+                        data-testid={`button-remove-faq-${idx}`}
+                      >Remover</Button>
+                    </div>
+                    <Input
+                      placeholder="Pergunta"
+                      value={item.q}
+                      onChange={(e) => setFaqItems(prev => prev.map((it, i) => i === idx ? { ...it, q: e.target.value } : it))}
+                      className="mb-2"
+                      data-testid={`input-faq-q-${idx}`}
+                    />
+                    <Textarea
+                      placeholder="Resposta (texto puro, será exibido para buscadores e LLMs)"
+                      value={item.a}
+                      onChange={(e) => setFaqItems(prev => prev.map((it, i) => i === idx ? { ...it, a: e.target.value } : it))}
+                      className="resize-y min-h-[80px]"
+                      data-testid={`input-faq-a-${idx}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
         </div>
 
         <div className="space-y-4">

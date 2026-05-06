@@ -7,22 +7,20 @@ export function setMetaTags(options: {
   ogImage?: string;
   ogUrl?: string;
   twitterCard?: string;
+  robots?: string;
 }) {
-  // Title
   if (options.title) {
     document.title = options.title;
     setOrCreateMetaTag("og:title", options.ogTitle || options.title);
     setOrCreateMetaTag("twitter:title", options.ogTitle || options.title);
   }
 
-  // Description
   if (options.description) {
     setOrCreateMetaTag("description", options.description);
     setOrCreateMetaTag("og:description", options.ogDescription || options.description);
     setOrCreateMetaTag("twitter:description", options.ogDescription || options.description);
   }
 
-  // Canonical
   if (options.canonical) {
     let canonical = document.querySelector("link[rel='canonical']") as HTMLLinkElement;
     if (!canonical) {
@@ -34,7 +32,6 @@ export function setMetaTags(options: {
     setOrCreateMetaTag("og:url", options.ogUrl || options.canonical);
   }
 
-  // Open Graph
   if (options.ogImage) {
     setOrCreateMetaTag("og:image", options.ogImage);
     setOrCreateMetaTag("twitter:image", options.ogImage);
@@ -44,11 +41,14 @@ export function setMetaTags(options: {
     setOrCreateMetaTag("og:url", options.ogUrl);
   }
 
-  // Twitter Card
   if (options.twitterCard) {
     setOrCreateMetaTag("twitter:card", options.twitterCard);
   } else if (options.ogImage) {
     setOrCreateMetaTag("twitter:card", "summary_large_image");
+  }
+
+  if (options.robots) {
+    setOrCreateMetaTag("robots", options.robots);
   }
 }
 
@@ -56,7 +56,7 @@ function setOrCreateMetaTag(name: string, content: string) {
   let tag = document.querySelector(`meta[name="${name}"], meta[property="${name}"]`) as HTMLMetaElement;
   if (!tag) {
     tag = document.createElement("meta");
-    const isProperty = name.startsWith("og:") || name.startsWith("twitter:");
+    const isProperty = name.startsWith("og:") || name.startsWith("twitter:") || name.startsWith("article:");
     if (isProperty) {
       tag.setAttribute("property", name);
     } else {
@@ -67,12 +67,19 @@ function setOrCreateMetaTag(name: string, content: string) {
   tag.content = content;
 }
 
-export function setJsonLd(data: any) {
-  let script = document.querySelector("script[type='application/ld+json']") as HTMLScriptElement;
-  if (!script) {
-    script = document.createElement("script");
+/**
+ * Replace all <script type="application/ld+json"> blocks with the supplied
+ * data array. Accepts a single object (legacy) or an array of objects.
+ * Removing existing blocks ensures stale SSR JSON-LD is purged on SPA navigation.
+ */
+export function setJsonLd(data: any | any[]) {
+  document.querySelectorAll('script[type="application/ld+json"]').forEach((el) => el.remove());
+  const list = Array.isArray(data) ? data : [data];
+  for (const obj of list) {
+    if (!obj) continue;
+    const script = document.createElement("script");
     script.type = "application/ld+json";
+    script.textContent = JSON.stringify(obj);
     document.head.appendChild(script);
   }
-  script.textContent = JSON.stringify(data);
 }

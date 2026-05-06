@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 import { nanoid } from "nanoid";
 import { injectMetaPixelNoscript } from "./meta-pixel-html";
+import { injectSeoHead } from "./seo-html";
 
 const viteLogger = createLogger();
 
@@ -50,6 +51,7 @@ export async function setupVite(server: Server, app: Express) {
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
       let page = await vite.transformIndexHtml(url, template);
+      page = await injectSeoHead(page, url);
       page = await injectMetaPixelNoscript(page, url);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {

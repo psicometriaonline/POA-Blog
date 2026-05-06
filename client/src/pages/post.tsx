@@ -946,27 +946,60 @@ export default function PostPage() {
       twitterCard: "summary_large_image",
     });
 
-    setJsonLd({
+    const primaryCategory = post.categories?.[0];
+    const blogPosting: any = {
       "@context": "https://schema.org",
-      "@type": "Article",
+      "@type": "BlogPosting",
+      mainEntityOfPage: { "@type": "WebPage", "@id": postUrl },
       headline: post.seoTitle || post.title,
+      name: post.seoTitle || post.title,
       description: metaDesc,
-      image: post.featuredImage,
-      datePublished: post.publishedAt ? new Date(post.publishedAt).toISOString().split('T')[0] : undefined,
-      dateModified: post.updatedAt ? new Date(post.updatedAt).toISOString().split('T')[0] : (post.publishedAt ? new Date(post.publishedAt).toISOString().split('T')[0] : undefined),
-      author: {
-        "@type": "Person",
-        name: post.authorName || "Blog Psicometria Online"
-      },
+      url: postUrl,
+      inLanguage: "pt-BR",
+      datePublished: post.publishedAt ? new Date(post.publishedAt).toISOString() : undefined,
+      dateModified: post.updatedAt ? new Date(post.updatedAt).toISOString() : (post.publishedAt ? new Date(post.publishedAt).toISOString() : undefined),
+      author: { "@type": "Person", name: post.authorName || post.author?.name || "Blog Psicometria Online" },
       publisher: {
         "@type": "Organization",
         name: "Blog Psicometria Online",
-        logo: {
-          "@type": "ImageObject",
-          url: `${siteUrl}/logo.png`
+        logo: { "@type": "ImageObject", url: `${siteUrl}/logo.png` },
+      },
+      keywords: post.tags?.map((t) => t.name).join(", ") || undefined,
+      articleSection: primaryCategory?.name,
+    };
+    if (post.featuredImage) blogPosting.image = [post.featuredImage];
+
+    const breadcrumbItems: any[] = [
+      { "@type": "ListItem", position: 1, name: "Início", item: `${siteUrl}/` },
+    ];
+    if (primaryCategory) {
+      breadcrumbItems.push({ "@type": "ListItem", position: 2, name: primaryCategory.name, item: `${siteUrl}/categorias/${primaryCategory.slug}` });
+      breadcrumbItems.push({ "@type": "ListItem", position: 3, name: post.title, item: postUrl });
+    } else {
+      breadcrumbItems.push({ "@type": "ListItem", position: 2, name: post.title, item: postUrl });
+    }
+    const blocks: any[] = [
+      blogPosting,
+      { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: breadcrumbItems },
+    ];
+
+    if ((post as any).faq) {
+      try {
+        const items = JSON.parse((post as any).faq) as Array<{ q: string; a: string }>;
+        if (Array.isArray(items) && items.length > 0) {
+          blocks.push({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: items.filter((i) => i.q && i.a).map((i) => ({
+              "@type": "Question",
+              name: i.q,
+              acceptedAnswer: { "@type": "Answer", text: i.a },
+            })),
+          });
         }
-      }
-    });
+      } catch {}
+    }
+    setJsonLd(blocks);
   }, [post]);
 
   if (isLoading) {
