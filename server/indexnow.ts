@@ -39,6 +39,14 @@ export async function pingIndexNow(urls: string[]): Promise<void> {
     } else {
       console.log(`[indexnow] pinged ${urls.length} URL(s) — ${res.status}`);
     }
+    // Persist last-notified timestamp + count in settings (read by SEO admin tab).
+    try {
+      await storage.setSetting("indexnow_last_notified_at", new Date().toISOString());
+      await storage.setSetting("indexnow_last_url_count", String(urls.length));
+      await storage.setSetting("indexnow_last_status", String(res.status));
+    } catch (e) {
+      console.warn("[indexnow] failed to persist last-notified setting:", e);
+    }
   } catch (err) {
     console.warn("[indexnow] ping error:", err);
   }
@@ -64,7 +72,7 @@ export async function notifySearchEngines(urls: string[]): Promise<void> {
       const parsed = new URL(u);
       const isFile = /\.[a-z0-9]+$/i.test(parsed.pathname);
       const isRoot = parsed.pathname === "/" || parsed.pathname === "";
-      const isSection = parsed.pathname.startsWith("/categorias/") || parsed.pathname.startsWith("/tags/") || parsed.pathname.startsWith("/admin");
+      const isSection = parsed.pathname.startsWith("/categoria/") || parsed.pathname.startsWith("/tag/") || parsed.pathname.startsWith("/admin") || parsed.pathname === "/busca" || parsed.pathname === "/termos-de-uso" || parsed.pathname === "/politicas-de-privacidade" || parsed.pathname === "/quem-somos";
       if (!isFile && !isRoot && !isSection) {
         expanded.add(`${parsed.origin}${parsed.pathname.replace(/\/$/, "")}.md`);
       }

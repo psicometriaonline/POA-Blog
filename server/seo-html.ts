@@ -175,7 +175,7 @@ async function buildPostHead(slug: string, siteVerifs: { google?: string; bing?:
       "@type": "ListItem",
       position: 2,
       name: primaryCategory.name,
-      item: `${SITE_URL}/categorias/${primaryCategory.slug}`,
+      item: `${SITE_URL}/categoria/${primaryCategory.slug}`,
     });
     breadcrumbItems.push({ "@type": "ListItem", position: 3, name: title, item: url });
   } else {
@@ -213,7 +213,7 @@ async function buildCategoryHead(slug: string, defaultOg: string): Promise<strin
   if (!cat) return null;
   const title = `${cat.name} — ${SITE_NAME}`;
   const desc = cat.description || `Artigos sobre ${cat.name} no ${SITE_NAME}.`;
-  const url = `${SITE_URL}/categorias/${cat.slug}`;
+  const url = `${SITE_URL}/categoria/${cat.slug}`;
   let html = "";
   html += `    <title>${escapeAttr(title)}</title>\n`;
   html += meta("description", desc);
@@ -242,7 +242,7 @@ async function buildCategoryHead(slug: string, defaultOg: string): Promise<strin
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Início", item: SITE_URL + "/" },
-      { "@type": "ListItem", position: 2, name: "Categorias", item: SITE_URL + "/categorias" },
+      { "@type": "ListItem", position: 2, name: "Categorias", item: SITE_URL + "/" },
       { "@type": "ListItem", position: 3, name: cat.name, item: url },
     ],
   });
@@ -254,7 +254,7 @@ async function buildTagHead(slug: string, defaultOg: string): Promise<string | n
   if (!tag) return null;
   const title = `${tag.name} — ${SITE_NAME}`;
   const desc = `Artigos com a tag ${tag.name} no ${SITE_NAME}.`;
-  const url = `${SITE_URL}/tags/${tag.slug}`;
+  const url = `${SITE_URL}/tag/${tag.slug}`;
   let html = "";
   html += `    <title>${escapeAttr(title)}</title>\n`;
   html += meta("description", desc);
@@ -283,7 +283,7 @@ async function buildTagHead(slug: string, defaultOg: string): Promise<string | n
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Início", item: SITE_URL + "/" },
-      { "@type": "ListItem", position: 2, name: "Tags", item: SITE_URL + "/tags" },
+      { "@type": "ListItem", position: 2, name: "Tags", item: SITE_URL + "/" },
       { "@type": "ListItem", position: 3, name: tag.name, item: url },
     ],
   });
@@ -297,6 +297,36 @@ function notFoundHead(path: string): string {
   html += meta("description", "A página solicitada não foi encontrada.");
   html += meta("robots", "noindex,follow");
   html += `    <link rel="canonical" href="${escapeAttr(url)}">\n`;
+  return html;
+}
+
+const STATIC_PAGES: Record<string, { title: string; desc: string }> = {
+  "/busca": { title: "Busca", desc: `Pesquise artigos no ${SITE_NAME}.` },
+  "/termos-de-uso": { title: "Termos de uso", desc: `Termos de uso do ${SITE_NAME}.` },
+  "/politicas-de-privacidade": { title: "Políticas de privacidade", desc: `Política de privacidade do ${SITE_NAME}.` },
+  "/quem-somos": { title: "Quem somos", desc: `Conheça a equipe do ${SITE_NAME}.` },
+};
+
+function buildStaticPageHead(path: string, ogImage: string): string {
+  const meta_ = STATIC_PAGES[path];
+  if (!meta_) return "";
+  const fullTitle = `${meta_.title} | ${SITE_NAME}`;
+  const url = `${SITE_URL}${path}`;
+  const robots = path === "/busca" ? "noindex,follow" : "index,follow";
+  let html = "";
+  html += `    <title>${escapeAttr(fullTitle)}</title>\n`;
+  html += meta("description", meta_.desc);
+  html += `    <link rel="canonical" href="${escapeAttr(url)}">\n`;
+  html += hreflang(url);
+  html += meta("robots", robots);
+  html += meta("og:type", "website", true);
+  html += meta("og:site_name", SITE_NAME, true);
+  html += meta("og:title", meta_.title, true);
+  html += meta("og:description", meta_.desc, true);
+  html += meta("og:url", url, true);
+  html += meta("og:locale", "pt_BR", true);
+  if (ogImage) html += meta("og:image", ogImage, true);
+  html += meta("twitter:card", "summary_large_image");
   return html;
 }
 
@@ -329,15 +359,18 @@ export async function injectSeoHead(html: string, urlPath: string): Promise<SeoI
 
     let head: string | null = null;
     let isContentRoute = false;
+    const trimmed = path.replace(/\/$/, "") || "/";
     if (path === "/" || path === "") {
       head = await buildHomeHead(verifs, ogImage);
-    } else if (path.startsWith("/categorias/")) {
+    } else if (STATIC_PAGES[trimmed]) {
+      head = buildStaticPageHead(trimmed, ogImage);
+    } else if (path.startsWith("/categoria/")) {
       isContentRoute = true;
-      const slug = path.replace(/^\/categorias\//, "").replace(/\/$/, "");
+      const slug = path.replace(/^\/categoria\//, "").replace(/\/$/, "");
       if (slug && !slug.includes("/")) head = await buildCategoryHead(slug, ogImage);
-    } else if (path.startsWith("/tags/")) {
+    } else if (path.startsWith("/tag/")) {
       isContentRoute = true;
-      const slug = path.replace(/^\/tags\//, "").replace(/\/$/, "");
+      const slug = path.replace(/^\/tag\//, "").replace(/\/$/, "");
       if (slug && !slug.includes("/")) head = await buildTagHead(slug, ogImage);
     } else if (!path.startsWith("/uploads/") && !path.includes(".")) {
       isContentRoute = true;

@@ -3553,12 +3553,12 @@ export async function registerRoutes(
 
       // Categories
       for (const cat of categories) {
-        xml += `  <url>\n    <loc>${SITE_URL}/categorias/${escXml(cat.slug)}</loc>\n    <lastmod>${homeLastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n`;
+        xml += `  <url>\n    <loc>${SITE_URL}/categoria/${escXml(cat.slug)}</loc>\n    <lastmod>${homeLastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n`;
       }
 
       // Tags
       for (const tag of tags) {
-        xml += `  <url>\n    <loc>${SITE_URL}/tags/${escXml(tag.slug)}</loc>\n    <lastmod>${homeLastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.5</priority>\n  </url>\n`;
+        xml += `  <url>\n    <loc>${SITE_URL}/tag/${escXml(tag.slug)}</loc>\n    <lastmod>${homeLastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.5</priority>\n  </url>\n`;
       }
 
       xml += '</urlset>';
@@ -3676,7 +3676,7 @@ Sitemap: ${SITE_URL}/sitemap.xml
       // Categories
       for (const cat of categories) {
         urls.push({
-          loc: `${SITE_URL}/categorias/${cat.slug}`,
+          loc: `${SITE_URL}/categoria/${cat.slug}`,
           priority: "0.6",
           lastmod: null
         });
@@ -3685,7 +3685,7 @@ Sitemap: ${SITE_URL}/sitemap.xml
       // Tags
       for (const tag of tags) {
         urls.push({
-          loc: `${SITE_URL}/tags/${tag.slug}`,
+          loc: `${SITE_URL}/tag/${tag.slug}`,
           priority: "0.6",
           lastmod: null
         });

@@ -146,7 +146,7 @@ export function registerLlmsRoutes(app: Express) {
       lines.push("");
       lines.push("Cada post está disponível em Markdown puro adicionando `.md` à URL:");
       lines.push("");
-      for (const p of recent) {
+      for (const p of allPublished) {
         lines.push(`- ${SITE_URL}/${p.slug}.md`);
       }
       lines.push("");
@@ -154,14 +154,14 @@ export function registerLlmsRoutes(app: Express) {
       lines.push("## Categorias");
       lines.push("");
       for (const c of categories) {
-        lines.push(`- [${c.name}](${SITE_URL}/categorias/${c.slug})${c.description ? `: ${c.description}` : ""}`);
+        lines.push(`- [${c.name}](${SITE_URL}/categoria/${c.slug})${c.description ? `: ${c.description}` : ""}`);
       }
       lines.push("");
 
       lines.push("## Tags");
       lines.push("");
       for (const t of tags) {
-        lines.push(`- [${t.name}](${SITE_URL}/tags/${t.slug})`);
+        lines.push(`- [${t.name}](${SITE_URL}/tag/${t.slug})`);
       }
       lines.push("");
 
@@ -247,7 +247,7 @@ export function registerLlmsRoutes(app: Express) {
       const md = buildPostMarkdown(post);
       if (!md) return next();
       res
-        .header("Content-Type", "text/markdown; charset=utf-8")
+        .header("Content-Type", "text/plain; charset=utf-8")
         .header("Cache-Control", CACHE_HEADER)
         .header("X-Robots-Tag", "index, follow")
         .header("Link", `<${SITE_URL}/${post.slug}>; rel="canonical"`)

@@ -973,7 +973,7 @@ export default function PostPage() {
       { "@type": "ListItem", position: 1, name: "Início", item: `${siteUrl}/` },
     ];
     if (primaryCategory) {
-      breadcrumbItems.push({ "@type": "ListItem", position: 2, name: primaryCategory.name, item: `${siteUrl}/categorias/${primaryCategory.slug}` });
+      breadcrumbItems.push({ "@type": "ListItem", position: 2, name: primaryCategory.name, item: `${siteUrl}/categoria/${primaryCategory.slug}` });
       breadcrumbItems.push({ "@type": "ListItem", position: 3, name: post.title, item: postUrl });
     } else {
       breadcrumbItems.push({ "@type": "ListItem", position: 2, name: post.title, item: postUrl });
