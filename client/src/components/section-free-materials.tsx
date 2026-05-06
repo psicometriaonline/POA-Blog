@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import type { FreeMaterial } from "@shared/schema";
+import { trackEvent } from "@/lib/meta-pixel";
 
 export function SectionFreeMaterials({ materials }: { materials: FreeMaterial[] }) {
   if (materials.length === 0) return null;
@@ -45,7 +46,14 @@ export function SectionFreeMaterials({ materials }: { materials: FreeMaterial[] 
           <div className="flex gap-5">
             {materials.map((mat) => (
               <div key={mat.id} className="flex-[0_0_70%] sm:flex-[0_0_45%] lg:flex-[0_0_23%] min-w-0">
-                <a href={mat.linkUrl} target="_blank" rel="noopener noreferrer" data-testid={`material-${mat.id}`} className="block group">
+                <a
+                  href={mat.linkUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackEvent("Lead", { content_name: mat.title, content_ids: [String(mat.id)], content_category: "free_material" })}
+                  data-testid={`material-${mat.id}`}
+                  className="block group"
+                >
                   <div className="rounded-xl overflow-hidden border border-white/10 bg-white/5 transition-colors hover:bg-white/10">
                     {mat.imageUrl && (
                       <div className="overflow-hidden">
