@@ -163,6 +163,14 @@ async function seedDefaultSettings() {
     if (!existing) {
       await storage.setSetting("comment_reply_template", DEFAULT_REPLY_TEMPLATE);
     }
+    const pixelId = await storage.getSetting("meta_pixel_id");
+    if (pixelId === undefined) {
+      await storage.setSetting("meta_pixel_id", "2663379490619235");
+    }
+    const pixelEnabled = await storage.getSetting("meta_pixel_enabled");
+    if (pixelEnabled === undefined) {
+      await storage.setSetting("meta_pixel_enabled", "true");
+    }
   } catch (err) {
     console.error("Seed default settings error:", err);
   }

@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
 import DOMPurify from "dompurify";
+import { trackEvent } from "@/lib/meta-pixel";
 
 export function HeroBar({ showHeadline = true, settings = {} }: { showHeadline?: boolean; settings?: Record<string, string> }) {
   const headlineHtml = settings["hero_headline_html"] || 'O seu <span style="color:#31D5FF;font-weight:bold">Blog</span> de Psicometria';
@@ -32,7 +33,7 @@ export function HeroBar({ showHeadline = true, settings = {} }: { showHeadline?:
                 data-testid="text-hero-cta"
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(ctaText, { ALLOWED_TAGS: ["span", "strong", "em", "b", "i"], ALLOWED_ATTR: ["style", "class"] }) }}
               />
-              <a href={buttonUrl} target="_blank" rel="noopener noreferrer">
+              <a href={buttonUrl} target="_blank" rel="noopener noreferrer" onClick={() => trackEvent("Lead", { content_name: "Hero CTA" })}>
                 <Button
                   className="border-transparent px-8 py-3 text-base font-semibold"
                   style={{ backgroundColor: buttonColor, color: buttonTextColor }}

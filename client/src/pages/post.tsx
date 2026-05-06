@@ -17,6 +17,7 @@ import { ptBR } from "date-fns/locale";
 import DOMPurify from "dompurify";
 import { useEffect, useRef, useState } from "react";
 import { setMetaTags, setJsonLd } from "@/lib/meta-tags";
+import { trackEvent } from "@/lib/meta-pixel";
 
 import { Calendar, User, Tag, ChevronRight, Send, MessageSquare, List, Pencil, FolderOpen } from "lucide-react";
 import { SiFacebook, SiLinkedin, SiWhatsapp, SiX } from "react-icons/si";
@@ -918,6 +919,15 @@ export default function PostPage() {
       setTimeout(() => renderMathAndCode(contentRef), 50);
     }
   }, [post, containerData]);
+
+  useEffect(() => {
+    if (!post || isPreview) return;
+    trackEvent("ViewContent", {
+      content_name: post.title,
+      content_ids: [String(post.id)],
+      content_type: "article",
+    });
+  }, [post?.id, isPreview]);
 
   useEffect(() => {
     if (!post) return;

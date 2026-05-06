@@ -28,6 +28,7 @@ import PrivacyPage from "@/pages/privacy";
 import AboutPage from "@/pages/about";
 import type { FreeMaterial } from "@shared/schema";
 import { WhatsAppButton } from "@/components/whatsapp-button";
+import { MetaPixel } from "@/components/meta-pixel";
 
 function Router() {
   return (
@@ -93,6 +94,7 @@ function App() {
             <BlogFooter />
           </div>
           <WhatsAppButton />
+          <MetaPixel />
           <Toaster />
         </TooltipProvider>
       </ThemeProvider>

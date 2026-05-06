@@ -715,6 +715,94 @@ function AdminUsersContent() {
   );
 }
 
+function MetaPixelSettingsContent() {
+  const { toast } = useToast();
+  const { data: settings } = useQuery<Record<string, string>>({
+    queryKey: ["/api/admin/settings"],
+  });
+
+  const [pixelId, setPixelId] = useState("");
+  const [enabled, setEnabled] = useState(true);
+
+  useEffect(() => {
+    if (settings) {
+      setPixelId(settings["meta_pixel_id"] || "");
+      setEnabled(settings["meta_pixel_enabled"] !== "false");
+    }
+  }, [settings]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("PUT", "/api/admin/settings", {
+        meta_pixel_id: pixelId.trim(),
+        meta_pixel_enabled: enabled ? "true" : "false",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      toast({ title: "Salvo", description: "Configurações do Pixel da Meta atualizadas." });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Falha ao salvar.", variant: "destructive" });
+    },
+  });
+
+  return (
+    <Card className="p-6 space-y-6 max-w-2xl">
+      <div>
+        <h3 className="font-semibold text-lg mb-1">Pixel da Meta (Facebook)</h3>
+        <p className="text-sm text-muted-foreground">
+          O Pixel rastreia eventos nas páginas públicas do blog (PageView em cada navegação,
+          ViewContent ao abrir um post, Lead no botão do hero e Contact no botão flutuante do WhatsApp).
+          Não é carregado nas páginas administrativas.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="text-sm font-medium mb-1 block">ID do Pixel</label>
+          <Input
+            value={pixelId}
+            onChange={(e) => setPixelId(e.target.value)}
+            placeholder="2663379490619235"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            data-testid="input-meta-pixel-id"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Apenas dígitos. Encontre o ID no Gerenciador de Eventos da Meta.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <input
+            id="meta-pixel-enabled"
+            type="checkbox"
+            checked={enabled}
+            onChange={(e) => setEnabled(e.target.checked)}
+            className="h-4 w-4 rounded border-input"
+            data-testid="checkbox-meta-pixel-enabled"
+          />
+          <label htmlFor="meta-pixel-enabled" className="text-sm font-medium">
+            Pixel ativado
+          </label>
+        </div>
+
+        <div className="pt-2">
+          <Button
+            onClick={() => saveMutation.mutate()}
+            disabled={saveMutation.isPending}
+            data-testid="button-save-meta-pixel"
+          >
+            {saveMutation.isPending ? "Salvando..." : "Salvar"}
+          </Button>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 function DatabaseTab() {
   const [subTab, setSubTab] = useState("media");
 
@@ -727,6 +815,7 @@ function DatabaseTab() {
           <TabsTrigger value="authors" data-testid="tab-db-authors">Autores</TabsTrigger>
           <TabsTrigger value="broken-links" data-testid="tab-db-broken-links">Links Quebrados</TabsTrigger>
           <TabsTrigger value="migration" data-testid="tab-db-migration">Migração</TabsTrigger>
+          <TabsTrigger value="meta-pixel" data-testid="tab-db-meta-pixel">Pixel da Meta</TabsTrigger>
           <TabsTrigger value="admin-users" data-testid="tab-db-admin-users">
             <Users className="h-3.5 w-3.5 mr-1" />
             Admins
@@ -752,6 +841,10 @@ function DatabaseTab() {
 
       <TabsContent value="migration" className="mt-0">
         <MigrationContent />
+      </TabsContent>
+
+      <TabsContent value="meta-pixel" className="mt-0">
+        <MetaPixelSettingsContent />
       </TabsContent>
 
       <TabsContent value="admin-users" className="mt-0">
