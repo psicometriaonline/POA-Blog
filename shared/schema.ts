@@ -153,6 +153,15 @@ export const postViews = pgTable("post_views", {
   referrer: text("referrer"),
 });
 
+export const popupEvents = pgTable("popup_events", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  postId: integer("post_id").references(() => posts.id, { onDelete: "set null" }),
+  type: text("type").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type PopupEvent = typeof popupEvents.$inferSelect;
+
 export const imageGroups = pgTable("image_groups", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: text("name").notNull(),

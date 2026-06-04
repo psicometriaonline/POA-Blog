@@ -8,14 +8,18 @@ interface PostPopupProps {
   onClose: () => void;
   topic?: string;
   academyUrl: string;
+  onLinkClick?: () => void;
 }
 
-export default function PostPopup({ open, onClose, topic, academyUrl }: PostPopupProps) {
+export default function PostPopup({ open, onClose, topic, academyUrl, onLinkClick }: PostPopupProps) {
   const headline = topic ? `Precisa aprender sobre ${topic}?` : "Quer se aprofundar no tema?";
 
   const goToAcademy = () => {
     const isSafe = /^https?:\/\//i.test(academyUrl);
-    if (isSafe) window.open(academyUrl, "_blank", "noopener,noreferrer");
+    if (isSafe) {
+      onLinkClick?.();
+      window.open(academyUrl, "_blank", "noopener,noreferrer");
+    }
     onClose();
   };
 

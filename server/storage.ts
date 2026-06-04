@@ -14,7 +14,7 @@ import {
   type Subscriber,
   type AdminUser,
   authors, categories, tags, posts, postCategories, postTags,
-  banners, freeMaterials, siteSettings, comments, postViews,
+  banners, freeMaterials, siteSettings, comments, postViews, popupEvents,
   imageGroups, imageBankItems, containerRules, mediaLibrary, subscribers, brokenLinks,
   adminUsers,
 } from "@shared/schema";
@@ -61,6 +61,9 @@ export interface IStorage {
   updatePost(id: number, data: Partial<InsertPost>, categoryIds?: number[], tagIds?: number[]): Promise<PostWithRelations | undefined>;
   deletePost(id: number): Promise<boolean>;
   incrementViewCount(id: number, visitorId?: string, referrer?: string): Promise<void>;
+
+  recordPopupEvent(type: string, postId?: number): Promise<void>;
+  getPopupStats(): Promise<{ impressions: number; clicks: number; ctr: number; impressions30d: number; clicks30d: number }>;
 
   getBanners(slot?: string): Promise<Banner[]>;
   getBanner(id: number): Promise<Banner | undefined>;
@@ -649,6 +652,31 @@ export class DatabaseStorage implements IStorage {
   async incrementViewCount(id: number, visitorId?: string, referrer?: string): Promise<void> {
     await db.update(posts).set({ viewCount: sql`${posts.viewCount} + 1` }).where(eq(posts.id, id));
     await db.insert(postViews).values({ postId: id, visitorId: visitorId || null, referrer: referrer || null });
+  }
+
+  async recordPopupEvent(type: string, postId?: number): Promise<void> {
+    await db.insert(popupEvents).values({ type, postId: postId ?? null });
+  }
+
+  async getPopupStats(): Promise<{ impressions: number; clicks: number; ctr: number; impressions30d: number; clicks30d: number }> {
+    const since = new Date();
+    since.setDate(since.getDate() - 30);
+
+    const rows = await db.select({
+      type: popupEvents.type,
+      total: sql<number>`count(*)::int`,
+      last30: sql<number>`count(*) filter (where ${popupEvents.createdAt} >= ${since.toISOString()})::int`,
+    })
+      .from(popupEvents)
+      .groupBy(popupEvents.type);
+
+    let impressions = 0, clicks = 0, impressions30d = 0, clicks30d = 0;
+    for (const r of rows) {
+      if (r.type === "impression") { impressions = r.total; impressions30d = r.last30; }
+      else if (r.type === "click") { clicks = r.total; clicks30d = r.last30; }
+    }
+    const ctr = impressions > 0 ? Math.round((clicks / impressions) * 1000) / 10 : 0;
+    return { impressions, clicks, ctr, impressions30d, clicks30d };
   }
 
   async getViewsTimeSeries(startDate: Date, endDate: Date, postId?: number): Promise<{ date: string; views: number; visitors: number }[]> {

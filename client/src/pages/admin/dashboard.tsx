@@ -28,6 +28,7 @@ import { CrawlContent } from "./crawl";
 import { BrokenLinksContent } from "./broken-links";
 import { MigrationContent } from "./migration";
 import { SeoSettingsContent } from "./seo-settings";
+import { PopupSettingsContent } from "./popup-settings";
 import { AdminLayout, type AdminTab } from "@/components/admin/admin-layout";
 import { PostsSubNav } from "@/components/admin/posts-sub-nav";
 
@@ -214,7 +215,7 @@ function PostsTab({ user, bannerQuery, settings }: { user: any; bannerQuery: Ret
 
   return (
     <div className="space-y-6">
-      <PostsSubNav activePage={subTab as "posts" | "containers" | "import" | "banners" | "preview" | "citation"} />
+      <PostsSubNav activePage={subTab as "posts" | "containers" | "import" | "banners" | "preview" | "citation" | "popup"} />
       <Tabs value={subTab} onValueChange={setSubTab}>
         <TabsContent value="banners" className="mt-0">
           <FilteredBannersTab 
@@ -468,6 +469,10 @@ function PostsTab({ user, bannerQuery, settings }: { user: any; bannerQuery: Ret
 
         <TabsContent value="citation" className="mt-0">
           <CitationSettingsTab settings={settings} />
+        </TabsContent>
+
+        <TabsContent value="popup" className="mt-0">
+          <PopupSettingsContent />
         </TabsContent>
       </Tabs>
     </div>

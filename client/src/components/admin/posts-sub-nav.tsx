@@ -1,9 +1,9 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, BarChart3, MessageSquare, Eye, Quote } from "lucide-react";
+import { Plus, BarChart3, MessageSquare, Eye, Quote, MousePointerClick } from "lucide-react";
 
-type ActivePage = "posts" | "containers" | "import" | "preview" | "banners" | "citation" | "metricas" | "comentarios";
+type ActivePage = "posts" | "containers" | "import" | "preview" | "banners" | "citation" | "popup" | "metricas" | "comentarios";
 
 interface PostsSubNavProps {
   activePage: ActivePage;
@@ -39,6 +39,12 @@ export function PostsSubNav({ activePage, showActionButtons = true }: PostsSubNa
             <Link href="/admin?tab=posts&sub=citation">
               <Quote className="h-3.5 w-3.5 mr-1" />
               Citação
+            </Link>
+          </TabsTrigger>
+          <TabsTrigger value="popup" data-testid="tab-posts-popup" asChild>
+            <Link href="/admin?tab=posts&sub=popup">
+              <MousePointerClick className="h-3.5 w-3.5 mr-1" />
+              Pop-Up
             </Link>
           </TabsTrigger>
           <TabsTrigger value="preview" data-testid="tab-posts-preview" asChild>

@@ -184,6 +184,22 @@ async function seedDefaultSettings() {
     if (academyPopupUrl === undefined) {
       await storage.setSetting("academy_popup_url", "https://academy.psicometriaonline.com.br");
     }
+    const popupEnabled = await storage.getSetting("popup_enabled");
+    if (popupEnabled === undefined) {
+      await storage.setSetting("popup_enabled", "true");
+    }
+    const popupScrollEnabled = await storage.getSetting("popup_scroll_enabled");
+    if (popupScrollEnabled === undefined) {
+      await storage.setSetting("popup_scroll_enabled", "true");
+    }
+    const popupScrollPercent = await storage.getSetting("popup_scroll_percent");
+    if (popupScrollPercent === undefined) {
+      await storage.setSetting("popup_scroll_percent", "50");
+    }
+    const popupExitIntentEnabled = await storage.getSetting("popup_exit_intent_enabled");
+    if (popupExitIntentEnabled === undefined) {
+      await storage.setSetting("popup_exit_intent_enabled", "true");
+    }
     await getOrCreateIndexNowKey();
   } catch (err) {
     console.error("Seed default settings error:", err);
@@ -886,6 +902,20 @@ export async function registerRoutes(
     try {
       const settings = await storage.getAllSettings();
       res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/popup/event", async (req, res) => {
+    try {
+      const { type, postId } = req.body || {};
+      if (type !== "impression" && type !== "click") {
+        return res.status(400).json({ message: "Invalid event type" });
+      }
+      const pid = typeof postId === "number" && Number.isInteger(postId) ? postId : undefined;
+      await storage.recordPopupEvent(type, pid);
+      res.json({ ok: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -2502,6 +2532,15 @@ export async function registerRoutes(
     try {
       const settings = await storage.getAllSettings();
       res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/popup/stats", isAuthenticated, async (_req, res) => {
+    try {
+      const stats = await storage.getPopupStats();
+      res.json(stats);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
