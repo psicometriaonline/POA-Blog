@@ -155,14 +155,14 @@ export function PopupSettingsContent() {
               <Eye className="h-4 w-4" /> Exibições
             </div>
             <div className="text-2xl font-bold" data-testid="text-popup-impressions">{stats?.impressions ?? 0}</div>
-            <div className="text-xs text-muted-foreground mt-1">{stats?.impressions30d ?? 0} nos últimos 30 dias</div>
+            <div className="text-xs text-muted-foreground mt-1">desde o início</div>
           </div>
           <div className="rounded-lg border p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
               <MousePointerClick className="h-4 w-4" /> Cliques
             </div>
             <div className="text-2xl font-bold" data-testid="text-popup-clicks">{stats?.clicks ?? 0}</div>
-            <div className="text-xs text-muted-foreground mt-1">{stats?.clicks30d ?? 0} nos últimos 30 dias</div>
+            <div className="text-xs text-muted-foreground mt-1">desde o início</div>
           </div>
           <div className="rounded-lg border p-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
