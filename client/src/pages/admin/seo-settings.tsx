@@ -24,6 +24,7 @@ export function SeoSettingsContent() {
   const [defaultOg, setDefaultOg] = useState("");
   const [llmsFaq, setLlmsFaq] = useState<FaqItem[]>([]);
   const [indexnowKey, setIndexnowKey] = useState("");
+  const [academyPopupUrl, setAcademyPopupUrl] = useState("");
 
   useEffect(() => {
     if (!settings) return;
@@ -32,6 +33,7 @@ export function SeoSettingsContent() {
     setBingVerif(settings["bing_site_verification"] || "");
     setDefaultOg(settings["default_og_image"] || "");
     setIndexnowKey(settings["indexnow_key"] || "");
+    setAcademyPopupUrl(settings["academy_popup_url"] || "");
     try {
       const raw = settings["llms_faq_json"];
       setLlmsFaq(raw ? (JSON.parse(raw) as FaqItem[]) : []);
@@ -66,6 +68,7 @@ export function SeoSettingsContent() {
       google_site_verification: googleVerif,
       bing_site_verification: bingVerif,
       default_og_image: defaultOg,
+      academy_popup_url: academyPopupUrl,
       llms_faq_json: JSON.stringify(llmsFaq.filter(i => i.q.trim() && i.a.trim())),
     });
   };
@@ -234,6 +237,12 @@ export function SeoSettingsContent() {
         <h4 className="font-semibold mb-1">Imagem padrão de Open Graph</h4>
         <p className="text-xs text-muted-foreground mb-3">Usada como og:image quando o post não tiver imagem destacada.</p>
         <Input value={defaultOg} onChange={e => setDefaultOg(e.target.value)} placeholder="https://www.blog.psicometriaonline.com.br/og-default.jpg" data-testid="input-default-og" />
+      </Card>
+
+      <Card className="p-6">
+        <h4 className="font-semibold mb-1">URL do pop-up Academy</h4>
+        <p className="text-xs text-muted-foreground mb-3">Destino do pop-up de engajamento exibido nos posts. Inclua os parâmetros UTM no link.</p>
+        <Input value={academyPopupUrl} onChange={e => setAcademyPopupUrl(e.target.value)} placeholder="https://academy.psicometriaonline.com.br/?utm_source=blog&utm_medium=popup" data-testid="input-academy-popup-url" />
       </Card>
 
       <Card className="p-6">

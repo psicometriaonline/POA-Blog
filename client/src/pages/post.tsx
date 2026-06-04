@@ -22,6 +22,7 @@ import { trackEvent } from "@/lib/meta-pixel";
 import { Calendar, User, Tag, ChevronRight, Send, MessageSquare, List, Pencil, FolderOpen } from "lucide-react";
 import { SiFacebook, SiLinkedin, SiWhatsapp, SiX } from "react-icons/si";
 import { useAuth } from "@/hooks/use-auth";
+import PostPopup from "@/components/post-popup";
 import { parseBannerButtonColor } from "@/lib/banner-utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -891,6 +892,15 @@ export default function PostPage() {
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [location]);
 
+  const forcePopup = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("popup");
+  const [popupOpen, setPopupOpen] = useState(false);
+  const popupHandledRef = useRef(false);
+
+  const { data: siteSettings } = useQuery<Record<string, string>>({
+    queryKey: ["/api/settings"],
+  });
+  const academyPopupUrl = siteSettings?.academy_popup_url || siteSettings?.header_cta_url || "https://academy.psicometriaonline.com.br";
+
   const apiPath = isPreview ? `/api/admin/posts/slug/${slug}` : `/api/posts/slug/${slug}`;
 
   const { data: post, isLoading } = useQuery<PostWithRelations>({
@@ -919,6 +929,51 @@ export default function PostPage() {
       setTimeout(() => renderMathAndCode(contentRef), 50);
     }
   }, [post, containerData]);
+
+  useEffect(() => {
+    if (!post || isPreview) return;
+    if (forcePopup) {
+      setPopupOpen(true);
+      popupHandledRef.current = true;
+      return;
+    }
+
+    const SESSION_KEY = "academy_popup_shown";
+    if (sessionStorage.getItem(SESSION_KEY)) return;
+
+    const trigger = () => {
+      if (popupHandledRef.current) return;
+      popupHandledRef.current = true;
+      sessionStorage.setItem(SESSION_KEY, "1");
+      setPopupOpen(true);
+      cleanup();
+    };
+
+    const onScroll = () => {
+      const el = contentRef.current;
+      if (!el) return;
+      const start = el.offsetTop;
+      const total = el.offsetHeight;
+      if (total <= 0) return;
+      const progress = (window.scrollY + window.innerHeight - start) / total;
+      if (progress >= 0.5) trigger();
+    };
+
+    const canHover = typeof window !== "undefined" && window.matchMedia("(hover: hover)").matches;
+    const onMouseOut = (e: MouseEvent) => {
+      if (e.clientY <= 0 && !e.relatedTarget) trigger();
+    };
+
+    const cleanup = () => {
+      window.removeEventListener("scroll", onScroll);
+      if (canHover) document.removeEventListener("mouseout", onMouseOut);
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    if (canHover) document.addEventListener("mouseout", onMouseOut);
+
+    return cleanup;
+  }, [post?.id, isPreview, forcePopup]);
 
   useEffect(() => {
     if (!post || isPreview) return;
@@ -1178,6 +1233,13 @@ export default function PostPage() {
           </aside>
         </div>
       </div>
+
+      <PostPopup
+        open={popupOpen}
+        onClose={() => setPopupOpen(false)}
+        topic={primaryCategory?.name}
+        academyUrl={academyPopupUrl}
+      />
 
       {user && (
         <Link href={`/admin/post/${post.id}`}>

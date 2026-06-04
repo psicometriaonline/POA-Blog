@@ -180,6 +180,10 @@ async function seedDefaultSettings() {
         "Blog acadêmico em português sobre psicometria, estatística aplicada e pesquisa quantitativa em psicologia. Publicamos guias técnicos, tutoriais de R/Python e validação de instrumentos."
       );
     }
+    const academyPopupUrl = await storage.getSetting("academy_popup_url");
+    if (academyPopupUrl === undefined) {
+      await storage.setSetting("academy_popup_url", "https://academy.psicometriaonline.com.br");
+    }
     await getOrCreateIndexNowKey();
   } catch (err) {
     console.error("Seed default settings error:", err);
