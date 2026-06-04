@@ -14,7 +14,8 @@ export default function PostPopup({ open, onClose, topic, academyUrl }: PostPopu
   const headline = topic ? `Precisa aprender sobre ${topic}?` : "Quer se aprofundar no tema?";
 
   const goToAcademy = () => {
-    window.open(academyUrl, "_blank", "noopener,noreferrer");
+    const isSafe = /^https?:\/\//i.test(academyUrl);
+    if (isSafe) window.open(academyUrl, "_blank", "noopener,noreferrer");
     onClose();
   };
 
@@ -27,8 +28,11 @@ export default function PostPopup({ open, onClose, topic, academyUrl }: PostPopu
         <DialogTitle className="sr-only">{headline}</DialogTitle>
         <DialogDescription className="sr-only">Temos aulas específicas sobre o tema na Psicometria Online Academy.</DialogDescription>
         <div
+          role="button"
+          tabIndex={0}
           onClick={goToAcademy}
-          className="relative cursor-pointer bg-gradient-to-b from-[#f5f9fd] to-[#e6f0fa] px-6 pt-9 pb-7 text-center"
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); goToAcademy(); } }}
+          className="relative cursor-pointer bg-gradient-to-b from-[#f5f9fd] to-[#e6f0fa] px-6 pt-9 pb-7 text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
           data-testid="card-academy-popup"
         >
           <button
