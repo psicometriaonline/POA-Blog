@@ -33,6 +33,8 @@ export function PopupSettingsContent() {
   const [scrollPercent, setScrollPercent] = useState("50");
   const [exitIntentEnabled, setExitIntentEnabled] = useState(true);
   const [popupUrl, setPopupUrl] = useState("");
+  const [cooldownCloseDays, setCooldownCloseDays] = useState("7");
+  const [cooldownClickDays, setCooldownClickDays] = useState("90");
 
   useEffect(() => {
     if (!settings) return;
@@ -41,6 +43,8 @@ export function PopupSettingsContent() {
     setScrollPercent(settings["popup_scroll_percent"] || "50");
     setExitIntentEnabled(settings["popup_exit_intent_enabled"] !== "false");
     setPopupUrl(settings["academy_popup_url"] || "");
+    setCooldownCloseDays(settings["popup_cooldown_close_days"] ?? "7");
+    setCooldownClickDays(settings["popup_cooldown_click_days"] ?? "90");
   }, [settings]);
 
   const saveMutation = useMutation({
@@ -60,12 +64,16 @@ export function PopupSettingsContent() {
       toast({ title: "Selecione ao menos um gatilho", description: "Ative o gatilho por rolagem ou por saída.", variant: "destructive" });
       return;
     }
+    const closeDays = Math.max(0, parseInt(cooldownCloseDays) || 0);
+    const clickDays = Math.max(0, parseInt(cooldownClickDays) || 0);
     saveMutation.mutate({
       popup_enabled: enabled ? "true" : "false",
       popup_scroll_enabled: scrollEnabled ? "true" : "false",
       popup_scroll_percent: String(pct),
       popup_exit_intent_enabled: exitIntentEnabled ? "true" : "false",
       academy_popup_url: popupUrl,
+      popup_cooldown_close_days: String(closeDays),
+      popup_cooldown_click_days: String(clickDays),
     });
   };
 
@@ -145,6 +153,45 @@ export function PopupSettingsContent() {
           placeholder="https://academy.psicometriaonline.com.br/?utm_source=blog&utm_medium=popup"
           data-testid="input-popup-url"
         />
+      </Card>
+
+      <Card className="p-6">
+        <h4 className="font-semibold mb-1">Frequência de exibição</h4>
+        <p className="text-xs text-muted-foreground mb-4">Por quanto tempo o pop-up deixa de aparecer para o mesmo visitante. Use 0 para mostrar sempre. O cooldown persiste mesmo após fechar o navegador.</p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label className="font-medium">Dias até reaparecer após fechar</Label>
+            <p className="text-xs text-muted-foreground mb-2">Quando o visitante fecha o pop-up sem clicar.</p>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={0}
+                value={cooldownCloseDays}
+                onChange={e => setCooldownCloseDays(e.target.value)}
+                className="w-24"
+                data-testid="input-popup-cooldown-close"
+              />
+              <span className="text-sm text-muted-foreground">dias</span>
+            </div>
+          </div>
+
+          <div>
+            <Label className="font-medium">Dias até reaparecer após clicar</Label>
+            <p className="text-xs text-muted-foreground mb-2">Quando o visitante clica no CTA e vai para a Academy.</p>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={0}
+                value={cooldownClickDays}
+                onChange={e => setCooldownClickDays(e.target.value)}
+                className="w-24"
+                data-testid="input-popup-cooldown-click"
+              />
+              <span className="text-sm text-muted-foreground">dias</span>
+            </div>
+          </div>
+        </div>
       </Card>
 
       <Card className="p-6">

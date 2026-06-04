@@ -884,6 +884,31 @@ function recordPopupEvent(type: "impression" | "click", postId?: number) {
   } catch {}
 }
 
+const POPUP_COOLDOWN_KEY = "academy_popup_cooldown_until";
+
+function isPopupOnCooldown(): boolean {
+  try {
+    const raw = localStorage.getItem(POPUP_COOLDOWN_KEY);
+    if (!raw) return false;
+    const until = parseInt(raw, 10);
+    if (!until || Number.isNaN(until)) return false;
+    return Date.now() < until;
+  } catch {
+    return false;
+  }
+}
+
+function setPopupCooldown(days: number) {
+  try {
+    if (days <= 0) {
+      localStorage.removeItem(POPUP_COOLDOWN_KEY);
+      return;
+    }
+    const until = Date.now() + days * 24 * 60 * 60 * 1000;
+    localStorage.setItem(POPUP_COOLDOWN_KEY, String(until));
+  } catch {}
+}
+
 export default function PostPage() {
   const { slug } = useParams<{ slug: string }>();
   const [location] = useLocation();
@@ -906,6 +931,7 @@ export default function PostPage() {
   const forcePopup = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("popup");
   const [popupOpen, setPopupOpen] = useState(false);
   const popupHandledRef = useRef(false);
+  const popupClickedRef = useRef(false);
 
   const { data: siteSettings } = useQuery<Record<string, string>>({
     queryKey: ["/api/settings"],
@@ -915,6 +941,8 @@ export default function PostPage() {
   const popupScrollEnabled = siteSettings?.popup_scroll_enabled !== "false";
   const popupExitIntentEnabled = siteSettings?.popup_exit_intent_enabled !== "false";
   const popupScrollPercent = Math.min(100, Math.max(1, parseInt(siteSettings?.popup_scroll_percent || "50") || 50)) / 100;
+  const popupCooldownCloseDays = Math.max(0, parseInt(siteSettings?.popup_cooldown_close_days ?? "7") || 0);
+  const popupCooldownClickDays = Math.max(0, parseInt(siteSettings?.popup_cooldown_click_days ?? "90") || 0);
 
   const apiPath = isPreview ? `/api/admin/posts/slug/${slug}` : `/api/posts/slug/${slug}`;
 
@@ -955,13 +983,12 @@ export default function PostPage() {
     if (!siteSettings || !popupEnabled) return;
     if (!popupScrollEnabled && !popupExitIntentEnabled) return;
 
-    const SESSION_KEY = "academy_popup_shown";
-    if (sessionStorage.getItem(SESSION_KEY)) return;
+    if (isPopupOnCooldown()) return;
 
     const trigger = () => {
       if (popupHandledRef.current) return;
       popupHandledRef.current = true;
-      sessionStorage.setItem(SESSION_KEY, "1");
+      popupClickedRef.current = false;
       recordPopupEvent("impression", post.id);
       setPopupOpen(true);
       cleanup();
@@ -991,7 +1018,7 @@ export default function PostPage() {
     if (popupExitIntentEnabled && canHover) document.addEventListener("mouseout", onMouseOut);
 
     return cleanup;
-  }, [post?.id, isPreview, forcePopup, siteSettings, popupEnabled, popupScrollEnabled, popupExitIntentEnabled, popupScrollPercent]);
+  }, [post?.id, isPreview, forcePopup, siteSettings, popupEnabled, popupScrollEnabled, popupExitIntentEnabled, popupScrollPercent, popupCooldownCloseDays, popupCooldownClickDays]);
 
   useEffect(() => {
     if (!post || isPreview) return;
@@ -1254,10 +1281,17 @@ export default function PostPage() {
 
       <PostPopup
         open={popupOpen}
-        onClose={() => setPopupOpen(false)}
+        onClose={() => {
+          if (!forcePopup && !popupClickedRef.current) setPopupCooldown(popupCooldownCloseDays);
+          setPopupOpen(false);
+        }}
         topic={primaryCategory?.name}
         academyUrl={academyPopupUrl}
-        onLinkClick={() => recordPopupEvent("click", post.id)}
+        onLinkClick={() => {
+          popupClickedRef.current = true;
+          recordPopupEvent("click", post.id);
+          if (!forcePopup) setPopupCooldown(popupCooldownClickDays);
+        }}
       />
 
       {user && (

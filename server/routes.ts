@@ -200,6 +200,14 @@ async function seedDefaultSettings() {
     if (popupExitIntentEnabled === undefined) {
       await storage.setSetting("popup_exit_intent_enabled", "true");
     }
+    const popupCooldownClose = await storage.getSetting("popup_cooldown_close_days");
+    if (popupCooldownClose === undefined) {
+      await storage.setSetting("popup_cooldown_close_days", "7");
+    }
+    const popupCooldownClick = await storage.getSetting("popup_cooldown_click_days");
+    if (popupCooldownClick === undefined) {
+      await storage.setSetting("popup_cooldown_click_days", "90");
+    }
     await getOrCreateIndexNowKey();
   } catch (err) {
     console.error("Seed default settings error:", err);
