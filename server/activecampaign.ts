@@ -60,7 +60,7 @@ function isDuplicateError(error: any): boolean {
 async function resolveListId(config: { baseUrl: string; token: string }): Promise<string | null> {
   if (cachedListId) return cachedListId;
   const data = await acFetch(config, `/lists?filters[name]=${encodeURIComponent(LIST_NAME)}`);
-  const list = (data?.lists || []).find((l: any) => l.name === LIST_NAME) || data?.lists?.[0];
+  const list = (data?.lists || []).find((l: any) => l.name === LIST_NAME);
   if (list?.id) {
     cachedListId = String(list.id);
     return cachedListId;
