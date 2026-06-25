@@ -38,9 +38,23 @@ async function acFetch(
   }
   if (!res.ok) {
     const detail = json?.errors?.[0]?.title || json?.message || text || res.statusText;
-    throw new Error(`ActiveCampaign ${res.status}: ${detail}`);
+    const err: any = new Error(`ActiveCampaign ${res.status}: ${detail}`);
+    err.status = res.status;
+    err.detail = String(detail);
+    throw err;
   }
   return json;
+}
+
+function isDuplicateError(error: any): boolean {
+  const status = error?.status;
+  const detail = String(error?.detail || error?.message || "").toLowerCase();
+  return (
+    status === 422 &&
+    (detail.includes("duplicate") ||
+      detail.includes("already") ||
+      detail.includes("exist"))
+  );
 }
 
 async function resolveListId(config: { baseUrl: string; token: string }): Promise<string | null> {
@@ -102,22 +116,32 @@ export async function syncLead(params: { name?: string; email: string }): Promis
   }
 
   const listId = await resolveListId(config);
-  if (listId) {
+  if (!listId) {
+    throw new Error(`ActiveCampaign: lista "${LIST_NAME}" não encontrada.`);
+  }
+  try {
     await acFetch(config, `/contactLists`, {
       method: "POST",
       body: JSON.stringify({
         contactList: { list: listId, contact: contactId, status: 1 },
       }),
     });
+  } catch (error) {
+    if (!isDuplicateError(error)) throw error;
   }
 
   const tagId = await resolveTagId(config);
-  if (tagId) {
+  if (!tagId) {
+    throw new Error(`ActiveCampaign: tag "${TAG_NAME}" não pôde ser resolvida.`);
+  }
+  try {
     await acFetch(config, `/contactTags`, {
       method: "POST",
       body: JSON.stringify({
         contactTag: { contact: contactId, tag: tagId },
       }),
     });
+  } catch (error) {
+    if (!isDuplicateError(error)) throw error;
   }
 }

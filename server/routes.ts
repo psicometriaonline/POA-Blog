@@ -930,16 +930,31 @@ export async function registerRoutes(
     }
   });
 
+  const heroLeadHits = new Map<string, number[]>();
+  const HERO_LEAD_WINDOW_MS = 60_000;
+  const HERO_LEAD_MAX = 5;
   app.post("/api/hero-lead", async (req, res) => {
     try {
+      const ip = (req.ip || req.socket.remoteAddress || "unknown").toString();
+      const now = Date.now();
+      const recent = (heroLeadHits.get(ip) || []).filter((t) => now - t < HERO_LEAD_WINDOW_MS);
+      if (recent.length >= HERO_LEAD_MAX) {
+        return res.status(429).json({ message: "Muitas tentativas. Aguarde um instante e tente novamente." });
+      }
+      recent.push(now);
+      heroLeadHits.set(ip, recent);
+
       const { name, email } = req.body || {};
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      const safeName = typeof name === "string" ? name.trim().slice(0, 200) : "";
+      if (safeName.length < 2) {
+        return res.status(400).json({ message: "Informe seu nome." });
+      }
+      if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
         return res.status(400).json({ message: "E-mail inválido" });
       }
       if (!isActiveCampaignConfigured()) {
         return res.status(503).json({ message: "Cadastro temporariamente indisponível. Tente novamente mais tarde." });
       }
-      const safeName = typeof name === "string" ? name.trim().slice(0, 200) : undefined;
       const safeEmail = email.trim().slice(0, 320);
       await syncLead({ name: safeName, email: safeEmail });
       res.json({ message: "Cadastro realizado com sucesso!" });

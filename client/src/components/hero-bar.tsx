@@ -41,16 +41,21 @@ export function HeroBar({ showHeadline = true, settings = {} }: { showHeadline?:
   const onSubmit = async (values: LeadForm) => {
     setSubmitError("");
     try {
-      const res = await apiRequest("POST", "/api/hero-lead", values);
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Não foi possível concluir o cadastro.");
-      }
+      await apiRequest("POST", "/api/hero-lead", values);
       trackEvent("Lead", { content_name: "Hero Form" });
       form.reset();
       setSuccessOpen(true);
     } catch (err: any) {
-      setSubmitError(err?.message || "Não foi possível concluir o cadastro. Tente novamente.");
+      const raw = err?.message || "";
+      const body = raw.replace(/^\d+:\s*/, "");
+      let message = "Não foi possível concluir o cadastro. Tente novamente.";
+      try {
+        const parsed = JSON.parse(body);
+        if (parsed?.message) message = parsed.message;
+      } catch {
+        if (body) message = body;
+      }
+      setSubmitError(message);
     }
   };
 
