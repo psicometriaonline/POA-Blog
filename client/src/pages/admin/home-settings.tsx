@@ -188,6 +188,7 @@ function HeroSettingsTab({ settings }: { settings: Record<string, string> }) {
   const [heroHeadlineHtml, setHeroHeadlineHtml] = useState("");
   const [heroSubheadline, setHeroSubheadline] = useState("");
   const [heroFormEnabled, setHeroFormEnabled] = useState(true);
+  const [heroMode, setHeroMode] = useState("form");
   const [heroFormCtaText, setHeroFormCtaText] = useState("");
   const [heroButtonText, setHeroButtonText] = useState("");
   const [heroButtonColor, setHeroButtonColor] = useState("#31D5FF");
@@ -198,6 +199,7 @@ function HeroSettingsTab({ settings }: { settings: Record<string, string> }) {
     setHeroHeadlineHtml(settings["hero_headline_html"] || 'O seu <span style="color:#31D5FF;font-weight:bold">Blog</span> de Psicometria');
     setHeroSubheadline(settings["hero_subheadline"] || "Recursos de aprendizagem em psicometria e análises quantitativas");
     setHeroFormEnabled(settings["hero_form_enabled"] !== "false");
+    setHeroMode(settings["hero_mode"] || "form");
     setHeroFormCtaText(settings["hero_form_cta_text"] || 'Cadastre-se gratuitamente na Psicometria Online Academy e tenha acesso a todos os nossos cursos, recursos e ferramentas estatísticas');
     setHeroButtonText(settings["hero_button_text"] || "Fazer cadastro agora");
     setHeroButtonColor(settings["hero_button_color"] || "#31D5FF");
@@ -263,6 +265,24 @@ function HeroSettingsTab({ settings }: { settings: Record<string, string> }) {
 
         {heroFormEnabled && (
           <div className="space-y-4 pl-4 border-l-2 border-muted">
+            <div className="max-w-xs">
+              <Label htmlFor="hero-mode">Tipo de cabeçalho</Label>
+              <Select value={heroMode} onValueChange={setHeroMode}>
+                <SelectTrigger id="hero-mode" data-testid="select-hero-mode">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="form">Formulário de cadastro (Nome + E-mail)</SelectItem>
+                  <SelectItem value="cta">Botão CTA (link externo)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {heroMode === "form"
+                  ? "Captura leads diretamente no ActiveCampaign (lista Leads, tag Leads - Blog)."
+                  : "Mostra um botão que leva a um link externo."}
+              </p>
+            </div>
+
             <div>
               <Label htmlFor="hero-form-cta">Texto do CTA (HTML)</Label>
               <Textarea
@@ -275,15 +295,17 @@ function HeroSettingsTab({ settings }: { settings: Record<string, string> }) {
               />
             </div>
 
-            <div>
-              <Label htmlFor="hero-button-url">URL do botão</Label>
-              <Input id="hero-button-url" value={heroButtonUrl} onChange={(e) => setHeroButtonUrl(e.target.value)} data-testid="input-hero-button-url" placeholder="https://academy.psicometriaonline.com.br" />
-              <p className="text-xs text-muted-foreground mt-1">Link externo que abre em nova aba ao clicar no botão.</p>
-            </div>
+            {heroMode !== "form" && (
+              <div>
+                <Label htmlFor="hero-button-url">URL do botão</Label>
+                <Input id="hero-button-url" value={heroButtonUrl} onChange={(e) => setHeroButtonUrl(e.target.value)} data-testid="input-hero-button-url" placeholder="https://academy.psicometriaonline.com.br" />
+                <p className="text-xs text-muted-foreground mt-1">Link externo que abre em nova aba ao clicar no botão.</p>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="hero-button-text">Texto do botão</Label>
+                <Label htmlFor="hero-button-text">{heroMode === "form" ? "Texto do botão de envio" : "Texto do botão"}</Label>
                 <Input id="hero-button-text" value={heroButtonText} onChange={(e) => setHeroButtonText(e.target.value)} data-testid="input-hero-button-text" />
               </div>
               <div>
@@ -313,6 +335,7 @@ function HeroSettingsTab({ settings }: { settings: Record<string, string> }) {
           hero_headline_html: heroHeadlineHtml,
           hero_subheadline: heroSubheadline,
           hero_form_enabled: String(heroFormEnabled),
+          hero_mode: heroMode,
           hero_form_cta_text: heroFormCtaText,
           hero_button_text: heroButtonText,
           hero_button_color: heroButtonColor,

@@ -8,6 +8,7 @@ import { crawlMultipleUrls } from "./crawler";
 import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integrations/auth";
 import { registerLlmsRoutes } from "./llms";
 import { getOrCreateIndexNowKey, notifySearchEngines } from "./indexnow";
+import { syncLead, isActiveCampaignConfigured } from "./activecampaign";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -926,6 +927,25 @@ export async function registerRoutes(
       res.json({ ok: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/hero-lead", async (req, res) => {
+    try {
+      const { name, email } = req.body || {};
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ message: "E-mail inválido" });
+      }
+      if (!isActiveCampaignConfigured()) {
+        return res.status(503).json({ message: "Cadastro temporariamente indisponível. Tente novamente mais tarde." });
+      }
+      const safeName = typeof name === "string" ? name.trim().slice(0, 200) : undefined;
+      const safeEmail = email.trim().slice(0, 320);
+      await syncLead({ name: safeName, email: safeEmail });
+      res.json({ message: "Cadastro realizado com sucesso!" });
+    } catch (error: any) {
+      console.error("Hero lead error:", error?.message || error);
+      res.status(502).json({ message: "Não foi possível concluir o cadastro. Tente novamente." });
     }
   });
 
