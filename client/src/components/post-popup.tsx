@@ -73,7 +73,7 @@ export default function PostPopup({ open, onClose, topic, academyUrl, onLinkClic
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#2563eb] px-7 py-3 text-base font-bold text-white shadow-md transition-colors hover:bg-[#1d4fd7]"
             data-testid="button-popup-cta"
           >
-            Cadastre-se gratuitamente
+            Conheça a formação
             <ArrowRight className="h-5 w-5" />
           </span>
         </div>
