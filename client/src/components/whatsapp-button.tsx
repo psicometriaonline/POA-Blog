@@ -1,7 +1,7 @@
 import { SiWhatsapp } from "react-icons/si";
 import { trackEvent } from "@/lib/meta-pixel";
 
-const WHATSAPP_NUMBER = "5583991575688";
+const WHATSAPP_NUMBER = "5583991771120";
 const WHATSAPP_MESSAGE = encodeURIComponent(
   "Olá, pessoal! Estou no blog da Psicometria Online e gostaria de mais informações sobre a formação."
 );
