@@ -1,0 +1,24 @@
+Recebi um git bundle (blog-fase1-2.bundle) com as Fases 1 e 2 do mecanismo de geração de posts, feito sobre a main atual (commit 690f249). Aplique-o localmente — não precisa de pull/push nem npm install (o provider de LLM usa fetch, sem dependência nova).
+
+1. Aplicar o bundle (com a working tree limpa, na branch main):
+
+git bundle verify blog-fase1-2.bundle          # deve dizer "okay" e exigir o 690f249
+git fetch blog-fase1-2.bundle 'claude/psicometria-post-generation-port-1kjjj0'
+git merge --ff-only FETCH_HEAD                 # fast-forward, sem conflito
+Se a main tiver avançado e o --ff-only recusar, use git merge FETCH_HEAD (as mudanças são quase todas arquivos novos + edições aditivas; conflito improvável).
+
+2. O que entra (10 arquivos): server/blog/llm.ts, citations.ts, blog-generator.ts, blog-posts.ts, daily-generator.ts, preview-post.ts, generate-posts.ts, edições aditivas em keyword-queue.ts e seo-html.ts, e o README.md. Gera um post denso por cluster, sempre como rascunho (nunca publica): esboço → expansão (aula em R + FAQ) → revisor Opus 4.8 → gate de citações por DOI (Crossref/OpenAlex) → anti-canibalização Camada 2 → rascunho no CMS.
+
+3. Variáveis de ambiente (as principais você já tem): ANTHROPIC_API_KEY (escritor Sonnet 5 / revisor Opus 4.8) e BLOG_EMBEDDING_PROVIDER/BLOG_EMBEDDING_API_KEY (Camada 2). Opcionais: BLOG_MAX_POSTS_DIA (default 3), BLOG_MODEL_ESCRITOR/BLOG_MODEL_REVISOR, BLOG_CROSSREF_MAILTO.
+
+4. Texto de abertura das pillars (páginas de categoria), rode uma vez:
+
+UPDATE categories SET description='Construir e validar um instrumento de medida é o coração da psicometria aplicada. Este eixo reúne o passo a passo das evidências de validade (conteúdo, estrutura interna, critério e relação com outras variáveis) e da confiabilidade, com foco em como calcular, interpretar e reportar cada indicador em pesquisa com humanos.' WHERE slug='psicometria';
+UPDATE categories SET description='Da estrutura latente de um teste a um modelo teórico completo: este eixo cobre a análise fatorial exploratória (AFE), a confirmatória (AFC) e a modelagem por equações estruturais (MEE), com ênfase em decidir o número de fatores, avaliar o ajuste do modelo, testar invariância de medida e interpretar e reportar cada resultado em R.' WHERE slug='analise-fatorial';
+5. Validar (nada é publicado):
+
+tsx server/blog/preview-post.ts --eixo 1       # gera+revisa+cita e IMPRIME, sem salvar
+tsx server/blog/generate-posts.ts --once       # cria 1 rascunho de verdade
+Depois abra o rascunho no /admin e confira tom, profundidade, o exemplo em R, as citações (devem estar resolvidas por DOI) e a FAQ (deve aparecer como H2 dentro do texto, não como card separado).
+
+Me devolva: se o merge aplicou limpo, e um print do post gerado pelo --once (ou do preview) para eu avaliar a qualidade.
