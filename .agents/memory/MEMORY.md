@@ -1,0 +1,1 @@
+- [Long jobs in the agent sandbox](sandbox-long-jobs.md) — bash kills background procs and caps at 120s; use resumable chunk scripts with state files in .local/tmp/.

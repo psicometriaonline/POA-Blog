@@ -8,6 +8,7 @@
 import type { Eixo, Seed } from "@shared/blog/seeds";
 import { minerarTermo, type Lang, type SugestaoMinerada } from "./keyword-research";
 import { isRelevante } from "./keyword-filter";
+import { filtrarSemanticamente } from "./semantic-filter";
 
 const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -60,10 +61,12 @@ export async function minerarEixo(
       }
       if (delayMs > 0) await dormir(delayMs);
     }
-    const sugestoes = Array.from(porNorm.values())
+    const lexicais = Array.from(porNorm.values())
       .filter((s) => isRelevante(s.query))
       .sort((a, b) => b.score - a.score);
-    clusters.push({ subcategoria: seed.conceito, priority: seed.priority, sugestoes });
+    // Filtro semantico (inerte sem provider de embeddings configurado).
+    const { mantidas } = await filtrarSemanticamente(lexicais, seed.conceito);
+    clusters.push({ subcategoria: seed.conceito, priority: seed.priority, sugestoes: mantidas });
   }
 
   return clusters;
