@@ -78,17 +78,42 @@ Google — por isso a mineração e o banco rodam no Replit. Ordem:
 | `DATABASE_URL` | já existe | Postgres do CMS |
 | `BLOG_EMBEDDING_PROVIDER` / `BLOG_EMBEDDING_API_KEY` | Fase 0 (Camada 2) | embeddings da anti-canibalização semântica |
 | `ANTHROPIC_API_KEY` | Fase 1 | gerador (Sonnet 5) + revisor (Opus 4.8) |
+| `BLOG_MODEL_ESCRITOR` / `BLOG_MODEL_REVISOR` | Fase 1 (opcional) | override dos modelos (default sonnet-5 / opus-4-8) |
+| `BLOG_MAX_POSTS_DIA` | Fase 1 (opcional) | cap de rascunhos por dia (default 3) |
+| `BLOG_CROSSREF_MAILTO` | Fase 1 (opcional) | e-mail de cortesia para Crossref/OpenAlex |
 | `BLOG_CRON_TOKEN` | Fase 3 | proteção do endpoint interno do despertador |
 
-## Próximas fases (ainda não implementadas)
+## Fase 1 — geração ancorada em rascunho (implementada)
 
-- **Fase 1** — geração ancorada em **rascunho** + revisor estatístico (Sonnet 5 /
-  Opus 4.8), com o gate determinístico de verificação de citações por DOI
-  (Crossref/OpenAlex) e a Camada 2 no checkpoint pré-publicação. Prompts em
-  `PROMPTS.md` (B/C/D/E).
+Gera **um post denso por cluster** (a busca mais forte vira H1; as irmãs viram H2 e
+FAQ; o cluster inteiro é consumido de uma vez — a redundância de fraseado da fila
+não vira posts redundantes). Nunca publica: cria **rascunho** para revisão humana.
+
+| Arquivo | Papel |
+|---|---|
+| `llm.ts` | Provider Anthropic via fetch (Sonnet 5 escritor / Opus 4.8 revisor). |
+| `blog-generator.ts` | Regras do escritor/revisor (domínio estatístico) + esboço→expansão, revisão com barreira determinística, correção. |
+| `citations.ts` | Gate determinístico de citações por DOI (Crossref/OpenAlex, resolve-ou-remove). |
+| `blog-posts.ts` | `persistGeneratedPost` → rascunho no CMS (content HTML, `faq`, categoria, tag do cluster, `target_query`). |
+| `daily-generator.ts` | Pipeline por cluster + `blog_daily_runs`; `gerarRevisarCitar` (sem persistir). |
+| `preview-post.ts` | **CLI**: gera+revisa+cita e imprime **sem salvar** (calibração). |
+| `generate-posts.ts` | **CLI**: geração real, cria rascunhos até o cap diário. |
+
+Rodar no Replit (precisa `ANTHROPIC_API_KEY`; a Camada 2 usa `BLOG_EMBEDDING_*`):
+```sh
+# calibrar a olho, sem salvar nada
+tsx server/blog/preview-post.ts --eixo 1
+# gerar rascunhos de verdade (revise no /admin antes de publicar)
+tsx server/blog/generate-posts.ts --once     # um cluster
+tsx server/blog/generate-posts.ts            # até o cap diário
+```
+
+## Próximas fases
+
 - **Fase 2** — SEO: o CMS já emite JSON-LD (BlogPosting/Breadcrumb/FAQPage),
   sitemap, robots, IndexNow e llms.txt; falta sobretudo **pillar page por eixo**
   e linkagem por cluster.
-- **Fase 3** — cadência + despertador (cron do stack batendo num endpoint
-  interno protegido por `BLOG_CRON_TOKEN`), ainda em rascunho.
+- **Fase 3** — cadência + despertador: endpoint interno `/generate-next`
+  protegido por `BLOG_CRON_TOKEN` (chama `rodarProximaGeracao`) + cron do stack.
+  A lógica já existe em `daily-generator.ts`; falta só expor a rota.
 - **Virada de chave** — publicação automática só depois de validado (Seção 7).
