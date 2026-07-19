@@ -43,13 +43,22 @@ const TOKENS_BLOQUEADOS = new Set<string>([
   "python",
   "acoes", "bolsa", "bitcoin", "cripto", "criptomoedas", "forex", "trading",
   "engenharia", "industria", "industrial", "marketing", "vendas",
+  // Homonimos de sigla fora de escopo observados na mineracao (IVC catolico/
+  // geriatrico, etc.). A causa-raiz (minerar sigla nua) foi tratada no
+  // mine-runner; estes tokens limpam o que ja entrou na fila.
+  "igreja", "catequese", "orante", "ivcf", "ivcam", "ivcad", "ivcc", "cvco",
 ]);
 
 // Trechos (substring na versao normalizada) que denunciam ruido/off-topic.
 const TRECHOS_BLOQUEADOS = [
-  // Espanhol multi-palavra.
+  // Espanhol multi-palavra (inclui "en <software>" e verbos espanhois soltos
+  // que vazaram do hl=pt-BR: "como hacer alfa ... en spss", "porque se llama").
   "que es el", "que es la", "en espana", "en argentina", "en mexico",
   "en colombia", "en chile", "en peru", "para que sirve el",
+  "como hacer", "como hallar", "se llama", "en spss", "en excel", "en jamovi",
+  "en jasp", "en stata", "en amos", " en r", " en el ",
+  // Homonimo religioso (IVC catolico).
+  "na igreja", "leitura orante",
   // Entretenimento.
   "quem matou", "novela das", "para colorir",
   // Fora de escopo (recorte academico de humanas/sociais/saude).
@@ -64,6 +73,46 @@ const TRECHOS_BLOQUEADOS = [
 // Cohen", "Q de Cochran", "W de Kendall"). O piso de 8 caracteres ja elimina a
 // sopa curta ("kmo w"); o resto fica a cargo da curadoria das sementes.
 const REGEX_SO_LETRA = /^[a-z0-9 ]{0,4}$/; // curta demais / sem conteudo
+
+// Vocabulario do nicho (pt+en), usado como trava contra homonimos quando a
+// mineracao parte de uma SIGLA ambigua (Secao 5.5: "a sugestao precisa conter a
+// raiz da semente E/OU um termo do vocabulario do nicho"). NAO inclui siglas
+// ambiguas (IVC/CVR/CVC) de proposito — sao elas que precisam da trava; inclui
+// siglas de metodo inequivocas (KMO, AFC, RMSEA...).
+const VOCAB_NICHO = new Set<string>([
+  "validade", "validity", "valido", "valida",
+  "confiabilidade", "fidedignidade", "reliability", "reliable",
+  "consistencia", "consistency", "homogeneidade",
+  "fator", "fatores", "fatorial", "factor", "factorial",
+  "escala", "escalas", "scale", "likert",
+  "item", "itens", "items",
+  "teste", "reteste", "test", "retest",
+  "questionario", "questionnaire", "instrumento", "instrument",
+  "psicometria", "psicometrico", "psychometric",
+  "correlacao", "correlation",
+  "cronbach", "omega", "alfa", "alpha", "kr20", "kuder",
+  "conteudo", "content",
+  "convergente", "convergent", "discriminante", "discriminant",
+  "criterio", "criterion", "concorrente", "concurrent", "preditiva", "predictive",
+  "construto", "construct",
+  "amostra", "amostral", "sample",
+  "spss", "jamovi", "jasp", "mplus", "lavaan", "amos", "stata", "winsteps", "factor",
+  "afe", "afc", "acp", "pca", "efa", "cfa", "sem", "mee",
+  "kmo", "bartlett", "rmsea", "cfi", "tli", "srmr",
+  "esfericidade", "sphericity",
+  "rotacao", "rotation", "carga", "cargas", "loading", "loadings",
+  "variancia", "variance", "comunalidade", "communality",
+  "invariancia", "invariance", "medida", "measurement", "mensuracao",
+  "latente", "latent", "estrutura", "structure", "interna", "internal",
+  "adaptacao", "transcultural", "traducao", "translation", "retrotraducao",
+]);
+
+// true se a busca contem ao menos um termo do vocabulario do nicho.
+export function contemVocabNicho(query: string): boolean {
+  const n = normalizar(query);
+  if (!n) return false;
+  return n.split(" ").some((t) => VOCAB_NICHO.has(t));
+}
 
 // Decide se uma busca minerada e um bom tema para o blog.
 export function isRelevante(query: string): boolean {

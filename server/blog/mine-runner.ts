@@ -7,13 +7,21 @@
 
 import type { Eixo, Seed } from "@shared/blog/seeds";
 import { minerarTermo, type Lang, type SugestaoMinerada } from "./keyword-research";
-import { isRelevante } from "./keyword-filter";
+import { isRelevante, contemVocabNicho } from "./keyword-filter";
 
 const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Um termo a minerar. `acronym` marca a sigla nua: suas sugestoes passam por uma
+// trava de vocabulario do nicho (contra homonimos como IVC catolico/geriatrico).
+export interface TermoConsulta {
+  term: string;
+  lang: Lang;
+  acronym: boolean;
+}
+
 // Expande uma semente nos termos que serao efetivamente minerados.
-export function termosDaSemente(seed: Seed, langs: Lang[]): { term: string; lang: Lang }[] {
-  const out: { term: string; lang: Lang }[] = [];
+export function termosDaSemente(seed: Seed, langs: Lang[]): TermoConsulta[] {
+  const out: TermoConsulta[] = [];
   const paren = seed.conceito.match(/\(([^)]+)\)/);
   const base = seed.conceito
     .replace(/\s*\([^)]*\)\s*/g, " ")
@@ -21,15 +29,17 @@ export function termosDaSemente(seed: Seed, langs: Lang[]): { term: string; lang
     .trim();
 
   if (langs.includes("pt")) {
-    out.push({ term: base, lang: "pt" });
-    // Sigla curta e util (AFE, IVC, KMO, AFC, MEE...) tambem e minerada em pt.
+    out.push({ term: base, lang: "pt", acronym: false });
+    // Sigla curta (AFE, KMO, AFC, MEE...) tambem e minerada, mas travada pelo
+    // vocabulario do nicho na agregacao (siglas ambiguas como IVC so passam se a
+    // sugestao trouxer um termo do dominio).
     if (paren) {
       const acr = paren[1].trim();
-      if (/^[A-Za-z0-9.-]{2,10}$/.test(acr)) out.push({ term: acr, lang: "pt" });
+      if (/^[A-Za-z0-9.-]{2,10}$/.test(acr)) out.push({ term: acr, lang: "pt", acronym: true });
     }
   }
   if (langs.includes("en")) {
-    for (const t of seed.termosEn ?? []) out.push({ term: t, lang: "en" });
+    for (const t of seed.termosEn ?? []) out.push({ term: t, lang: "en", acronym: false });
   }
   return out;
 }
@@ -51,8 +61,11 @@ export async function minerarEixo(
 
   for (const seed of eixo.sementes) {
     const porNorm = new Map<string, SugestaoMinerada>();
-    for (const { term, lang } of termosDaSemente(seed, langs)) {
-      const sugestoes = await minerarTermo(term, lang, { delayMs });
+    for (const { term, lang, acronym } of termosDaSemente(seed, langs)) {
+      let sugestoes = await minerarTermo(term, lang, { delayMs });
+      // Sigla nua: so aceita sugestoes que tragam um termo do vocabulario do
+      // nicho (evita "ivc na igreja", "ivc na medicina", "ivcf 20"...).
+      if (acronym) sugestoes = sugestoes.filter((s) => contemVocabNicho(s.query));
       for (const s of sugestoes) {
         const existente = porNorm.get(s.queryNormalized);
         if (existente) existente.score += s.score;
