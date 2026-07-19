@@ -59,7 +59,10 @@ const TRECHOS_BLOQUEADOS = [
 ];
 
 // Sopa de letrinhas / vazio (SEM cortar por ano — anos/versoes importam aqui).
-const REGEX_LETRA_FINAL = /\s[a-z]$/; // sobra "invariancia w"
+// NAO cortamos por letra final unica: neste dominio uma letra sozinha no fim
+// costuma ser um metodo real (R a linguagem, "teste t", "escore z", "d de
+// Cohen", "Q de Cochran", "W de Kendall"). O piso de 8 caracteres ja elimina a
+// sopa curta ("kmo w"); o resto fica a cargo da curadoria das sementes.
 const REGEX_SO_LETRA = /^[a-z0-9 ]{0,4}$/; // curta demais / sem conteudo
 
 // Decide se uma busca minerada e um bom tema para o blog.
@@ -71,7 +74,6 @@ export function isRelevante(query: string): boolean {
 export function motivoIrrelevante(query: string): string | null {
   const n = normalizar(query);
   if (!n || n.length < 8) return "curta demais";
-  if (REGEX_LETRA_FINAL.test(n)) return "sobra de sopa de letrinhas";
   if (REGEX_SO_LETRA.test(n)) return "sem conteudo";
   for (const p of n.split(" ")) {
     if (TOKENS_BLOQUEADOS.has(p)) return `token bloqueado: ${p}`;
