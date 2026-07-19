@@ -11,3 +11,9 @@ id = "QVfSzlTdMZKsi49Em3OFS"
 uri = "file://client/public/favicon.webp"
 type = "image"
 title = "No stock image needed"
+
+[[outputs]]
+id = "P7cvfFZWxdrbWfWT5N7Jc"
+uri = "file://exports/fila-eixo1.md"
+type = "text"
+title = "Fila do Eixo 1 — 448 perguntas + buscas já cobertas"
