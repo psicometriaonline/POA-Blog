@@ -159,6 +159,59 @@ export async function marcarComoDescartada(id: number, motivo?: string): Promise
     .where(eq(blogKeywordQueue.id, id));
 }
 
+// ---- Consolidacao por cluster (Fase 1) ----
+// O post e por CLUSTER (subcategoria), nao por busca: o alvo e a busca mais
+// forte; as irmas viram H2/FAQ; e o cluster inteiro e consumido de uma vez.
+// Assim nao se gera um segundo post do mesmo conceito (a redundancia da fila
+// vira UM post denso, nao 40 rasos).
+
+// Proxima busca-alvo pendente do eixo (a mais forte por priority > score).
+export async function proximoAlvo(macro: string): Promise<BlogKeywordQueue | null> {
+  const [alvo] = await proximasPendentes(macro, 1);
+  return alvo ?? null;
+}
+
+// Todas as buscas pendentes do mesmo cluster (subcategoria) do eixo. Se a
+// subcategoria for nula, o cluster e so a propria linha-alvo.
+export async function linhasDoCluster(
+  macro: string,
+  subcategoria: string | null,
+  alvoId: number,
+): Promise<BlogKeywordQueue[]> {
+  if (!subcategoria) {
+    const [linha] = await db.select().from(blogKeywordQueue).where(eq(blogKeywordQueue.id, alvoId));
+    return linha ? [linha] : [];
+  }
+  return db
+    .select()
+    .from(blogKeywordQueue)
+    .where(
+      and(
+        eq(blogKeywordQueue.macro, macro),
+        eq(blogKeywordQueue.subcategoria, subcategoria),
+        eq(blogKeywordQueue.status, "pending"),
+      ),
+    );
+}
+
+// Marca o cluster inteiro como usado (ligado ao post gerado).
+export async function marcarClusterUsado(ids: number[], postId: number): Promise<void> {
+  if (ids.length === 0) return;
+  await db
+    .update(blogKeywordQueue)
+    .set({ status: "used", usedPostId: postId, usedAt: new Date() })
+    .where(inArray(blogKeywordQueue.id, ids));
+}
+
+// Marca o cluster inteiro como descartado, com motivo (canibalizacao, reprovado...).
+export async function marcarClusterDescartado(ids: number[], motivo: string): Promise<void> {
+  if (ids.length === 0) return;
+  await db
+    .update(blogKeywordQueue)
+    .set({ status: "skipped", skipReason: motivo, usedAt: new Date() })
+    .where(inArray(blogKeywordQueue.id, ids));
+}
+
 // Varre a fila pendente e descarta o que o filtro recusa (limpeza de uma vez).
 export async function limparFilaIrrelevante(): Promise<{ analisadas: number; descartadas: number }> {
   const pendentes = await db
