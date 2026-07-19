@@ -1,7 +1,34 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, primaryKey, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, primaryKey, index, customType } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Dimensao do vetor de embedding usado na anti-canibalizacao semantica
+// (Secao 5.8 do mapa, Camada 2). 1024 corresponde aos modelos multilingues da
+// Voyage (voyage-3 / voyage-multilingual-2) e da Cohere (embed-multilingual-v3),
+// adequados ao corpus academico pt-BR + termos em ingles. O provider escolhido
+// (server/blog/embeddings.ts) DEVE emitir vetores desta dimensao; trocar de
+// dimensao exige recriar a coluna vetorial.
+export const EMBEDDING_DIM = 1024;
+
+// Tipo pgvector para o Drizzle. Requer a extensao "vector" habilitada no
+// Postgres (a migracao aditiva a habilita). Serializa number[] -> "[a,b,c]".
+const vector = (name: string, dim: number) =>
+  customType<{ data: number[]; driverData: string }>({
+    dataType() {
+      return `vector(${dim})`;
+    },
+    toDriver(value: number[]): string {
+      return `[${value.join(",")}]`;
+    },
+    fromDriver(value: string): number[] {
+      return value
+        .slice(1, -1)
+        .split(",")
+        .filter((s) => s.length > 0)
+        .map(Number);
+    },
+  })(name);
 
 export { users, sessions } from "./models/auth";
 export type { User, UpsertUser } from "./models/auth";
@@ -43,6 +70,10 @@ export const posts = pgTable("posts", {
   metaDescription: text("meta_description"),
   focusKeyword: text("focus_keyword"),
   faq: text("faq"),
+  // Busca real do Google que ancorou o post (mecanismo de geracao da Fase 1).
+  // Nulo nos 500+ posts manuais e no fluxo classico. Serve para dedup por
+  // intencao de busca (anti-canibalizacao) e para metricas de conversao.
+  targetQuery: text("target_query"),
   publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -307,3 +338,89 @@ export type PostWithRelations = Post & {
   tags: Tag[];
   author?: Author | null;
 };
+
+// ============================================================
+// Mecanismo de geracao de posts ancorados em busca real (port dos sites
+// irmaos, adaptado ao dominio de Psicometria/Estatistica/Analise de Dados).
+// Todas as tabelas abaixo sao ADITIVAS e isoladas: nada no fluxo atual do CMS
+// le ou escreve nelas ate a Fase 1 conectar o gerador. Ver MIGRACAO-PSICOMETRIA.
+// ============================================================
+
+// Fila de palavras-chave/perguntas mineradas do Google Autocomplete (Fase 0).
+// Cada linha e uma busca real que vira tema de post. Idempotente por
+// queryNormalized (unico): re-minerar so soma score, nao duplica.
+export const blogKeywordQueue = pgTable("blog_keyword_queue", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  // A sugestao real do Google, como veio (ex.: "como interpretar o alfa de cronbach").
+  query: text("query").notNull(),
+  // Normalizada (sem acento, minuscula, espacos colapsados) para dedup. Unica.
+  queryNormalized: text("query_normalized").notNull().unique(),
+  // Eixo tematico (vira a pillar page e mapeia para uma categoria do CMS).
+  macro: text("macro").notNull(),
+  // Semente/cluster que originou a busca (nulo quando veio da macro solta).
+  subcategoria: text("subcategoria"),
+  // true quando a sugestao e uma pergunta (viram H2 e a secao "Perguntas frequentes").
+  isQuestion: boolean("is_question").notNull().default(false),
+  // Demanda acumulada: cresce com a frequencia e a posicao no Autocomplete.
+  score: integer("score").notNull().default(0),
+  // Curadoria editorial (Secao 5.3): proximidade ao curso que mais converte.
+  // Ordena a fila com desempate por score; permite que sementes curadas de
+  // baixo volume (score 0) ainda saiam na frente.
+  priority: integer("priority").notNull().default(0),
+  // Idioma da busca minerada (Secao 5.4): "pt" | "en". Escrevemos sempre em
+  // portugues; o termo en entra como palavra-chave/sinonimo.
+  lang: text("lang").notNull().default("pt"),
+  // Origem: "autocomplete" | "curado" | "search-console".
+  source: text("source").notNull().default("autocomplete"),
+  // Ciclo de vida: "pending" | "used" | "skipped".
+  status: text("status").notNull().default("pending"),
+  // Post gerado a partir desta pergunta (quando status = "used").
+  usedPostId: integer("used_post_id"),
+  // Motivo quando skipped (ex.: "coberto pelo post #123" na anti-canibalizacao).
+  skipReason: text("skip_reason"),
+  discoveredAt: timestamp("discovered_at").notNull().defaultNow(),
+  usedAt: timestamp("used_at"),
+}, (table) => [
+  index("blog_keyword_queue_macro_status_idx").on(table.macro, table.status),
+  index("blog_keyword_queue_status_score_idx").on(table.status, table.score),
+]);
+
+// Log de execucao diaria do gerador (idempotencia por dia + metrica de qualidade).
+export const blogDailyRuns = pgTable("blog_daily_runs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  runDate: text("run_date").notNull(), // YYYY-MM-DD (UTC)
+  macro: text("macro").notNull(),
+  status: text("status").notNull(), // "published" | "rejected" | "skipped" | "failed"
+  reason: text("reason"),
+  title: text("title"),
+  postId: integer("post_id"),
+  correctionRounds: integer("correction_rounds").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("blog_daily_runs_date_idx").on(table.runDate),
+]);
+
+// Indice do corpus existente (500+ posts) para anti-canibalizacao (Secao 5.8).
+// Sidecar da tabela posts (nao altera a tabela consolidada): guarda o titulo
+// normalizado (Camada 1 lexical, indice trigrama pg_trgm criado na migracao) e
+// o embedding do titulo+resumo (Camada 2 semantica, pgvector). Reconstruivel a
+// qualquer momento a partir de posts.
+export const blogPostIndex = pgTable("blog_post_index", {
+  postId: integer("post_id")
+    .primaryKey()
+    .references(() => posts.id, { onDelete: "cascade" }),
+  titleNormalized: text("title_normalized").notNull(),
+  // Texto embedado (titulo + resumo) — guardado para auditoria/rebuild seletivo.
+  embeddedText: text("embedded_text"),
+  embedding: vector("embedding", EMBEDDING_DIM),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertBlogKeywordQueueSchema = createInsertSchema(blogKeywordQueue).omit({ id: true, discoveredAt: true });
+export const insertBlogDailyRunSchema = createInsertSchema(blogDailyRuns).omit({ id: true, createdAt: true });
+
+export type BlogKeywordQueue = typeof blogKeywordQueue.$inferSelect;
+export type InsertBlogKeywordQueue = z.infer<typeof insertBlogKeywordQueueSchema>;
+export type BlogDailyRun = typeof blogDailyRuns.$inferSelect;
+export type InsertBlogDailyRun = z.infer<typeof insertBlogDailyRunSchema>;
+export type BlogPostIndex = typeof blogPostIndex.$inferSelect;
