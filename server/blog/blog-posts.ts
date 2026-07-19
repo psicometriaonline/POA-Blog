@@ -10,12 +10,7 @@
 import { storage } from "../storage";
 import type { InsertPost, Post } from "@shared/schema";
 import type { Eixo } from "@shared/blog/seeds";
-import {
-  type GeneratedPost,
-  sectionsToHtml,
-  extrairFaq,
-  slugify,
-} from "./blog-generator";
+import { type GeneratedPost, sectionsToHtml, slugify } from "./blog-generator";
 
 const DISCLAIMER =
   "Este conteudo e educativo; verifique os pressupostos e adapte ao seu desenho de pesquisa e aos seus dados.";
@@ -88,7 +83,6 @@ export async function persistGeneratedPost(
   }
 
   const slug = await ensureUniqueSlug(generated.title);
-  const faq = extrairFaq(generated.body);
 
   // Tag do cluster (o CMS exige ao menos uma tag por post).
   const tagId = await garantirTag(generated.subcategoria || generated.keywords[0] || eixo.macro);
@@ -103,7 +97,12 @@ export async function persistGeneratedPost(
     seoTitle: generated.title.slice(0, 60) || null,
     metaDescription: (generated.excerpt || generated.subtitle || "").slice(0, 160) || null,
     focusKeyword: generated.keywords[0] || null,
-    faq: faq.length > 0 ? JSON.stringify(faq) : null,
+    // A FAQ vai INLINE como H2 "Perguntas frequentes" no content (decisao
+    // editorial: parte do texto, nao um Card a parte). Por isso NAO populamos a
+    // coluna faq — no CMS ela renderiza um Card separado (post.tsx) e no formato
+    // {q,a}. O FAQPage JSON-LD sera restaurado na Fase 2 (SEO), emitido a partir
+    // da FAQ do proprio content, sem Card.
+    faq: null,
     targetQuery: opts.targetQuery,
     publishedAt: opts.publish ? new Date() : null,
   };
