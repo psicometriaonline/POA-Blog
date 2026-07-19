@@ -105,6 +105,41 @@ async function buildHomeHead(siteVerifs: { google?: string; bing?: string }, ogI
   return html;
 }
 
+// Deriva itens de FAQ {q,a} de uma secao "Perguntas frequentes" INLINE no corpo
+// (posts gerados poem a FAQ como H2 no content, nao na coluna faq). Usado como
+// fallback para o FAQPage JSON-LD quando post.faq esta vazio. Retrocompativel:
+// so entra quando nao ha faq estruturada. Beneficia tambem posts manuais que
+// escrevem a FAQ dentro do texto.
+function faqFromContentHtml(html: string): Array<{ q: string; a: string }> {
+  if (!html) return [];
+  const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const heads: Array<{ end: number; idx: number; text: string }> = [];
+  const h2re = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = h2re.exec(html))) heads.push({ idx: m.index, end: m.index + m[0].length, text: norm(stripHtml(m[1])) });
+  let start = -1;
+  let end = html.length;
+  for (let i = 0; i < heads.length; i++) {
+    if (heads[i].text.includes("perguntas frequentes")) {
+      start = heads[i].end;
+      end = i + 1 < heads.length ? heads[i + 1].idx : html.length;
+      break;
+    }
+  }
+  if (start === -1) return [];
+  const paras = Array.from(html.slice(start, end).matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi))
+    .map((x) => stripHtml(x[1]).trim())
+    .filter(Boolean);
+  const out: Array<{ q: string; a: string }> = [];
+  for (let i = 0; i < paras.length; i++) {
+    if (paras[i].endsWith("?") && paras[i + 1] && !paras[i + 1].endsWith("?")) {
+      out.push({ q: paras[i], a: paras[i + 1] });
+      i++;
+    }
+  }
+  return out;
+}
+
 async function buildPostHead(slug: string, siteVerifs: { google?: string; bing?: string }, defaultOg: string): Promise<string | null> {
   const post = await storage.getPostBySlug(slug);
   if (!post || post.status !== "published") return null;
@@ -187,23 +222,28 @@ async function buildPostHead(slug: string, siteVerifs: { google?: string; bing?:
     itemListElement: breadcrumbItems,
   });
 
+  // FAQPage JSON-LD: prioriza a coluna faq (estruturada); se vazia, deriva da
+  // FAQ inline no corpo (posts gerados). Retrocompativel.
+  let faqItems: Array<{ q: string; a: string }> = [];
   if (post.faq) {
     try {
-      const items = JSON.parse(post.faq) as Array<{ q: string; a: string }>;
-      if (Array.isArray(items) && items.length > 0) {
-        html += ldScript({
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: items.filter((i) => i.q && i.a).map((i) => ({
-            "@type": "Question",
-            name: i.q,
-            acceptedAnswer: { "@type": "Answer", text: i.a },
-          })),
-        });
-      }
+      const parsed = JSON.parse(post.faq) as Array<{ q: string; a: string }>;
+      if (Array.isArray(parsed)) faqItems = parsed.filter((i) => i.q && i.a);
     } catch {
       // ignore malformed faq json
     }
+  }
+  if (faqItems.length === 0) faqItems = faqFromContentHtml(post.content);
+  if (faqItems.length > 0) {
+    html += ldScript({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: faqItems.map((i) => ({
+        "@type": "Question",
+        name: i.q,
+        acceptedAnswer: { "@type": "Answer", text: i.a },
+      })),
+    });
   }
   return html;
 }
