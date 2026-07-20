@@ -14,6 +14,7 @@ import { rodarProximaGeracao } from "./daily-generator";
 async function main() {
   const once = process.argv.includes("--once");
   let criados = 0;
+  let falhasSeguidas = 0;
 
   while (true) {
     const r = await rodarProximaGeracao();
@@ -26,8 +27,13 @@ async function main() {
       break;
     }
     if (r.status === "draft") criados += 1;
+    falhasSeguidas = r.status === "failed" ? falhasSeguidas + 1 : 0;
     console.log(`[${r.status}] eixo="${r.processed}"  restam~${r.remaining}`);
     if (once || r.remaining === 0) break;
+    if (falhasSeguidas >= 3) {
+      console.log("Interrompido: 3 falhas seguidas. Verifique os logs e rode novamente.");
+      break;
+    }
   }
 
   console.log(`\nConcluido. Rascunhos criados nesta execucao: ${criados}. Revise-os no /admin antes de publicar.\n`);

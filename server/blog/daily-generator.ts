@@ -205,7 +205,9 @@ export async function rodarProximaGeracao(): Promise<{
     const alvo = await proximoAlvo(macro);
     if (!alvo) continue;
     const status = await processarProximoCluster(macro);
-    // remaining aproximado: cap restante apos este, se ainda ha eixo com pendencia.
+    // Recomputa o cap restante apos o processamento: so conta contra a cota
+    // quando um rascunho foi de fato criado (status "draft" registrado).
+    const capAposProcesso = Math.max(0, capDiario() - (await rascunhosHoje()));
     let aindaTem = false;
     for (const m of MACRO_NOMES) {
       if (await proximoAlvo(m)) {
@@ -213,7 +215,7 @@ export async function rodarProximaGeracao(): Promise<{
         break;
       }
     }
-    const remaining = aindaTem ? Math.max(0, capRestante - 1) : 0;
+    const remaining = aindaTem ? capAposProcesso : 0;
     return { processed: macro, status, remaining };
   }
   return { processed: null, status: null, remaining: 0 };
