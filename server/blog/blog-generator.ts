@@ -11,8 +11,7 @@
 
 import type { Eixo } from "@shared/blog/seeds";
 import {
-  chamarLLM,
-  parseJsonDaIA,
+  chamarLLMJson,
   MODEL_ESCRITOR,
   MODEL_REVISOR,
 } from "./llm";
@@ -220,14 +219,13 @@ Defina, seguindo a estrutura didatica (gancho -> intuicao -> metodo -> exemplo e
 
 Responda APENAS em JSON: {"objetivo":"...","h1":"...","subtitulo":"...","h2":["...","..."],"cursoAlvo":"..."}.`;
 
-  const raw = await chamarLLM({
+  const p = (await chamarLLMJson({
     model: MODEL_ESCRITOR,
     system: EDITORIAL_RULES,
     user,
     maxTokens: 2000,
     effort: "medium",
-  });
-  const p = parseJsonDaIA(raw) as Partial<Esboco>;
+  })) as Partial<Esboco>;
   if (!p || typeof p.h1 !== "string" || !Array.isArray(p.h2)) {
     throw new Error("Esboco em formato inesperado.");
   }
@@ -277,14 +275,14 @@ Responda APENAS em JSON, exatamente neste formato:
 }
 O primeiro item de "body" e a introducao e NAO tem heading. A penultima secao e "Perguntas frequentes". Nao inclua o disclaimer nem o CTA no corpo; sao adicionados pelo sistema.`;
 
-  const raw = await chamarLLM({
+  const parsed = await chamarLLMJson({
     model: MODEL_ESCRITOR,
     system: EDITORIAL_RULES,
     user,
     maxTokens: 16000,
     effort: "high",
   });
-  return buildGeneratedPost(parseJsonDaIA(raw) as Partial<GeneratedPost>, subcategoria);
+  return buildGeneratedPost(parsed as Partial<GeneratedPost>, subcategoria);
 }
 
 // ------------------------------------------------------------------
@@ -337,15 +335,14 @@ Responda APENAS com JSON valido, exatamente neste formato:
   ]
 }`;
 
-  const raw = await chamarLLM({
+  const parsed = (await chamarLLMJson({
     model: MODEL_REVISOR,
     system: REVIEWER_RULES,
     user,
     maxTokens: 16000,
     effort: "high",
     thinking: true,
-  });
-  const parsed = parseJsonDaIA(raw) as { aprovado?: unknown; motivos?: unknown; checagens?: unknown };
+  })) as { aprovado?: unknown; motivos?: unknown; checagens?: unknown };
   if (!parsed || typeof parsed.aprovado !== "boolean") {
     throw new Error("Resposta da IA em formato inesperado para a verificacao.");
   }
@@ -411,12 +408,12 @@ PROBLEMAS APONTADOS: ${lista}
 
 Responda APENAS com JSON no mesmo formato do post atual (title, subtitle, excerpt, subcategoria, keywords, body, referencias, ctaCurso). O primeiro item de "body" e a introducao e NAO tem heading.`;
 
-  const raw = await chamarLLM({
+  const parsedCorr = await chamarLLMJson({
     model: MODEL_ESCRITOR,
     system: EDITORIAL_RULES,
     user,
     maxTokens: 16000,
     effort: "high",
   });
-  return buildGeneratedPost(parseJsonDaIA(raw) as Partial<GeneratedPost>, post.subcategoria);
+  return buildGeneratedPost(parsedCorr as Partial<GeneratedPost>, post.subcategoria);
 }

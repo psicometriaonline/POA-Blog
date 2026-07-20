@@ -79,11 +79,38 @@ export async function chamarLLM(p: LlmParams, tentativas = 3): Promise<string> {
         .join("")
         .trim();
       if (!text) throw new Error(`Resposta vazia da IA (stop_reason=${json.stop_reason}).`);
+      if (json.stop_reason === "max_tokens") {
+        // Saida truncada: JSON viria quebrado. Erro explicito (retryavel pelo
+        // chamarLLMJson, que refaz a chamada).
+        throw new Error(`Resposta truncada pela IA (max_tokens=${body.max_tokens}).`);
+      }
       return text;
     } catch (err) {
       ultimoErro = err;
       // AbortError/rede: tenta de novo; erro de request (4xx != 429): propaga.
       if (t < tentativas - 1) await dormir(2000 * 2 ** t);
+    }
+  }
+  throw ultimoErro;
+}
+
+// Chamada + parse de JSON com nova tentativa: se a resposta vier truncada ou
+// com JSON invalido (ex.: caractere sem escape), refaz a chamada — uma nova
+// amostragem do modelo normalmente resolve.
+export async function chamarLLMJson(p: LlmParams, tentativasParse = 2): Promise<unknown> {
+  let ultimoErro: unknown;
+  for (let t = 0; t < tentativasParse; t++) {
+    try {
+      const raw = await chamarLLM(p);
+      return parseJsonDaIA(raw);
+    } catch (err) {
+      ultimoErro = err;
+      if (t < tentativasParse - 1) {
+        console.warn(
+          `[llm] JSON invalido/truncado (tentativa ${t + 1}/${tentativasParse}), refazendo chamada:`,
+          err instanceof Error ? err.message : err,
+        );
+      }
     }
   }
   throw ultimoErro;
