@@ -139,10 +139,21 @@ export async function indexarPost(postId: number): Promise<void> {
     });
 }
 
+// Garante a extensao pg_trgm (idempotente). Necessario porque o Publish
+// sincroniza tabelas/colunas, mas nao extensoes que so fornecem funcoes —
+// em producao a similarity() nao existia ate rodar isto uma vez.
+let pgTrgmGarantido = false;
+async function garantirPgTrgm(): Promise<void> {
+  if (pgTrgmGarantido) return;
+  await db.execute(sql`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
+  pgTrgmGarantido = true;
+}
+
 // --- Camada 1: lexical (pg_trgm). Barata, sem chave. ---
 export async function candidatosLexicais(texto: string, k = 5): Promise<CorpusMatch[]> {
   const cand = normalizarTitulo(texto);
   if (!cand) return [];
+  await garantirPgTrgm();
   const rows = await db.execute(sql`
     SELECT post_id, title_normalized,
            similarity(title_normalized, ${cand}) AS sim

@@ -33,7 +33,7 @@ import {
   type VerificationResult,
 } from "./blog-generator";
 import { resolverReferencias, type ResultadoCitacoes } from "./citations";
-import { verificarCanibalizacao } from "./corpus-index";
+import { verificarCanibalizacao, indexarCorpus } from "./corpus-index";
 import { persistGeneratedPost } from "./blog-posts";
 
 export type RunStatus = "draft" | "rejected" | "skipped" | "failed";
@@ -200,6 +200,17 @@ export async function rodarProximaGeracao(): Promise<{
 }> {
   const capRestante = Math.max(0, capDiario() - (await rascunhosHoje()));
   if (capRestante === 0) return { processed: null, status: null, remaining: 0 };
+
+  // Mantem o indice anti-canibalizacao em dia (so posts ainda nao indexados;
+  // barato quando ja esta completo). Essencial em producao, onde o banco novo
+  // comeca com o indice vazio.
+  try {
+    const idx = await indexarCorpus({ onlyMissing: true });
+    if (idx.total > 0) console.log(`[daily-generator] Corpus indexado: +${idx.total} post(s).`);
+  } catch (err) {
+    console.error("[daily-generator] Falha ao indexar corpus:", err);
+    throw err;
+  }
 
   for (const macro of MACRO_NOMES) {
     const alvo = await proximoAlvo(macro);
