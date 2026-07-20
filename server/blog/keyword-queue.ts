@@ -130,12 +130,16 @@ export async function perguntasDoCluster(
   excluirId: number,
   limite = 5,
 ): Promise<BlogKeywordQueue[]> {
+  // Sem subcategoria o alvo e um cluster singleton (mesmo modelo de
+  // linhasDoCluster): nao ha perguntas-irmas, e puxar outras perguntas do eixo
+  // misturaria temas no FAQ do post. Retorna vazio.
+  if (!subcategoria) return [];
   const condicoes = [
     eq(blogKeywordQueue.macro, macro),
     eq(blogKeywordQueue.status, "pending"),
     eq(blogKeywordQueue.isQuestion, true),
+    eq(blogKeywordQueue.subcategoria, subcategoria),
   ];
-  if (subcategoria) condicoes.push(eq(blogKeywordQueue.subcategoria, subcategoria));
   const linhas = await db
     .select()
     .from(blogKeywordQueue)
