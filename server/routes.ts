@@ -9,6 +9,7 @@ import { setupAuth, isAuthenticated, registerAuthRoutes } from "./replit_integra
 import { registerLlmsRoutes } from "./llms";
 import { getOrCreateIndexNowKey, notifySearchEngines } from "./indexnow";
 import { syncLead, isActiveCampaignConfigured } from "./activecampaign";
+import { registerBlogScheduler } from "./blog/scheduler";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -225,6 +226,7 @@ export async function registerRoutes(
   await migrateAuthors();
   await migrateBannerSlots();
   await seedDefaultSettings();
+  registerBlogScheduler(app);
 
   setInterval(async () => {
     try {

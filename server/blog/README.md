@@ -113,7 +113,12 @@ tsx server/blog/generate-posts.ts            # até o cap diário
 - **Fase 2** — SEO: o CMS já emite JSON-LD (BlogPosting/Breadcrumb/FAQPage),
   sitemap, robots, IndexNow e llms.txt; falta sobretudo **pillar page por eixo**
   e linkagem por cluster.
-- **Fase 3** — cadência + despertador: endpoint interno `/generate-next`
-  protegido por `BLOG_CRON_TOKEN` (chama `rodarProximaGeracao`) + cron do stack.
-  A lógica já existe em `daily-generator.ts`; falta só expor a rota.
+- **Fase 3 (feita)** — cadência + despertador (`scheduler.ts`): endpoint
+  interno `POST /api/internal/blog/generate-next` protegido por token
+  (somente `Authorization: Bearer`; `?all=1` roda a rodada completa) +
+  despertador embutido que dispara 1x/dia às `BLOG_CRON_HORA` (default 06:00,
+  America/Sao_Paulo) até o cap `BLOG_MAX_POSTS_DIA`. Desativável com
+  `BLOG_CRON_DISABLED=1`. O token vem do secret `BLOG_CRON_TOKEN` ou, na
+  ausência, é gerado e guardado em `site_settings` (`blog_cron_token`),
+  como o `indexnow_key` — nunca versionado.
 - **Virada de chave** — publicação automática só depois de validado (Seção 7).
