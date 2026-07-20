@@ -105,10 +105,17 @@ export async function chamarLLMJson(p: LlmParams, tentativasParse = 2): Promise<
       return parseJsonDaIA(raw);
     } catch (err) {
       ultimoErro = err;
+      // So refaz a chamada para erros de parse (SyntaxError) ou truncamento.
+      // Outros erros (auth, 4xx, rede apos os retries do chamarLLM) propagam
+      // direto — repetir seria custo sem chance de resultado diferente.
+      const retryavel =
+        err instanceof SyntaxError ||
+        (err instanceof Error && err.message.includes("truncada"));
+      if (!retryavel) throw err;
       if (t < tentativasParse - 1) {
         console.warn(
           `[llm] JSON invalido/truncado (tentativa ${t + 1}/${tentativasParse}), refazendo chamada:`,
-          err instanceof Error ? err.message : err,
+          err.message,
         );
       }
     }

@@ -18,7 +18,7 @@
 import { randomBytes, timingSafeEqual } from "crypto";
 import type { Express, Request, Response } from "express";
 import { z } from "zod";
-import { db } from "../db";
+import { db, pool } from "../db";
 import { blogKeywordQueue } from "@shared/schema";
 import { storage } from "../storage";
 import { rodarProximaGeracao, type RunStatus } from "./daily-generator";
@@ -63,6 +63,26 @@ function agoraNoFuso(): { hhmm: string; dia: string } {
 let rodando = false;
 let ultimoDiaDisparado: string | null = null;
 
+// Lock distribuido no Postgres: serializa a geracao entre instancias/processos
+// (autoscale pode rodar mais de uma instancia; o flag `rodando` so cobre o
+// processo local). Mantem a MESMA conexao do pool durante todo o trabalho —
+// advisory locks sao por sessao.
+const LOCK_GERACAO = 771203991;
+async function comLockGlobal<T>(fn: () => Promise<T>): Promise<T | null> {
+  const client = await pool.connect();
+  try {
+    const r = await client.query("SELECT pg_try_advisory_lock($1) AS ok", [LOCK_GERACAO]);
+    if (!r.rows[0]?.ok) return null;
+    try {
+      return await fn();
+    } finally {
+      await client.query("SELECT pg_advisory_unlock($1)", [LOCK_GERACAO]);
+    }
+  } finally {
+    client.release();
+  }
+}
+
 export interface ResultadoRodada {
   processados: { macro: string; status: RunStatus | null }[];
   rascunhosCriados: number;
@@ -74,22 +94,24 @@ export interface ResultadoRodada {
 export async function rodarRodadaDiaria(maxIteracoes = 20): Promise<ResultadoRodada | null> {
   if (rodando) return null;
   rodando = true;
-  const resultado: ResultadoRodada = { processados: [], rascunhosCriados: 0, remaining: 0 };
   try {
-    for (let i = 0; i < maxIteracoes; i++) {
-      const r = await rodarProximaGeracao();
-      resultado.remaining = r.remaining;
-      if (r.processed === null) break;
-      resultado.processados.push({ macro: r.processed, status: r.status });
-      if (r.status === "draft") resultado.rascunhosCriados += 1;
-      console.log(`[blog-scheduler] [${r.status}] eixo="${r.processed}" restam~${r.remaining}`);
-      if (r.remaining === 0) break;
-    }
-    console.log(
-      `[blog-scheduler] Rodada concluida: ${resultado.rascunhosCriados} rascunho(s), ` +
-        `${resultado.processados.length} cluster(s) processado(s).`,
-    );
-    return resultado;
+    return await comLockGlobal(async () => {
+      const resultado: ResultadoRodada = { processados: [], rascunhosCriados: 0, remaining: 0 };
+      for (let i = 0; i < maxIteracoes; i++) {
+        const r = await rodarProximaGeracao();
+        resultado.remaining = r.remaining;
+        if (r.processed === null) break;
+        resultado.processados.push({ macro: r.processed, status: r.status });
+        if (r.status === "draft") resultado.rascunhosCriados += 1;
+        console.log(`[blog-scheduler] [${r.status}] eixo="${r.processed}" restam~${r.remaining}`);
+        if (r.remaining === 0) break;
+      }
+      console.log(
+        `[blog-scheduler] Rodada concluida: ${resultado.rascunhosCriados} rascunho(s), ` +
+          `${resultado.processados.length} cluster(s) processado(s).`,
+      );
+      return resultado;
+    });
   } finally {
     rodando = false;
   }
@@ -120,10 +142,11 @@ export function registerBlogScheduler(app: Express): void {
       rodando = true;
       let r;
       try {
-        r = await rodarProximaGeracao();
+        r = await comLockGlobal(() => rodarProximaGeracao());
       } finally {
         rodando = false;
       }
+      if (!r) return res.status(409).json({ message: "Rodada ja em andamento" });
       return res.json(r);
     } catch (err) {
       console.error("[blog-scheduler] Falha na geracao:", err);

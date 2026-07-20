@@ -75,11 +75,26 @@ export async function persistGeneratedPost(
   eixo: Eixo,
   opts: PersistOpts,
 ): Promise<Post> {
-  const categoria = await storage.getCategoryBySlug(eixo.categorySlug);
+  let categoria = await storage.getCategoryBySlug(eixo.categorySlug);
   if (!categoria) {
-    throw new Error(
-      `Categoria "${eixo.categorySlug}" nao existe no CMS. Crie-a antes de gerar posts deste eixo.`,
-    );
+    // Auto-cria a categoria do eixo (ambientes novos, ex.: producao, nao tem os
+    // dados de dev). Nome derivado do slug; descricao = intro da pillar page.
+    const nome = eixo.categorySlug
+      .split("-")
+      .map((p, i) => (i === 0 ? p.charAt(0).toUpperCase() + p.slice(1) : p))
+      .join(" ");
+    try {
+      categoria = await storage.createCategory({
+        name: nome,
+        slug: eixo.categorySlug,
+        description: eixo.pillarIntro,
+      });
+      console.log(`[blog-posts] Categoria "${nome}" (${eixo.categorySlug}) criada automaticamente.`);
+    } catch (err) {
+      // Corrida: outra execucao criou a categoria entre o check e o create.
+      categoria = await storage.getCategoryBySlug(eixo.categorySlug);
+      if (!categoria) throw err;
+    }
   }
 
   const slug = await ensureUniqueSlug(generated.title);

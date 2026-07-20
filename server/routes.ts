@@ -912,7 +912,9 @@ export async function registerRoutes(
   app.get("/api/settings", async (_req, res) => {
     try {
       const settings = await storage.getAllSettings();
-      res.json(settings);
+      // Nunca expor segredos internos guardados em site_settings.
+      const { blog_cron_token, indexnow_key, ...publicas } = settings as Record<string, string>;
+      res.json(publicas);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
