@@ -79,6 +79,7 @@ PROFUNDIDADE E DIDATICA (o diferencial deste blog)
 - Encerre o corpo com uma sintese ("o que levar deste post") e uma secao final com heading exatamente "Perguntas frequentes" (3 a 4 perguntas, respostas de 1 a 2 frases).
 
 REGISTRO E ESTILO
+- ATENCAO, IDIOMA: escreva o post em portugues do Brasil com acentuacao e ortografia CORRETAS e completas (ex.: "é", "ção", "análise", "conteúdo", "razão", "estatística"). Estas instrucoes estao propositalmente sem acentos, mas o TEXTO DO POST (titulo, subtitulo, corpo, FAQ, referencias) DEVE usar acentuacao normal do portugues. Um post sem acentos e inaceitavel.
 - Academico e preciso, porem acessivel: nem coloquial/infantil, nem arido como paper de exatas. Terminologia correta, frases claras, tom de quem ensina.
 - PROIBIDO (evita "cara de IA"): travessao (—); reframing "nao e X, e Y"; contagem dramatica "Nao X. Nao Y. Apenas Z."; falso espectro "de X a Y" sem escala real; pergunta retorica respondida na frase seguinte; anafora repetitiva; fragmentos curtissimos de enfase; encerrar frase com participio vazio ("-ndo").
 
@@ -107,6 +108,7 @@ O QUE VERIFICAR
 4. CITACOES. Liste TODAS as citacoes do texto (autor, ano, titulo, veiculo). Elas serao resolvidas por DOI numa etapa automatica; sua funcao e lista-las com precisao e sinalizar as suspeitas/incompletas.
 5. PROFUNDIDADE E DIDATICA. O texto precisa ensinar de fato: objetivo claro, encadeamento sem saltos, exemplo passo a passo com interpretacao, e consolidacao. Reprove conteudo superficial, generico ou com lacunas de raciocinio.
 6. ESTILO. Reprove travessao (—) e os demais padroes proibidos; termo tecnico usado sem explicacao; promessa de resultado.
+7. IDIOMA. O texto deve estar em portugues do Brasil com acentuacao e ortografia corretas. Reprove IMEDIATAMENTE se o texto estiver sem acentos (ex.: "e" no lugar de "é", "razao" no lugar de "razão", "conteudo" no lugar de "conteúdo").
 
 DECISAO
 - "aprovado": true SOMENTE se todas as afirmacoes tecnicas estiverem corretas, o codigo valido, o escopo respeitado, sem citacao suspeita pendente, com profundidade adequada e sem violacao de estilo.
@@ -178,6 +180,13 @@ function buildGeneratedPost(parsed: Partial<GeneratedPost>, sub: string | null):
     }))
     .filter((s) => s.paragraphs.length > 0);
   if (body.length === 0) throw new Error("A IA nao retornou o corpo do post.");
+
+  // Barreira deterministica de idioma: um post longo em portugues sem NENHUM
+  // caractere acentuado e impossivel — indica que a IA escreveu sem acentos.
+  const textoTodo = body.map((s) => `${s.heading ?? ""} ${s.paragraphs.join(" ")}`).join(" ");
+  if (textoTodo.length > 1000 && !/[áéíóúâêôãõçàüÁÉÍÓÚÂÊÔÃÕÇ]/.test(textoTodo)) {
+    throw new Error("Post gerado sem acentuacao (portugues invalido). Geracao rejeitada.");
+  }
 
   return {
     title: stripDash(parsed.title).slice(0, 120),
