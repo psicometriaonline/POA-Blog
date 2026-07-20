@@ -17,6 +17,9 @@
 
 import { randomBytes, timingSafeEqual } from "crypto";
 import type { Express, Request, Response } from "express";
+import { z } from "zod";
+import { db } from "../db";
+import { blogKeywordQueue } from "@shared/schema";
 import { storage } from "../storage";
 import { rodarProximaGeracao, type RunStatus } from "./daily-generator";
 
@@ -125,6 +128,47 @@ export function registerBlogScheduler(app: Express): void {
     } catch (err) {
       console.error("[blog-scheduler] Falha na geracao:", err);
       return res.status(500).json({ message: err instanceof Error ? err.message : "Erro na geracao" });
+    }
+  });
+
+  // Endpoint interno: importa linhas da fila de palavras-chave (usado para
+  // levar a fila do ambiente de desenvolvimento para a producao). Upsert por
+  // query_normalized: linhas ja existentes sao ignoradas.
+  const linhaImportSchema = z.object({
+    query: z.string().min(1),
+    queryNormalized: z.string().min(1),
+    macro: z.string().min(1),
+    subcategoria: z.string().nullable().optional(),
+    isQuestion: z.boolean().optional(),
+    score: z.number().int().optional(),
+    priority: z.number().int().optional(),
+    lang: z.string().optional(),
+    source: z.string().optional(),
+    status: z.enum(["pending", "used", "skipped"]).optional(),
+    skipReason: z.string().nullable().optional(),
+  });
+  app.post("/api/internal/blog/keyword-queue/import", async (req: Request, res: Response) => {
+    if (!(await tokenValido(req))) {
+      return res.status(401).json({ message: "Nao autorizado" });
+    }
+    const parsed = z.array(linhaImportSchema).max(500).safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Corpo invalido", issues: parsed.error.issues.slice(0, 3) });
+    }
+    try {
+      let inseridas = 0;
+      for (const linha of parsed.data) {
+        const r = await db
+          .insert(blogKeywordQueue)
+          .values(linha)
+          .onConflictDoNothing({ target: blogKeywordQueue.queryNormalized })
+          .returning({ id: blogKeywordQueue.id });
+        inseridas += r.length;
+      }
+      return res.json({ recebidas: parsed.data.length, inseridas });
+    } catch (err) {
+      console.error("[blog-scheduler] Falha no import da fila:", err);
+      return res.status(500).json({ message: err instanceof Error ? err.message : "Erro no import" });
     }
   });
 

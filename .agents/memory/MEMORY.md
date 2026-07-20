@@ -1,1 +1,3 @@
 - [Long jobs in the agent sandbox](sandbox-long-jobs.md) — bash kills background procs and caps at 120s; use resumable chunk scripts with state files in .local/tmp/.
+- [Git bundle workaround](git-bundle-workaround.md) — git fetch/merge bloqueados no workspace; aplicar bundles via clone em /tmp + git diff --binary + git apply.
+- [Prod DB sem dados de dev](prod-db-data-gap.md) — Publish sincroniza schema, nao dados; tabelas-semente (fila de keywords) precisam de import via endpoint interno Bearer.
