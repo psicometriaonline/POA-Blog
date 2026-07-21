@@ -11,6 +11,35 @@ import { storage } from "../storage";
 import type { InsertPost, Post } from "@shared/schema";
 import type { Eixo } from "@shared/blog/seeds";
 import { type GeneratedPost, sectionsToHtml, slugify } from "./blog-generator";
+import { buscarImagemPexels } from "./pexels";
+
+function semAcento(s: string): string {
+  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+}
+
+// Resolve o autor dos rascunhos: Bruno Damasio (configuravel por BLOG_AUTHOR_NAME).
+// Procura o registro em authors pelo nome; se existir, usa id + nome canonicos.
+async function resolverAutor(): Promise<{ authorId: number | null; authorName: string }> {
+  const nome = (process.env.BLOG_AUTHOR_NAME || "Bruno Damásio").trim();
+  const alvo = semAcento(nome);
+  const autores = await storage.getAuthors();
+  const match =
+    autores.find((a) => semAcento(a.name) === alvo) ||
+    autores.find((a) => semAcento(a.name).includes("damasio"));
+  return { authorId: match?.id ?? null, authorName: match?.name ?? nome };
+}
+
+// Query tematica para a imagem de destaque (Pexels). Metodos especificos nao tem
+// foto de banco; usamos um tema academico por eixo. Override: BLOG_PEXELS_QUERY.
+function queryPexels(eixo: Eixo): string {
+  const override = process.env.BLOG_PEXELS_QUERY?.trim();
+  if (override) return override;
+  const porEixo: Record<string, string> = {
+    psicometria: "psychology research questionnaire survey",
+    "analise-fatorial": "data analysis statistics chart research",
+  };
+  return porEixo[eixo.categorySlug] || "statistics data analysis academic research";
+}
 
 const DISCLAIMER =
   "Este conteudo e educativo; verifique os pressupostos e adapte ao seu desenho de pesquisa e aos seus dados.";
@@ -45,7 +74,8 @@ async function garantirTag(nome: string): Promise<number | null> {
 // Monta o HTML final: corpo + Referencias (canonicas, ja resolvidas por DOI) +
 // CTA + disclaimer educativo.
 function montarHtml(generated: GeneratedPost): string {
-  const partes = [sectionsToHtml(generated.body)];
+  const linkSlugs = (generated.internalLinks ?? []).map((l) => l.slug);
+  const partes = [sectionsToHtml(generated.body, linkSlugs)];
 
   if (generated.referencias.length > 0) {
     partes.push("<h2>Referencias</h2>");
@@ -103,12 +133,19 @@ export async function persistGeneratedPost(
   const tagId = await garantirTag(generated.subcategoria || generated.keywords[0] || eixo.macro);
   const tagIds = tagId ? [tagId] : [];
 
+  // Autor (Bruno Damasio) e imagem de destaque (Pexels, fail-open).
+  const { authorId, authorName } = await resolverAutor();
+  const imagem = await buscarImagemPexels(queryPexels(eixo));
+
   const data: InsertPost = {
     title: generated.title,
     slug,
     content: montarHtml(generated),
     excerpt: generated.excerpt || null,
     status: opts.publish ? "published" : "draft",
+    authorId,
+    authorName,
+    featuredImage: imagem?.url ?? null,
     seoTitle: generated.title.slice(0, 60) || null,
     metaDescription: (generated.excerpt || generated.subtitle || "").slice(0, 160) || null,
     focusKeyword: generated.keywords[0] || null,

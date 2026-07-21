@@ -30,6 +30,15 @@ export interface GeneratedPost {
   body: BlogSection[]; // 1o item = introducao (sem heading); penultima = "Perguntas frequentes"
   referencias: string[];
   ctaCurso: string;
+  // Posts internos que o texto pode citar (citacao cruzada). Preenchido pelo
+  // orquestrador apos a geracao; usado para renderizar so links validos (evita
+  // link quebrado). O modelo referencia via [texto](/slug) no corpo.
+  internalLinks?: { slug: string; title: string }[];
+}
+
+export interface PostRelacionado {
+  slug: string;
+  title: string;
 }
 
 export interface Esboco {
@@ -133,12 +142,40 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+function escapeAttr(s: string): string {
+  return escapeHtml(s).replace(/"/g, "&quot;");
+}
+
+// Renderiza um paragrafo escapando o texto e convertendo links markdown internos
+// [texto](/slug) em <a href="/slug"> SOMENTE quando /slug esta na allowlist
+// (posts realmente existentes). Slug fora da lista vira texto puro (sem link),
+// para nunca gerar link quebrado.
+function renderParagraph(text: string, allowed: Set<string>): string {
+  const re = /\[([^\]]+)\]\((\/[a-z0-9\-]+)\)/gi;
+  let out = "";
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    out += escapeHtml(text.slice(last, m.index));
+    const label = m[1];
+    const href = m[2];
+    const slug = href.replace(/^\//, "");
+    if (allowed.has(slug)) out += `<a href="${escapeAttr(href)}">${escapeHtml(label)}</a>`;
+    else out += escapeHtml(label);
+    last = m.index + m[0].length;
+  }
+  out += escapeHtml(text.slice(last));
+  return out;
+}
+
 // Monta o HTML do corpo a partir das secoes (o editor do CMS usa HTML).
-export function sectionsToHtml(body: BlogSection[]): string {
+// `internalLinks` = slugs de posts existentes que podem virar link interno.
+export function sectionsToHtml(body: BlogSection[], internalLinks: string[] = []): string {
+  const allowed = new Set(internalLinks);
   const parts: string[] = [];
   for (const section of body) {
     if (section.heading) parts.push(`<h2>${escapeHtml(section.heading)}</h2>`);
-    for (const p of section.paragraphs) parts.push(`<p>${escapeHtml(p)}</p>`);
+    for (const p of section.paragraphs) parts.push(`<p>${renderParagraph(p, allowed)}</p>`);
   }
   return parts.join("\n");
 }
@@ -256,14 +293,24 @@ export async function expandirPost(
   targetQuery: string,
   perguntasRelacionadas: string[],
   subcategoria: string | null,
+  postsRelacionados: PostRelacionado[] = [],
 ): Promise<GeneratedPost> {
   const lista =
     perguntasRelacionadas.length > 0 ? perguntasRelacionadas.map((q) => `- ${q}`).join("\n") : "(nenhuma)";
+  const listaPosts =
+    postsRelacionados.length > 0
+      ? postsRelacionados.map((p) => `- "${p.title}" -> /${p.slug}`).join("\n")
+      : "(nenhum)";
   const user = `Escreva o post COMPLETO seguindo o esboco abaixo e TODAS as regras editoriais. Expanda cada H2 com profundidade (aula escrita, sem limite de tamanho), incluindo o exemplo passo a passo em R com interpretacao de cada resultado, a secao "Perguntas frequentes" e as referencias. Cite apenas obras reais (serao verificadas por DOI).
 
 Este post responde a busca real: "${targetQuery}".
 Perguntas do cluster (para H2 e FAQ):
 ${lista}
+
+CITACAO CRUZADA (links internos) — opcional, natural, sem forcar:
+Abaixo ha posts JA publicados neste blog sobre temas proximos. Quando (e SOMENTE quando) fizer sentido no fluxo, faca uma mencao natural a um deles NO MEIO de um paragrafo, com link markdown [texto ancora](/slug), usando o slug EXATO fornecido. Ex.: "como ja detalhamos ao tratar de [analise fatorial exploratoria](/slug-do-post), ...". Regras: no maximo 2 ou 3 links no post inteiro; NUNCA uma lista de "veja tambem"; nao inclua o link se ele nao acrescentar de verdade; use SO os slugs abaixo (nao invente URL); o texto ancora deve ser descritivo (nunca "clique aqui"). Se nenhum se encaixar com naturalidade, nao cite nenhum.
+POSTS INTERNOS RELACIONADOS:
+${listaPosts}
 
 ESBOCO: ${JSON.stringify(esboco)}
 

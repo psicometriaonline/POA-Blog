@@ -195,10 +195,15 @@ export function registerBlogScheduler(app: Express): void {
     }
   });
 
-  // Despertador embutido: checa a cada minuto; dispara uma vez por dia na hora
-  // agendada. Desativavel com BLOG_CRON_DISABLED=1 (ex.: em dev).
-  if (process.env.BLOG_CRON_DISABLED === "1") {
-    console.log("[blog-scheduler] Despertador embutido desativado (BLOG_CRON_DISABLED=1).");
+  // Despertador embutido: DESLIGADO por padrao. O gatilho oficial e o projeto
+  // paralelo (scheduled deployment) batendo no endpoint acima, para nao haver
+  // dois disparos. Para religar o embutido (ex.: ambiente sem cron externo),
+  // defina BLOG_CRON_EMBUTIDO=1. BLOG_CRON_DISABLED=1 continua forcando off.
+  if (process.env.BLOG_CRON_EMBUTIDO !== "1" || process.env.BLOG_CRON_DISABLED === "1") {
+    console.log(
+      "[blog-scheduler] Despertador embutido desligado; usando o gatilho externo (endpoint). " +
+        "Para religar: BLOG_CRON_EMBUTIDO=1.",
+    );
     return;
   }
   setInterval(async () => {

@@ -33,7 +33,7 @@ import {
   type VerificationResult,
 } from "./blog-generator";
 import { resolverReferencias, type ResultadoCitacoes } from "./citations";
-import { verificarCanibalizacao, indexarCorpus } from "./corpus-index";
+import { verificarCanibalizacao, indexarCorpus, postsRelacionadosParaCitar } from "./corpus-index";
 import { persistGeneratedPost } from "./blog-posts";
 
 export type RunStatus = "draft" | "rejected" | "skipped" | "failed";
@@ -84,7 +84,13 @@ export async function gerarRevisarCitar(
   subcategoria: string | null,
 ): Promise<GeracaoRevisada> {
   const esboco = await gerarEsboco(eixo, targetQuery, relacionadas);
-  let post = await expandirPost(eixo, esboco, targetQuery, relacionadas, subcategoria);
+
+  // Citacao cruzada: posts existentes relacionados (nao duplicatas) para o
+  // gerador citar com link interno, de forma natural, no meio do texto.
+  const relacionadosPosts = await postsRelacionadosParaCitar(esboco.h1 || targetQuery, 5);
+  const internalLinks = relacionadosPosts.map((p) => ({ slug: p.slug, title: p.title }));
+
+  let post = await expandirPost(eixo, esboco, targetQuery, relacionadas, subcategoria, internalLinks);
 
   // Revisor + correcao guiada.
   let verificacao = await revisarPost(eixo, targetQuery, post);
@@ -113,6 +119,10 @@ export async function gerarRevisarCitar(
   }
   // Adota as canonicas resolvidas; descarta as ainda nao confirmadas.
   post.referencias = citacoes.itens.filter((i) => i.resolvida).map((i) => i.canonical ?? i.original);
+
+  // Anexa os posts relacionados: o render so vira <a> os slugs desta lista
+  // (allowlist), garantindo que nenhum link interno gerado seja quebrado.
+  post.internalLinks = internalLinks;
 
   return { post, verificacao, correcoes, citacoes };
 }

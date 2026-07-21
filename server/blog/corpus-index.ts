@@ -243,3 +243,33 @@ export async function detalhesDosPosts(
     .where(inArray(posts.id, ids));
   return new Map(rows.map((r) => [r.id, { title: r.title, slug: r.slug }]));
 }
+
+// Piso de relacionamento semantico para CITACAO CRUZADA. A faixa util e
+// [LIMIAR_CITACAO, LIMIAR_SEMANTICO): relacionado ao tema, mas NAO duplicata
+// (o que passa de LIMIAR_SEMANTICO e canibalizacao, nao citacao).
+export const LIMIAR_CITACAO = 0.35;
+
+export interface PostParaCitar {
+  postId: number;
+  slug: string;
+  title: string;
+  similarity: number;
+}
+
+// Posts EXISTENTES relacionados (nao duplicatas) para o gerador citar com link
+// interno. So semantico (a citacao cruzada precisa do "mesmo tema, outras
+// palavras"); sem provider de embeddings, devolve [] e nao ha citacao cruzada.
+export async function postsRelacionadosParaCitar(texto: string, k = 5): Promise<PostParaCitar[]> {
+  const sem = await candidatosSemanticos(texto, "query", Math.max(k * 3, 12));
+  const rel = sem
+    .filter((c) => c.similarity >= LIMIAR_CITACAO && c.similarity < LIMIAR_SEMANTICO)
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, k);
+  const detalhes = await detalhesDosPosts(rel.map((c) => c.postId));
+  const out: PostParaCitar[] = [];
+  for (const c of rel) {
+    const d = detalhes.get(c.postId);
+    if (d) out.push({ postId: c.postId, slug: d.slug, title: d.title, similarity: c.similarity });
+  }
+  return out;
+}
