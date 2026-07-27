@@ -1,0 +1,28 @@
+Recebi um git bundle (blog-tres-tarefas.bundle) com 3 ajustes, feito sobre a main atual (commit a9b7a19). Não precisa npm install.
+
+1. Aplicar (working tree limpa, na main):
+
+git bundle verify blog-tres-tarefas.bundle          # "okay", exige a9b7a19
+git fetch blog-tres-tarefas.bundle 'claude/psicometria-post-generation-port-1kjjj0'
+git merge --ff-only FETCH_HEAD
+Se --ff-only recusar (main avançou), use git merge FETCH_HEAD — são 6 arquivos, conflito improvável.
+
+2. O que muda (6 arquivos em server/blog/):
+
+Despertador embutido agora DESLIGADO por padrão (scheduler.ts). O gatilho passa a ser só o projeto paralelo (scheduled deployment) batendo em POST /api/internal/blog/generate-next (Bearer BLOG_CRON_TOKEN). Para religar o embutido algum dia: BLOG_CRON_EMBUTIDO=1. Pode remover BLOG_CRON_DISABLED se tinha setado — não é mais necessário.
+Autor + imagem no rascunho: o post já sai com Bruno Damásio como autor e uma imagem de destaque do Pexels.
+Citação cruzada: o gerador recebe posts existentes relacionados (nem duplicata, nem aleatório) e, quando faz sentido, cita 2–3 no meio do texto com link interno natural. Links só viram <a> para slugs reais (allowlist) — nunca gera link quebrado.
+3. Variáveis de ambiente:
+
+PEXELS_API_KEY (nova, obrigatória p/ a imagem) — sem ela, o rascunho fica sem featured image (fail-open). Opcionais: BLOG_PEXELS_QUERY (força uma query fixa), BLOG_AUTHOR_NAME (default "Bruno Damásio").
+Citação cruzada usa os embeddings que você já configurou (BLOG_EMBEDDING_*) e o corpus indexado — nada novo.
+4. Pré-requisito do autor: para o post linkar à página do autor, precisa existir um autor "Bruno Damásio" na tabela authors (crie no /admin se não houver). Se não existir, o post ainda mostra o nome, só não vincula ao authorId.
+
+5. Validar: gere um rascunho e confira no /admin:
+
+tsx server/blog/generate-posts.ts --once
+autor = Bruno Damásio;
+imagem de destaque presente (do Pexels);
+no corpo, se houver posts relacionados, 2–3 links internos naturais no meio do texto (não uma lista "veja também").
+Me devolva se aplicou limpo e um print do rascunho (autor + imagem + algum link interno, se surgiu).
+
