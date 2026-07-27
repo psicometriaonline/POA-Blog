@@ -15,6 +15,7 @@ import type { InsertPost, Post } from "@shared/schema";
 import type { Eixo } from "@shared/blog/seeds";
 import { type GeneratedPost, sectionsToHtml, slugify } from "./blog-generator";
 import { buscarImagemPexels } from "./pexels";
+import { chamarLLMJson, MODEL_ESCRITOR } from "./llm";
 
 function semAcento(s: string): string {
   return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
@@ -32,9 +33,8 @@ async function resolverAutor(): Promise<{ authorId: number | null; authorName: s
   return { authorId: match?.id ?? null, authorName: match?.name ?? nome };
 }
 
-// Query tematica para a imagem de destaque (Pexels). Metodos especificos nao tem
-// foto de banco; usamos um tema academico por eixo. Override: BLOG_PEXELS_QUERY.
-function queryPexels(eixo: Eixo): string {
+// Query generica por eixo (fallback). Override: BLOG_PEXELS_QUERY.
+function queryPexelsEixo(eixo: Eixo): string {
   const override = process.env.BLOG_PEXELS_QUERY?.trim();
   if (override) return override;
   const porEixo: Record<string, string> = {
@@ -42,6 +42,38 @@ function queryPexels(eixo: Eixo): string {
     "analise-fatorial": "data analysis statistics chart research",
   };
   return porEixo[eixo.categorySlug] || "statistics data analysis academic research";
+}
+
+// Query tematica derivada do PROPRIO post: traduz titulo/keywords (pt-BR,
+// muitas vezes conceitos abstratos como "alfa de Cronbach") para 2-4 termos
+// VISUAIS em ingles, adequados a um banco de fotos. Assim posts de temas
+// diferentes no mesmo eixo nao disputam o mesmo pool de ~15 resultados.
+// Fail-open: qualquer erro devolve null e o chamador usa a query do eixo.
+async function queryPexelsTematica(generated: GeneratedPost): Promise<string | null> {
+  try {
+    const parsed = (await chamarLLMJson({
+      model: MODEL_ESCRITOR,
+      maxTokens: 300,
+      effort: "low",
+      system:
+        "Voce converte o tema de um artigo academico (psicometria/estatistica, em portugues) " +
+        "em uma query de busca de FOTOS de banco de imagens (Pexels), em INGLES. " +
+        "Regras: 2 a 4 palavras, apenas termos VISUAIS e concretos (objetos, cenas, pessoas em contexto), " +
+        "nada de jargao abstrato que nao rende foto (ex.: 'Cronbach alpha' -> 'survey clipboard checklist'). " +
+        'Responda APENAS com JSON: {"query": "..."}',
+      user:
+        `Titulo: ${generated.title}\n` +
+        `Keywords: ${generated.keywords.join(", ")}\n` +
+        `Resumo: ${generated.excerpt || generated.subtitle || ""}`,
+    })) as { query?: unknown };
+    const q = typeof parsed?.query === "string" ? parsed.query.trim() : "";
+    // Sanidade: query curta, sem quebras de linha.
+    if (!q || q.length > 80 || /\n/.test(q)) return null;
+    return q;
+  } catch (err) {
+    console.warn("[blog-posts] Falha ao derivar query tematica do Pexels (usando query do eixo):", err);
+    return null;
+  }
 }
 
 const DISCLAIMER =
@@ -150,7 +182,16 @@ export async function persistGeneratedPost(
   } catch (err) {
     console.error("[blog-posts] Falha ao listar featured_images usadas:", err);
   }
-  const imagem = await buscarImagemPexels(queryPexels(eixo), urlsUsadas);
+  // 1) Query tematica do post; 2) fallback: query generica do eixo (tambem
+  // usada quando a busca tematica nao encontra nenhuma foto).
+  // (BLOG_PEXELS_QUERY, quando definido, tem precedencia total: pula a etapa
+  // tematica e usa so o override.)
+  const queryEixo = queryPexelsEixo(eixo);
+  const queryTema = process.env.BLOG_PEXELS_QUERY?.trim()
+    ? null
+    : await queryPexelsTematica(generated);
+  let imagem = queryTema ? await buscarImagemPexels(queryTema, urlsUsadas) : null;
+  if (!imagem) imagem = await buscarImagemPexels(queryEixo, urlsUsadas);
 
   const data: InsertPost = {
     title: generated.title,
