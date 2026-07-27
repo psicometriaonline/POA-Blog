@@ -97,11 +97,12 @@ export async function chamarLLM(p: LlmParams, tentativas = 3): Promise<string> {
 // Chamada + parse de JSON com nova tentativa: se a resposta vier truncada ou
 // com JSON invalido (ex.: caractere sem escape), refaz a chamada — uma nova
 // amostragem do modelo normalmente resolve.
-export async function chamarLLMJson(p: LlmParams, tentativasParse = 2): Promise<unknown> {
+export async function chamarLLMJson(p: LlmParams, tentativasParse = 3): Promise<unknown> {
   let ultimoErro: unknown;
+  let maxTokens = p.maxTokens ?? 8000; // default do chamarLLM, explicitado para poder escalar
   for (let t = 0; t < tentativasParse; t++) {
     try {
-      const raw = await chamarLLM(p);
+      const raw = await chamarLLM({ ...p, maxTokens });
       return parseJsonDaIA(raw);
     } catch (err) {
       ultimoErro = err;
@@ -112,6 +113,11 @@ export async function chamarLLMJson(p: LlmParams, tentativasParse = 2): Promise<
         err instanceof SyntaxError ||
         (err instanceof Error && err.message.includes("truncada"));
       if (!retryavel) throw err;
+      // Se realmente truncou por max_tokens, aumenta o teto na proxima
+      // tentativa (ate 32000) — repetir com o mesmo teto tende a truncar de novo.
+      if (err instanceof Error && err.message.includes("truncada") && maxTokens) {
+        maxTokens = Math.min(Math.ceil(maxTokens * 1.5), 32000);
+      }
       if (t < tentativasParse - 1) {
         console.warn(
           `[llm] JSON invalido/truncado (tentativa ${t + 1}/${tentativasParse}), refazendo chamada:`,
@@ -126,19 +132,38 @@ export async function chamarLLMJson(p: LlmParams, tentativasParse = 2): Promise<
 // Extrai JSON da resposta da IA (tolera cercas ```json e texto ao redor).
 export function parseJsonDaIA(raw: string): unknown {
   let text = raw.trim();
-  // So usa a cerca se o CONTEUDO dela for JSON (comeca com { ou [). Sem isso,
-  // uma cerca ```r ... ``` DENTRO de uma string do JSON (aula em R) seria
-  // capturada e quebraria o parse.
-  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fence && /^[{[]/.test(fence[1].trim())) text = fence[1].trim();
+  // So usa cerca se o CONTEUDO dela for JSON (comeca com { ou [). Candidatos, do mais provavel ao mais tolerante. O JSON pode conter cercas
+  // internas (ex.: bloco ```r dentro de uma string do corpo), entao uma unica
+  // regex de cerca nao resolve todos os casos:
+  // 1. cerca non-greedy (primeiro bloco fechado — resposta com varios blocos);
+  // 2. cerca greedy ate a ULTIMA cerca (JSON unico com cercas internas);
+  // 3. recorte do primeiro {/[ ao ultimo }/] do texto bruto.
+  const candidatos: string[] = [];
+  const fenceNonGreedy = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenceNonGreedy && /^[{[]/.test(fenceNonGreedy[1].trim())) candidatos.push(fenceNonGreedy[1].trim());
+  const fenceGreedy = text.match(/```(?:json)?\s*([\s\S]*)```/);
+  if (fenceGreedy && /^[{[]/.test(fenceGreedy[1].trim())) candidatos.push(fenceGreedy[1].trim());
   const primeiro = text.search(/[{[]/);
   const ultimo = Math.max(text.lastIndexOf("}"), text.lastIndexOf("]"));
   if (primeiro !== -1 && ultimo !== -1 && ultimo > primeiro) {
-    text = text.slice(primeiro, ultimo + 1);
+    candidatos.push(text.slice(primeiro, ultimo + 1));
   }
-  try {
-    return JSON.parse(text);
-  } catch (err) {
+  if (candidatos.length === 0) candidatos.push(text);
+
+  let ultimoErro: unknown;
+  for (const cand of candidatos) {
+    // Recorta cada candidato ao trecho JSON (tolera prosa apos a cerca).
+    const ini = cand.search(/[{[]/);
+    const fim = Math.max(cand.lastIndexOf("}"), cand.lastIndexOf("]"));
+    const texto = ini !== -1 && fim > ini ? cand.slice(ini, fim + 1) : cand;
+    try {
+      return JSON.parse(texto);
+    } catch (err) {
+      ultimoErro = err;
+    }
+  }
+  {
+    const err = ultimoErro;
     try {
       mkdirSync(".local/tmp", { recursive: true });
       writeFileSync(`.local/tmp/llm-parse-fail-${Date.now()}.txt`, raw);
