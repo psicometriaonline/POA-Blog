@@ -7,7 +7,10 @@
 // fase; um humano revisa e publica com um clique.
 // ============================================================
 
+import { isNotNull } from "drizzle-orm";
+import { db } from "../db";
 import { storage } from "../storage";
+import { posts } from "@shared/schema";
 import type { InsertPost, Post } from "@shared/schema";
 import type { Eixo } from "@shared/blog/seeds";
 import { type GeneratedPost, sectionsToHtml, slugify } from "./blog-generator";
@@ -135,7 +138,19 @@ export async function persistGeneratedPost(
 
   // Autor (Bruno Damasio) e imagem de destaque (Pexels, fail-open).
   const { authorId, authorName } = await resolverAutor();
-  const imagem = await buscarImagemPexels(queryPexels(eixo));
+  // Imagens ja usadas por outros posts: evita repetir a featured_image entre
+  // rascunhos gerados (fail-open: erro na leitura nao bloqueia a persistencia).
+  let urlsUsadas: string[] = [];
+  try {
+    const usados = await db
+      .select({ url: posts.featuredImage })
+      .from(posts)
+      .where(isNotNull(posts.featuredImage));
+    urlsUsadas = usados.map((u) => u.url).filter((u): u is string => !!u);
+  } catch (err) {
+    console.error("[blog-posts] Falha ao listar featured_images usadas:", err);
+  }
+  const imagem = await buscarImagemPexels(queryPexels(eixo), urlsUsadas);
 
   const data: InsertPost = {
     title: generated.title,
